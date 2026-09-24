@@ -496,6 +496,15 @@
     if (openProject(link.dataset.project, link)) event.preventDefault();
   });
 
+  // Stacked panels can cover one another, so a panel reached by keyboard is
+  // brought fully into view. Mouse and touch focus leave the scroll alone.
+  $('.project-list').addEventListener('focusin', event => {
+    const link = event.target.closest('.project__link');
+    if (!link || !stacked.matches || pv.open) return;
+    try { if (!link.matches(':focus-visible')) return; } catch (error) { /* no :focus-visible support */ }
+    scrollToPanel(link.closest('.project'));
+  });
+
   window.addEventListener('popstate', () => {
     const slug = slugFromHash();
     if (slug) {
