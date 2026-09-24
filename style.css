@@ -105,6 +105,7 @@ ol, ul { padding: 0; list-style: none; }
 :focus-visible { outline: 1px solid var(--c-accent); outline-offset: 4px; }
 :focus:not(:focus-visible) { outline: none; }
 
+.nowrap { white-space: nowrap; }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .icon { display: inline-block; width: 1.125rem; height: 1.125rem; flex: none; vertical-align: middle; transition: transform var(--t-med) var(--ease); }
 .visually-hidden {
@@ -646,6 +647,8 @@ h3 { font-weight: 400; }
 }
 
 @media (max-width: 1100px) {
+  .g-4 .work__caption { flex-direction: column; gap: var(--s-1); }
+  .g-4 .work__label { text-align: left; }
   .hero__kicker span:nth-child(3) { display: none; }
   .hero__copy { grid-column: 1 / span 7; }
   .hero__portrait { grid-column: 8 / -1; }
@@ -700,7 +703,8 @@ h3 { font-weight: 400; }
   html:not(.js) .hero { padding-top: var(--s-6); }
 
   .hero__copy, .hero__portrait { grid-column: 1 / -1; }
-  .hero__portrait { margin-top: var(--s-6); max-width: 34rem; }
+  .hero__portrait { margin-top: var(--s-6); width: min(100%, 26rem); justify-self: end; }
+  .hero__frame { aspect-ratio: 1 / 1; }
   .project--wide, .project--narrow { grid-column: span 6; }
   .project--narrow .project__media, .project--wide .project__media { aspect-ratio: 4 / 3; }
   .project--full .project__media { aspect-ratio: 16 / 9; }
@@ -733,7 +737,7 @@ h3 { font-weight: 400; }
   .discipline, .project__info { grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s-3); }
   .hero__statement span, .hero__statement em { display: block; }
   .hero__actions .btn { flex: 1 1 14rem; }
-  .hero__portrait { max-width: none; }
+  .hero__portrait { width: 100%; justify-self: stretch; }
   .hero__frame { aspect-ratio: 1 / 1; }
   .hero__frame img { height: 96%; object-position: 58% 100%; }
   .hero__facts { grid-template-columns: 1fr 1fr; }
