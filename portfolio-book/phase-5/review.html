@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phase 5 — Rich Architectural Portfolio — review</title>
+<link rel="stylesheet" href="../book/book.css">
+<style>
+  /* fonts: book.css loads Inter from fonts/ relative to itself — re-point for this folder */
+  @font-face { font-family: "Inter"; src: url("../book/fonts/Inter-400.ttf"); font-weight: 400; }
+  @font-face { font-family: "Inter"; src: url("../book/fonts/Inter-500.ttf"); font-weight: 500; }
+  @font-face { font-family: "Inter"; src: url("../book/fonts/Inter-600.ttf"); font-weight: 600; }
+  @font-face { font-family: "Inter"; src: url("../book/fonts/Inter-300.ttf"); font-weight: 300; }
+  .crop { position: absolute; overflow: hidden; }
+  .crop img { position: absolute; max-width: none; }
+  .cad { position: absolute; }
+  .gridpaper { position: absolute; left: -3mm; top: -3mm; }
+  .stag { position: absolute; display: inline-block; border: .3pt solid var(--bronze); padding: .9mm 1.6mm .7mm; font: 600 6pt/1 "Inter"; letter-spacing: .16em; text-transform: uppercase; color: var(--bronze); white-space: nowrap; }
+  .chip { position: absolute; }
+  .chip i { display: block; width: 100%; height: var(--ch, 14mm); }
+  .chip span { display: block; margin-top: 1.4mm; font: 400 6pt/1.35 "Inter"; color: var(--muted); letter-spacing: .02em; }
+  .chip span b { display: block; font-weight: 500; color: var(--ink); font-size: 6.5pt; letter-spacing: 0; }
+  .tx { position: absolute; }
+  .tx .crop { position: relative; }
+  .tx span { display: block; margin-top: 1.3mm; font: 400 6pt/1.35 "Inter"; color: var(--muted); }
+  .tx span b { display: block; font-weight: 500; color: var(--ink); font-size: 6.5pt; }
+  .vlabel { position: absolute; writing-mode: vertical-rl; transform: rotate(180deg); font: 500 6pt "Inter"; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  table.t { border-collapse: collapse; width: 100%; font: 400 6.5pt/1.3 "Inter"; color: var(--ink); }
+  table.t th { font: 500 6pt "Inter"; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 1.2mm 1.4mm 1.2mm 0; border-bottom: .5pt solid var(--ink); }
+  table.t td { padding: 1.3mm 1.4mm 1.3mm 0; border-bottom: .3pt solid var(--rule); vertical-align: top; }
+  table.t td.n, table.t th.n { text-align: right; }
+  table.t td b { font-weight: 500; }
+  .note { position: absolute; border: .3pt solid var(--bronze); padding: 2.4mm 3mm; font: 400 7pt/1.45 "Inter"; color: var(--ink-2); background: rgba(147,115,78,.05); }
+  .note b { display: block; font: 600 6pt "Inter"; letter-spacing: .16em; text-transform: uppercase; color: var(--bronze); margin-bottom: 1.2mm; }
+  .key { position: absolute; display: grid; column-gap: 4mm; row-gap: 1.3mm; font: 400 6.5pt/1.3 "Inter"; color: var(--ink-2); }
+  .key div { display: grid; grid-template-columns: 5mm 1fr; }
+  .key div b { font-weight: 600; color: var(--bronze); }
+  .check { display: grid; grid-template-columns: 4.5mm 1fr; align-items: start; font: 400 6.8pt/1.3 "Inter"; color: var(--ink-2); padding: 1.3mm 0; border-bottom: .3pt solid var(--rule); }
+  .check i { width: 2.8mm; height: 2.8mm; border: .35pt solid var(--ink); position: relative; margin-top: .2mm; }
+  .check i::after { content: "✓"; position: absolute; left: .3mm; top: -1.1mm; font: 600 7pt "Inter"; color: var(--bronze); font-style: normal; }
+  .chain { position: absolute; display: grid; grid-template-columns: repeat(7, 1fr); }
+  .chain div { border-top: .5pt solid var(--ink); padding-top: 2.4mm; position: relative; padding-right: 2mm; }
+  .chain div::before { content: ""; position: absolute; top: -1.2mm; left: 0; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: var(--bronze); }
+  .chain b { display: block; font: 400 10pt "Instrument Serif"; color: var(--bronze); }
+  .chain span { font: 400 6.5pt/1.3 "Inter"; color: var(--ink-2); }
+  .page .folio { z-index: 5; }
+</style>
+</head>
+<body>
+
+<!-- ================= 01 · COVER OPTION 1 — IMAGE-DOMINANT ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>01 · Cover option 1 — image-dominant</span></div>
+  <div class="spread"><div class="page recto">
+    <div class="fig fig--native" style="top:-3mm; left:14mm; width:199mm"><img src="../../projects/arched-retreat-01.webp" alt=""></div>
+    <div class="vlabel" style="left:5mm; top:14mm">Portfolio 2026–2027</div>
+    <div class="crop" data-img="projects/arched-retreat-07.webp" data-r="250,150,600,400" style="left:14mm; top:113mm; width:57.3mm"></div>
+    <div class="crop" data-img="projects/arched-retreat-05.webp" data-r="600,40,600,400" style="left:76.3mm; top:113mm; width:57.3mm"></div>
+    <div class="crop" data-img="projects/arched-retreat-02.webp" data-r="640,110,600,400" style="left:138.6mm; top:113mm; width:57.3mm"></div>
+    <div class="abs lbl lbl--m" style="top:155mm; left:14mm">An arched retreat — reception hall · guest room · indoor pool · guest suite</div>
+    <div class="abs display caps" style="top:166mm; left:11mm; font-size:118pt">Alaa</div>
+    <div class="abs display caps" style="top:202mm; left:11mm; font-size:118pt">Masri</div>
+    <div class="abs rows" style="top:170mm; left:141.3mm; width:54.7mm">
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Interior Designer</span></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Interior Architect</span></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Portfolio 2026–2027</span></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Riyadh, Saudi Arabia</span></div>
+    </div>
+    <div class="abs lead" style="top:246mm; left:14mm; width:128mm; font-size:15pt">Interior design and interior architecture — from the first concept to the final handover.</div>
+    <div class="hair" style="left:14mm; right:14mm; top:272mm"></div>
+    <div class="abs lbl lbl--m" style="top:275mm; left:14mm">Residential · Hospitality · Commercial · Retail</div>
+    <div class="abs lbl lbl--m" style="top:275mm; right:14mm">alaamasri.com</div>
+  </div></div>
+  <div class="board__notes">
+    <p><b>Idea</b>The work first: one hero render running off the top and outer edge, then three arch details from the same project, like a competition board header. The name sits below in monumental capitals.</p>
+    <p><b>Images</b>arched-retreat-01 at 199 mm (230 ppi). Crops from -07, -05 and -02: each is a 600 × 400 px region at 57 mm (266 ppi).</p>
+    <p><b>Character</b>Most visual of the three. Around 60% of the page is image.</p>
+  </div>
+</section>
+
+<!-- ================= 02 · COVER OPTION 2 — TYPOGRAPHY + TECHNICAL GRID ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>02 · Cover option 2 — typography + technical grid</span></div>
+  <div class="spread"><div class="page recto">
+    <div class="gridpaper"></div>
+    <div class="abs" style="top:6mm; left:0; right:0; height:6mm" id="c2axes"></div>
+    <div class="abs display caps" style="top:30mm; left:10mm; font-size:150pt">Alaa</div>
+    <div class="abs display caps" style="top:80mm; left:10mm; font-size:150pt">Masri</div>
+    <div class="cad" data-cad="archElevation" data-w="62" data-h="120" data-arg='{"wLabel":"Opening","hLabel":"Springing","aLabel":"Apex"}' style="left:124mm; top:136mm"></div>
+    <div class="stag" style="left:124mm; top:130mm">Design development diagram · arch</div>
+    <div class="abs rows" style="top:152mm; left:14mm; width:84mm">
+      <div class="row"><span class="lbl lbl--m">Discipline</span><span class="val">Interior Designer · Interior Architect</span></div>
+      <div class="row"><span class="lbl lbl--m">Document</span><span class="val">Portfolio 2026–2027</span></div>
+      <div class="row"><span class="lbl lbl--m">Based in</span><span class="val">Riyadh, Saudi Arabia</span></div>
+      <div class="row"><span class="lbl lbl--m">Online</span><span class="val">alaamasri.com</span></div>
+    </div>
+    <div class="abs lead" style="top:192mm; left:14mm; width:98mm; font-size:15pt">Interior design and interior architecture — from the first concept to the final handover.</div>
+    <div class="abs lbl lbl--m" style="top:214mm; left:14mm">Sheet index</div>
+    <div class="abs rows" style="top:219mm; left:14mm; width:98mm">
+      <div class="row" style="grid-template-columns:10mm 1fr 10mm; padding:1.1mm 0 1.2mm"><span class="num" style="font-size:9pt">01</span><span class="val">Profile · Expertise</span><span class="lbl" style="text-align:right">04</span></div>
+      <div class="row" style="grid-template-columns:10mm 1fr 10mm; padding:1.1mm 0 1.2mm"><span class="num" style="font-size:9pt">02</span><span class="val">Selected works — seven projects</span><span class="lbl" style="text-align:right">08</span></div>
+      <div class="row" style="grid-template-columns:10mm 1fr 10mm; padding:1.1mm 0 1.2mm"><span class="num" style="font-size:9pt">03</span><span class="val">Technical capability</span><span class="lbl" style="text-align:right">36</span></div>
+      <div class="row" style="grid-template-columns:10mm 1fr 10mm; padding:1.1mm 0 1.2mm; border-bottom:.3pt solid var(--rule)"><span class="num" style="font-size:9pt">04</span><span class="val">Experience · Contact</span><span class="lbl" style="text-align:right">38</span></div>
+    </div>
+    <div class="abs" style="left:14mm; top:262mm; width:182mm; height:18mm; border:.5pt solid var(--ink); display:grid; grid-template-columns:1.3fr 1.2fr 1fr .6fr; background:var(--paper)">
+      <div style="padding:2mm 2.4mm; border-right:.3pt solid var(--rule)"><div class="lbl lbl--m">Name</div><div class="serif" style="font-size:17pt; margin-top:1mm">Alaa Masri</div></div>
+      <div style="padding:2mm 2.4mm; border-right:.3pt solid var(--rule)"><div class="lbl lbl--m">Title</div><div class="val" style="margin-top:1.4mm">Interior Designer<br>Interior Architect</div></div>
+      <div style="padding:2mm 2.4mm; border-right:.3pt solid var(--rule)"><div class="lbl lbl--m">Issue</div><div class="val" style="margin-top:1.4mm">Portfolio 2026–2027</div></div>
+      <div style="padding:2mm 2.4mm"><div class="lbl lbl--m">Sheet</div><div class="val" style="margin-top:1.4mm">01</div></div>
+    </div>
+  </div></div>
+  <div class="board__notes">
+    <p><b>Idea</b>The cover as a drawing sheet: grid paper with 5 mm and 25 mm modules, axis references, the name set on the grid, and a title block carrying the portfolio details.</p>
+    <p><b>Drawing</b>A pointed-arch elevation taken from the arched retreat's openings, labelled as a design development diagram. It has named dimensions only, no invented sizes.</p>
+    <p><b>Character</b>The most technical of the three. It reads as an architect's document before the book is even opened.</p>
+  </div>
+</section>
+
+<!-- ================= 03 · COVER OPTION 3 — HYBRID RENDER + CAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>03 · Cover option 3 — hybrid render + CAD</span></div>
+  <div class="spread"><div class="page recto">
+    <div class="block" style="left:110mm; top:-3mm; width:103mm; height:236mm"></div>
+    <div class="abs lbl lbl--m" style="top:24mm; left:114mm; width:82mm; line-height:1.7">An arched retreat — guest room<br>Drawing · visualisation</div>
+    <div class="hair" style="left:114mm; width:82mm; top:36mm"></div>
+    <div class="cad" data-cad="archElevation" data-w="38" data-h="96" data-arg='{"dims":false,"open":0.7}' style="left:114mm; top:64mm"></div>
+    <div class="crop" data-img="projects/arched-retreat-07.webp" data-r="270,0,450,1005" style="left:157mm; top:70mm; width:38mm"></div>
+    <div class="hair" style="left:112mm; width:86mm; top:155mm; border-color:var(--bronze); border-top-style:dashed"></div>
+    <div class="abs lbl lbl--m" style="top:162mm; left:114mm; width:38mm; line-height:1.6">Elevation study<br>Arched opening</div>
+    <div class="abs lbl lbl--m" style="top:162mm; left:157mm; width:38mm; line-height:1.6">Visualisation<br>An arched retreat</div>
+    <div class="chip" data-pal="stone" data-nosrc="1" style="left:114mm; top:182mm; width:24mm; --ch:9mm"><i></i><span></span></div>
+    <div class="chip" data-pal="gold" data-nosrc="1" style="left:142mm; top:182mm; width:24mm; --ch:9mm"><i></i><span></span></div>
+    <div class="chip" data-pal="floor" data-nosrc="1" style="left:170mm; top:182mm; width:24mm; --ch:9mm"><i></i><span></span></div>
+    <div class="abs lbl lbl--m" style="top:212mm; left:114mm; width:82mm">Colours sampled from the arched retreat renders</div>
+    <div class="abs display" style="top:69mm; left:10mm; font-size:150pt">Alaa</div>
+    <div class="abs display" style="top:191mm; left:10mm; font-size:150pt">Masri</div>
+    <div class="hair" style="left:14mm; right:14mm; top:274mm"></div>
+    <div class="abs lbl" style="top:277mm; left:14mm">Interior Designer</div>
+    <div class="abs lbl" style="top:277mm; left:61mm">Interior Architect</div>
+    <div class="abs lbl lbl--m" style="top:277mm; right:14mm">Portfolio 2026–2027</div>
+  </div></div>
+  <div class="board__notes">
+    <p><b>Idea</b>The approved "Aperture", made richer. The window appears twice, side by side: as an elevation study drawn on the sand wall and as the render, sharing one base datum. Below them sits a strip of three colours sampled from the renders.</p>
+    <p><b>Image</b>Vertical crop of arched-retreat-07 (pixels 270–720) at 38 mm (301 ppi).</p>
+    <p><b>Character</b>Drawing next to render says "interior architect" at a glance, and keeps the cover you already chose.</p>
+  </div>
+</section>
+
+<!-- ================= 04 · PROFILE ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>04 · Profile spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">Profile</div>
+      <div class="abs display" style="top:22mm; left:11mm; font-size:92pt">Imagination.</div>
+      <div class="abs serif it" style="top:58mm; left:58mm; width:128mm; font-size:27pt; line-height:1.04">With the knowledge to make it real.</div>
+      <div class="abs body" style="top:94mm; left:14mm; width:69.3mm">Interior design and interior architecture — from the first concept to the final handover.</div>
+      <div class="abs serif it" style="top:94mm; left:102mm; width:84mm; font-size:13pt; line-height:1.2; color:var(--ink-2)">Design. Technical development. Execution.</div>
+      <div class="block" style="left:-3mm; top:124mm; width:119.7mm; height:176mm"></div>
+      <img class="abs" src="../../portrait.png" alt="" style="left:6mm; bottom:-3mm; width:109mm; height:109mm">
+      <div class="abs lbl" style="top:130mm; left:14mm">Alaa Masri · Riyadh, Saudi Arabia</div>
+      <div class="abs lbl lbl--m" style="top:124mm; left:131.3mm">Selected work</div>
+      <div class="fig fig--native" style="top:130mm; left:131.3mm; width:54.7mm"><img src="../../projects/arched-retreat-01.webp" alt=""></div>
+      <div class="abs cap" style="top:162mm; left:131.3mm; width:54.7mm"><b>01</b>An arched retreat · Hospitality</div>
+      <div class="fig fig--native" style="top:170mm; left:131.3mm; width:54.7mm"><img src="../../projects/walnut-suite-02.webp" alt=""></div>
+      <div class="abs cap" style="top:202mm; left:131.3mm; width:54.7mm"><b>03</b>The walnut suite · Residential</div>
+      <div class="fig fig--native" style="top:210mm; left:131.3mm; width:54.7mm"><img src="../../projects/illuminated-villa-02.webp" alt=""></div>
+      <div class="abs cap" style="top:242mm; left:131.3mm; width:54.7mm"><b>04</b>The illuminated villa · Architecture</div>
+      <div class="abs cap" style="top:252mm; left:131.3mm; width:54.7mm; color:var(--muted)">Seven projects · pages 09–33</div>
+    </div>
+    <div class="page recto">
+      <div class="abs lbl" style="top:14mm; left:24mm">Alaa Masri</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:14mm">Interior Designer · Interior Architect</div>
+      <div class="abs serif" style="top:26mm; left:24mm; width:142.7mm; font-size:17pt; line-height:1.24">I’m Alaa Masri, a Lebanese interior designer and interior architect based in Riyadh. Over 15 years of practice across the Gulf and Lebanon have shaped my approach to space.</div>
+      <div class="abs body" style="top:62mm; left:24mm; width:84mm">I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</div>
+      <div class="abs body" style="top:62mm; left:112mm; width:84mm">My work spans luxury residential, hospitality, commercial and retail interiors — coordinating clients, consultants, contractors, workshops, factories and site teams so that the design holds from drawing to site.</div>
+      <div class="abs display" style="top:94mm; left:21mm; font-size:130pt">15+</div>
+      <div class="abs serif" style="top:104mm; left:112mm; width:84mm; font-size:15pt; line-height:1.2">years in interior design, interior architecture, fit-out and project coordination.</div>
+      <div class="cell" style="top:150mm; left:24mm; width:40mm"><div class="lbl lbl--m">Practice across</div><div class="val">Saudi Arabia<br>Qatar<br>United Arab Emirates<br>Lebanon</div></div>
+      <div class="cell" style="top:150mm; left:68mm; width:40mm"><div class="lbl lbl--m">Sectors</div><div class="val">Residential · commercial · hospitality · retail</div></div>
+      <div class="cell" style="top:150mm; left:112mm; width:40mm"><div class="lbl lbl--m">Education</div><div class="val">BT — Interior Decoration / Interior Design, Lebanon · TS studies, Interior Design</div></div>
+      <div class="cell" style="top:150mm; left:156mm; width:40mm"><div class="lbl lbl--m">Languages</div><div class="val">Arabic — native<br>English — professional working proficiency</div></div>
+      <div class="cell" style="top:186mm; left:24mm; width:84mm"><div class="lbl lbl--m">Design toolkit</div><div class="val">AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator</div></div>
+      <div class="cell" style="top:186mm; left:112mm; width:84mm"><div class="lbl lbl--m">Beyond the drawing board</div><div class="val">AI-assisted design &amp; visualization · Figma · Design presentation</div></div>
+      <div class="abs lbl lbl--m" style="top:214mm; left:24mm">Concept to handover — how a project is carried</div>
+      <div class="chain" style="top:224mm; left:24mm; width:172mm">
+        <div><b>01</b><span>Concept &amp; design development</span></div><div><b>02</b><span>Technical drawings</span></div><div><b>03</b><span>Shop drawing coordination</span></div><div><b>04</b><span>BOQ &amp; cost estimation</span></div><div><b>05</b><span>Material &amp; sample review</span></div><div><b>06</b><span>Site coordination &amp; quality control</span></div><div><b>07</b><span>Handover</span></div>
+      </div>
+      <div class="abs cap" style="top:258mm; left:24mm; width:172mm; color:var(--muted)">Steps condensed from the professional profile: concept and design development, technical drawings, material selection, BOQ preparation and pricing, supplier and contractor coordination, execution on site.</div>
+      <div class="folio"><b>05</b><span>Profile</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>Statement, portrait and a "selected work" column of three thumbnails, so the profile shows the work straight away.</p>
+    <p><b>Right</b>First-person profile verbatim, "15+", six fact cells and a new seven-step concept-to-handover chain taken from your CV responsibilities.</p>
+    <p><b>Density</b>Both pages are now filled to the margins. The one open field, above the portrait, is deliberate.</p>
+  </div>
+</section>
+
+<!-- ================= 05 · RICH PROJECT OPENER ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>05 · Rich project opener — The walnut suite</span></div>
+  <div class="spread"><div class="page recto">
+    <div class="fig fig--native" style="top:-3mm; left:24mm; width:189mm"><img src="../../projects/walnut-suite-01.webp" alt=""></div>
+    <div class="abs lbl" style="top:106mm; left:24mm">Selected works — 03 <span class="lbl--m">/ 07</span></div>
+    <div class="abs cap" style="top:106mm; left:97.3mm; width:98.7mm; text-align:right"><b>Fig. 01</b>Symmetrical bedroom with an upholstered burgundy headboard wall, walnut panelling and a glass pendant.</div>
+    <div class="abs num" style="top:120mm; left:24mm; font-size:30pt; line-height:1">03</div>
+    <div class="abs display" style="top:116mm; left:37mm; font-size:84pt">The walnut</div>
+    <div class="abs display it" style="top:143mm; left:126.7mm; font-size:84pt">suite</div>
+    <div class="crop" data-img="projects/walnut-suite-01.webp" data-r="640,250,520,338" style="left:24mm; top:174mm; width:54.7mm"></div>
+    <div class="crop" data-img="projects/walnut-suite-02.webp" data-r="480,250,520,338" style="left:82.7mm; top:174mm; width:54.7mm"></div>
+    <div class="crop" data-img="projects/walnut-suite-03.webp" data-r="600,640,520,338" style="left:141.3mm; top:174mm; width:54.7mm"></div>
+    <div class="abs cap" style="top:211mm; left:24mm; width:54.7mm"><b>A</b>Headboard wall, lit reveals — Fig. 01</div>
+    <div class="abs cap" style="top:211mm; left:82.7mm; width:54.7mm"><b>B</b>Lit niche and media recess — Fig. 02</div>
+    <div class="abs cap" style="top:211mm; left:141.3mm; width:54.7mm"><b>C</b>Marble ledge and brass — Fig. 03</div>
+    <div data-meta5="recto" data-top="220" data-cat="Residential — Bedroom"></div>
+    <div class="abs lbl lbl--m" style="top:236mm; left:24mm">Concept</div>
+    <div class="abs lead" style="top:236mm; left:82.7mm; width:113.3mm">Rich walnut, burgundy accents and integrated lighting connect the bedroom and its bespoke joinery.</div>
+    <div class="chip" data-pal="walnut" data-name="Walnut" style="left:24mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="chip" data-pal="velvet" data-name="Burgundy velvet" style="left:52.9mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="chip" data-pal="marble" data-name="Black marble" style="left:81.8mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="chip" data-pal="brass" data-name="Brass" style="left:110.7mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="chip" data-pal="linen" data-name="Beige linen" style="left:139.6mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="chip" data-pal="led" data-name="Warm light" style="left:168.5mm; top:254mm; width:26.3mm; --ch:6mm"><i></i><span></span></div>
+    <div class="folio"><b>19</b><span>The walnut suite</span></div>
+  </div></div>
+  <div class="board__notes">
+    <p><b>Structure</b>Hero render at the head, bleeding off the top and outer edge (242 ppi). Then the title, three enlarged details, the metadata row, the concept statement, and a strip of colours sampled from the renders.</p>
+    <p><b>Crops</b>Details A–C are enlarged from Fig. 01–03: 520 × 338 px regions at 55 mm (241 ppi).</p>
+    <p><b>Facts</b>Category and concept text come from the website. Location, year, role and scope still read "To confirm".</p>
+  </div>
+</section>
+
+<!-- ================= 06 · DESIGN LANGUAGE SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>06 · Project design-language spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">03 — The walnut suite</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:24mm">Design language</div>
+      <div class="fig fig--native" style="top:22mm; left:-3mm; width:190mm"><img src="../../projects/walnut-suite-02.webp" alt=""></div>
+      <div class="abs cap" style="top:131mm; left:102mm; width:84mm; text-align:right"><b>Fig. 02</b>Opposite wall of the suite: a walnut media unit with lit shelving and a stone ledge.</div>
+      <div class="abs serif" style="top:142mm; left:14mm; width:84mm; font-size:21pt; line-height:1.05">Design <span class="it">language</span></div>
+      <div class="abs body tbc" style="top:154mm; left:14mm; width:84mm">Design intent — to confirm, in Alaa’s words.</div>
+      <div class="abs lbl lbl--m" style="top:166mm; left:14mm">Key elements — as visualised</div>
+      <div class="abs rows" style="top:171mm; left:14mm; width:84mm">
+        <div class="row" style="grid-template-columns:7mm 1fr"><span class="num" style="font-size:9pt">01</span><span class="val">Upholstered burgundy headboard wall</span></div>
+        <div class="row" style="grid-template-columns:7mm 1fr"><span class="num" style="font-size:9pt">02</span><span class="val">Walnut panelling and bespoke joinery</span></div>
+        <div class="row" style="grid-template-columns:7mm 1fr"><span class="num" style="font-size:9pt">03</span><span class="val">Integrated, concealed linear lighting</span></div>
+        <div class="row" style="grid-template-columns:7mm 1fr"><span class="num" style="font-size:9pt">04</span><span class="val">Lit display shelving and media recess</span></div>
+        <div class="row" style="grid-template-columns:7mm 1fr"><span class="num" style="font-size:9pt">05</span><span class="val">Black marble ledge and bedside surfaces</span></div>
+      </div>
+      <div class="abs lbl lbl--m" style="top:142mm; left:102mm">Colour — sampled from the visualisations</div>
+      <div class="chip" data-pal="walnut" style="left:102mm; top:148mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="chip" data-pal="walnutLit" style="left:131mm; top:148mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="chip" data-pal="velvet" style="left:160mm; top:148mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="chip" data-pal="marble" style="left:102mm; top:180mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="chip" data-pal="brass" style="left:131mm; top:180mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="chip" data-pal="linen" style="left:160mm; top:180mm; width:26mm; --ch:15mm"><i></i><span></span></div>
+      <div class="cell" style="top:222mm; left:14mm; width:40mm"><div class="lbl lbl--m">Palette</div><div class="cap">Walnut, burgundy velvet, black marble, brass</div></div>
+      <div class="cell" style="top:222mm; left:58mm; width:40mm"><div class="lbl lbl--m">Light</div><div class="cap">Concealed linear lighting in joinery, niches, reveals and ceiling</div></div>
+      <div class="cell" style="top:222mm; left:102mm; width:40mm"><div class="lbl lbl--m">Joinery</div><div class="cap">Walnut media unit with lit shelving and a stone ledge</div></div>
+      <div class="cell" style="top:222mm; left:146mm; width:40mm"><div class="lbl lbl--m">Accent</div><div class="cap">Burgundy upholstered headboard wall and drapery</div></div>
+      <div class="crop" data-img="projects/walnut-suite-01.webp" data-r="400,300,800,286" style="left:14mm; top:246mm; width:84mm"></div>
+      <div class="crop" data-img="projects/walnut-suite-02.webp" data-r="490,500,840,300" style="left:102mm; top:246mm; width:84mm"></div>
+      <div class="folio"><b>20</b><span>The walnut suite</span></div>
+    </div>
+    <div class="page recto">
+      <div class="crop" data-img="projects/walnut-suite-03.webp" data-r="460,20,340,850" style="left:24mm; top:14mm; width:36mm"></div>
+      <div class="abs cap" style="top:106.5mm; left:24mm; width:40mm"><b>Fig. 03</b>Lit shelving, enlarged</div>
+      <div class="fig fig--native" style="top:14mm; left:66mm; width:147mm"><img src="../../projects/walnut-suite-03.webp" alt=""></div>
+      <div class="abs cap" style="top:99mm; left:66mm; width:120mm"><b>Fig. 03</b>Detail of the walnut joinery, integrated shelving and concealed linear lighting.</div>
+      <div class="block" style="left:24mm; top:116mm; width:189mm; height:162mm"></div>
+      <div class="stag" style="left:32mm; top:122mm">Material study — swatches cropped from the visualisations</div>
+      <div class="tx" style="left:32mm; top:132mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="100,300,240,160" style="width:26mm"></div><span><b>Walnut veneer</b>Fig. 03</span></div>
+      <div class="tx" style="left:62mm; top:132mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="820,300,240,160" style="width:26mm"></div><span><b>Burgundy velvet</b>Fig. 05</span></div>
+      <div class="tx" style="left:92mm; top:132mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="560,300,240,160" style="width:26mm"></div><span><b>Lit reveal</b>Fig. 05</span></div>
+      <div class="tx" style="left:32mm; top:170mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="1000,840,240,160" style="width:26mm"></div><span><b>Black marble</b>Fig. 03</span></div>
+      <div class="tx" style="left:62mm; top:170mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-01.webp" data-r="700,740,240,160" style="width:26mm"></div><span><b>Beige linen</b>Fig. 01</span></div>
+      <div class="tx" style="left:92mm; top:170mm; width:26mm"><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="740,845,240,160" style="width:26mm"></div><span><b>Brass on marble</b>Fig. 03</span></div>
+      <div class="crop" data-img="projects/walnut-suite-01.webp" data-r="640,230,520,410" style="left:130mm; top:128mm; width:54.7mm"></div>
+      <div class="abs cap" style="top:172.5mm; left:130mm; width:54.7mm"><b>Fig. 01</b>Headboard wall, enlarged</div>
+      <div class="fig fig--native" style="top:180mm; left:130mm; width:54.7mm"><img src="../../projects/walnut-suite-04.webp" alt=""></div>
+      <div class="abs cap" style="top:213mm; left:130mm; width:54.7mm"><b>Fig. 04</b>Bedside detail: marble table, lamp, upholstered panels</div>
+      <div class="abs lbl lbl--m" style="top:214mm; left:32mm">Finish codes — material study, not a specification</div>
+      <div class="key" style="top:220mm; left:32mm; width:90mm; grid-template-columns:1fr">
+        <div><b>WD</b><span>Walnut veneer — panelling, media wall, joinery</span></div>
+        <div><b>UP</b><span>Burgundy velvet — headboard wall</span></div>
+        <div><b>ST</b><span>Black marble — ledge, bedside tables</span></div>
+        <div><b>MT</b><span>Brass — accessories</span></div>
+        <div><b>LT</b><span>Concealed linear light — shelves, reveals, cove</span></div>
+        <div><b>TX</b><span>Beige linen — bedding</span></div>
+      </div>
+      <div class="folio"><b>21</b><span>The walnut suite</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>Media wall render at 190 mm, the key elements (from the image captions), six colours sampled from the renders (hex shown), four design-language cells, and two enlarged strips: a walnut panel with lit reveal, and the lit shelf over the stone ledge.</p>
+    <p><b>Right</b>The joinery render with a tall shelving crop beside it. A sand board carries six texture swatches cut from the renders, the headboard crop, the bedside detail and finish codes.</p>
+    <p><b>Honesty</b>Swatches are cropped pixels of your renders; colours are the renders' median values as lit. There are no supplier or product names.</p>
+  </div>
+</section>
+
+<!-- ================= 07 · TECHNICAL / CAD SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>07 · Project technical / CAD spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">03 — The walnut suite</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:24mm">Space &amp; planning</div>
+      <div class="abs serif" style="top:21mm; left:14mm; width:172mm; font-size:20pt; line-height:1.1">Space study — <span class="it">sleep zone, media wall, circulation.</span></div>
+      <div class="cad" data-cad="walnutPlan" data-w="172" data-h="150" style="left:14mm; top:34mm"></div>
+      <div class="abs lbl lbl--m" style="top:190mm; left:14mm">Key</div>
+      <div class="key" style="top:195mm; left:14mm; width:84mm; grid-template-columns:1fr">
+        <div><b>1</b><span>Headboard feature wall — walnut panels either side</span></div>
+        <div><b>2</b><span>Upholstered burgundy centre panel</span></div>
+        <div><b>3</b><span>Bed with bedside tables</span></div>
+        <div><b>4</b><span>Glass pendant cluster over the bed (ceiling)</span></div>
+        <div><b>5</b><span>Media wall joinery with stone ledge</span></div>
+        <div><b>6</b><span>Tall storage units</span></div>
+        <div><b>7</b><span>Window with full-height drapery</span></div>
+      </div>
+      <div class="fig fig--native" style="top:190mm; left:102mm; width:40mm"><img src="../../projects/walnut-suite-02.webp" alt=""></div>
+      <div class="fig fig--native" style="top:190mm; left:146mm; width:40mm"><img src="../../projects/walnut-suite-01.webp" alt=""></div>
+      <div class="abs cap" style="top:213.5mm; left:102mm; width:40mm"><b>E1</b>looking to the media wall — Fig. 02</div>
+      <div class="abs cap" style="top:213.5mm; left:146mm; width:40mm"><b>E2</b>looking to the headboard — Fig. 01</div>
+      <div class="note" style="top:228mm; left:102mm; width:84mm"><b>Conceptual space study</b>A reading of the room from the two visualised elevations, drawn to show zoning and circulation. Not a surveyed or approved plan: sizes, openings and orientation are to be confirmed from the project drawings.</div>
+      <div class="folio"><b>22</b><span>The walnut suite</span></div>
+    </div>
+    <div class="page recto">
+      <div class="abs lbl" style="top:14mm; left:24mm">Elevations</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:14mm">Design development</div>
+      <div class="cad" data-cad="walnutMediaWall" data-w="172" data-h="104" style="left:24mm; top:20mm"></div>
+      <div class="key" style="top:130mm; left:24mm; width:172mm; grid-template-columns:1fr 1fr">
+        <div><b>1</b><span>Tall unit — walnut veneer, flush doors</span></div>
+        <div><b>5</b><span>Concealed LED below the ledge</span></div>
+        <div><b>2</b><span>Lit display niche — LED under each shelf</span></div>
+        <div><b>6</b><span>Continuous LED line below the top panel</span></div>
+        <div><b>3</b><span>Media recess in a framed panel</span></div>
+        <div><b>7</b><span>Door</span></div>
+        <div><b>4</b><span>Black marble ledge</span></div>
+      </div>
+      <div class="cad" data-cad="walnutHeadboard" data-w="110" data-h="84" style="left:24mm; top:164mm"></div>
+      <div class="crop" data-img="projects/walnut-suite-01.webp" data-r="480,180,850,620" style="left:141.3mm; top:164mm; width:54.7mm"></div>
+      <div class="abs cap" style="top:205mm; left:141.3mm; width:54.7mm"><b>Fig. 01</b>Headboard wall, as visualised</div>
+      <div class="key" style="top:214mm; left:141.3mm; width:54.7mm; grid-template-columns:1fr">
+        <div><b>1</b><span>Walnut panel</span></div><div><b>2</b><span>Upholstered channels</span></div><div><b>3</b><span>Lit reveal</span></div><div><b>4</b><span>Bedside table, marble</span></div><div><b>5</b><span>Glass pendant cluster</span></div>
+      </div>
+      <div class="abs cap" style="top:254mm; left:24mm; width:172mm; color:var(--muted)">DD-02 and DD-03 are traced from the proportions of the visualisations (Fig. 02 and Fig. 01) to explain the joinery and lighting strategy. They are not construction drawings; dimensions are named, not measured, until a survey is available.</div>
+      <div class="folio"><b>23</b><span>The walnut suite</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>DD-01 conceptual space study: walls in poche, headboard wall, bed and bedside tables, pendant, media wall with stone ledge, windows and drapery, door. Zones are tinted and circulation drawn with bronze arrows. E1 and E2 markers link to the two renders shown.</p>
+    <p><b>Right</b>DD-02 media wall elevation and DD-03 headboard wall, drawn from the render proportions. LED lines are shown in bronze, hatching distinguishes timber, stone and upholstery, and the dimension chain is named, not numbered.</p>
+    <p><b>Labelling</b>Every sheet carries its status in the title block, plus a plain-language note on the page.</p>
+  </div>
+</section>
+
+<!-- ================= 08 · MATERIAL / DETAIL SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>08 · Project material / detail spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">03 — The walnut suite</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:24mm">Detail &amp; materiality</div>
+      <div class="fig fig--native" style="top:20mm; left:14mm; width:172mm"><img src="../../projects/walnut-suite-03.webp" alt=""></div>
+      <div class="cad" id="annot" style="left:14mm; top:20mm"></div>
+      <div class="key" style="top:120mm; left:14mm; width:172mm; grid-template-columns:1fr 1fr 1fr">
+        <div><b>1</b><span>LED under each shelf</span></div><div><b>2</b><span>Walnut veneer, vertical grain</span></div><div><b>3</b><span>Lit display niche</span></div>
+        <div><b>4</b><span>Framed media recess</span></div><div><b>5</b><span>Black marble ledge</span></div><div><b>6</b><span>Continuous light below the top band</span></div>
+      </div>
+      <div class="cad" data-cad="shelfDetail" data-w="84" data-h="104" style="left:14mm; top:136mm"></div>
+      <div class="cad" data-cad="junctionDetail" data-w="84" data-h="82" style="left:102mm; top:136mm"></div>
+      <div class="note" style="top:226mm; left:102mm; width:84mm"><b>Representative / concept details</b>RD-01 shows how a lit shelf of this kind is typically built (typical sizes). CD-01 reads the junction visible in Fig. 05. Neither is a construction detail of this project.</div>
+      <div class="abs cap" style="top:246mm; left:14mm; width:84mm; color:var(--muted)">Details at typical sizes; project dimensions to be confirmed.</div>
+      <div class="folio"><b>24</b><span>The walnut suite</span></div>
+    </div>
+    <div class="page recto">
+      <div class="crop" data-img="projects/walnut-suite-05.webp" data-r="400,0,1005,1005" style="left:24mm; top:20mm; width:84mm"></div>
+      <div class="abs cap" style="top:106.5mm; left:24mm; width:84mm"><b>Fig. 05</b>Burgundy velvet meets walnut and a lit reveal — see CD-01</div>
+      <div class="crop" data-img="projects/walnut-suite-03.webp" data-r="480,600,800,405" style="left:112mm; top:20mm; width:84mm"></div>
+      <div class="abs cap" style="top:63.5mm; left:112mm; width:84mm"><b>Fig. 03</b>Lit shelf, ledge and brass, enlarged</div>
+      <div class="crop" data-img="projects/walnut-suite-02.webp" data-r="380,230,800,405" style="left:112mm; top:69mm; width:84mm"></div>
+      <div class="abs cap" style="top:111mm; left:112mm; width:84mm"><b>Fig. 02</b>Niche and media recess, enlarged</div>
+      <div class="block" style="left:24mm; top:120mm; width:189mm; height:158mm"></div>
+      <div class="stag" style="left:30mm; top:126mm">Material study — schedule format</div>
+      <div class="abs" style="top:134mm; left:30mm; width:166mm">
+        <table class="t">
+          <tr><th style="width:12mm">Code</th><th style="width:17mm">Sample</th><th>Material (as visualised)</th><th>Character</th><th>Location</th><th style="width:17mm">Product</th></tr>
+          <tr><td><b>WD-01</b></td><td><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="100,300,240,160" style="position:relative; width:14mm"></div></td><td>Walnut veneer</td><td>Vertical grain, warm dark tone</td><td>Panelling, media wall, joinery</td><td class="tbc">To specify</td></tr>
+          <tr><td><b>UP-01</b></td><td><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="820,300,240,160" style="position:relative; width:14mm"></div></td><td>Burgundy velvet</td><td>Channel-upholstered panels</td><td>Headboard wall</td><td class="tbc">To specify</td></tr>
+          <tr><td><b>ST-01</b></td><td><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="1000,840,240,160" style="position:relative; width:14mm"></div></td><td>Black marble, white veining</td><td>Polished</td><td>Ledge, bedside tables</td><td class="tbc">To specify</td></tr>
+          <tr><td><b>LT-01</b></td><td><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="560,300,240,160" style="position:relative; width:14mm"></div></td><td>Concealed linear light</td><td>Warm white, as visualised</td><td>Shelves, reveals, ledge, cove</td><td class="tbc">To specify</td></tr>
+          <tr><td><b>MT-01</b></td><td><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="740,845,240,160" style="position:relative; width:14mm"></div></td><td>Brass</td><td>Polished accent</td><td>Trays, accessories</td><td class="tbc">To specify</td></tr>
+          <tr><td><b>TX-01</b></td><td><div class="crop" data-img="projects/walnut-suite-01.webp" data-r="700,740,240,160" style="position:relative; width:14mm"></div></td><td>Beige linen</td><td>Soft woven texture</td><td>Bedding</td><td class="tbc">To specify</td></tr>
+        </table>
+      </div>
+      <div class="abs cap" style="top:238mm; left:30mm; width:166mm; color:var(--muted)">Samples are cropped from the project visualisations; colours below are sampled from the renders as lit. Product and supplier columns stay open until specified.</div>
+      <div class="chip" data-pal="walnut" data-nosrc="1" style="left:30mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="chip" data-pal="walnutLit" data-nosrc="1" style="left:58.2mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="chip" data-pal="velvet" data-nosrc="1" style="left:86.4mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="chip" data-pal="marble" data-nosrc="1" style="left:114.6mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="chip" data-pal="brass" data-nosrc="1" style="left:142.8mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="chip" data-pal="linen" data-nosrc="1" style="left:171mm; top:248mm; width:25.5mm; --ch:8mm"><i></i><span></span></div>
+      <div class="folio"><b>25</b><span>The walnut suite</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>The joinery render annotated with six numbered callouts, then RD-01 (a representative lit-shelf section with typical sizes) and CD-01 (a concept plan detail of the walnut / light / velvet junction).</p>
+    <p><b>Right</b>The velvet junction render as a square crop (304 ppi) beside two enlarged details, then a material-schedule format with real texture samples, character, location and an open product column.</p>
+    <p><b>Density</b>About 80% of the spread is content. There are no empty fields.</p>
+  </div>
+</section>
+
+<!-- ================= 09 · CINEMATIC SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>09 · Full-image cinematic spread (dark)</span></div>
+  <div class="spread spread--two">
+    <div class="page verso dark">
+      <div class="fig fig--native" style="top:-3mm; left:-3mm; width:190mm"><img src="../../projects/skyline-suite-01.webp" alt=""></div>
+      <div class="abs cap" style="top:106mm; left:72.7mm; width:113.3mm; text-align:right"><b>Fig. 01</b>Timber-lined bedroom with floor-to-ceiling windows overlooking a city skyline at night.</div>
+      <div class="abs num" style="top:120mm; left:14mm; font-size:30pt; line-height:1">02</div>
+      <div class="abs display" style="top:116mm; left:27mm; font-size:76pt">The skyline</div>
+      <div class="abs display it" style="top:142mm; left:102mm; font-size:76pt">suite</div>
+      <div data-meta5="verso" data-top="172" data-cat="Residential — Bedroom"></div>
+      <div class="abs lead" style="top:189mm; left:72.7mm; width:113.3mm">A timber-lined bedroom with skyline views, illuminated wardrobes and coordinated material details.</div>
+      <div class="abs lbl lbl--m" style="top:208mm; left:14mm">Material palette — cropped from the project material board (Fig. 06)</div>
+      <div id="boardstrip"></div>
+      <div class="fig fig--native" style="top:249mm; left:131.3mm; width:54.7mm"><img src="../../projects/skyline-suite-03.webp" alt=""></div>
+      <div class="abs cap" style="top:251mm; left:14mm; width:110mm"><b>Fig. 03</b>Bed detail with layered linens and an upholstered headboard.</div>
+      <div class="folio"><b>15</b><span>The skyline suite</span></div>
+    </div>
+    <div class="page recto dark">
+      <div class="fig fig--native" style="top:-3mm; left:24mm; width:189mm"><img src="../../projects/skyline-suite-04.webp" alt=""></div>
+      <div class="abs cap" style="top:106mm; left:24mm; width:120mm"><b>Fig. 04</b>Illuminated walk-in wardrobe with glass doors and walnut frames.</div>
+      <div class="cad" data-cad="wardrobeModule" data-w="66" data-h="136" data-dark="1" data-arg="true" style="left:24mm; top:116mm"></div>
+      <div class="crop" data-img="projects/skyline-suite-04.webp" data-r="560,40,280,900" style="left:94mm; top:118mm; width:29.6mm"></div>
+      <div class="abs cap" style="top:215.5mm; left:94mm; width:32mm">One bay, from Fig. 04</div>
+      <div class="fig fig--native" style="top:118mm; left:141.3mm; width:54.7mm"><img src="../../projects/skyline-suite-05.webp" alt=""></div>
+      <div class="abs cap" style="top:150.5mm; left:141.3mm; width:54.7mm"><b>Fig. 05</b>Brass and glass pendant light against timber panelling.</div>
+      <div class="key" style="top:164mm; left:141.3mm; width:54.7mm; grid-template-columns:1fr">
+        <div><b>1</b><span>LED to the top shelf</span></div><div><b>2</b><span>Hanging rail</span></div><div><b>3</b><span>Drawers</span></div><div><b>4</b><span>Lit shoe display</span></div><div><b>5</b><span>Glass doors in walnut frames</span></div>
+      </div>
+      <div class="stag" style="left:141.3mm; top:204mm">Design development diagram</div>
+      <div class="abs cap" style="top:212mm; left:141.3mm; width:54.7mm; color:var(--muted)">DD-04 traced from the proportions of Fig. 04; not a shop drawing.</div>
+      <div class="vlabel" style="right:6mm; top:230mm">02 — The skyline suite</div>
+      <div class="folio"><b>16</b><span>The skyline suite</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Idea</b>A dark pause that still carries information: two cinematic renders at full width, title and metadata, the project's own material board as a swatch strip, the wardrobe bay drawn beside its render crop, and a legend.</p>
+    <p><b>Material strip</b>Eight swatches cropped from the material board (Fig. 06), labelled exactly as on the board.</p>
+    <p><b>Resolution</b>Renders at 189–190 mm (240 ppi). Wardrobe bay crop 241 ppi. Board swatches are 15 mm texture samples at 203–271 ppi, fine at that size.</p>
+  </div>
+</section>
+
+<!-- ================= 10 · EXPERTISE SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>10 · Rich expertise spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">Expertise</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:24mm">Seven disciplines</div>
+      <div class="abs display" style="top:20mm; left:11mm; font-size:64pt">Every space.</div>
+      <div class="abs display it" style="top:41mm; left:58mm; font-size:64pt">Every detail.</div>
+      <div class="abs body" style="top:61mm; left:131.3mm; width:54.7mm; font-size:8pt; line-height:12pt">From the first sketch to the final handover — design authorship backed by the technical and site knowledge to deliver it.</div>
+      <div id="exp1"></div>
+      <div class="folio"><b>06</b><span>Expertise</span></div>
+    </div>
+    <div class="page recto">
+      <div id="exp2"></div>
+      <div class="block" style="left:24mm; top:214mm; width:189mm; height:64mm"></div>
+      <div class="cell" style="top:222mm; left:32mm; width:76mm; border-color:var(--rule)"><div class="lbl lbl--m">Toolkit</div><div class="val">AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator · Figma</div></div>
+      <div class="cell" style="top:222mm; left:116mm; width:80mm"><div class="lbl lbl--m">Typical deliverables</div><div class="val">Concept and mood boards · space planning and furniture layouts · technical and shop drawings · BOQs and cost estimates · material selections · 3D visualisation</div></div>
+      <div class="note" style="top:252mm; left:32mm; width:164mm"><b>Representative formats</b>The small drawings, tables and checklists on this spread were prepared for this portfolio to show working method. Project renders are Alaa Masri's visualisations.</div>
+      <div class="folio"><b>07</b><span>Expertise</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Structure</b>The seven disciplines (website copy, verbatim), each paired with a small study: palette and materials, a section fragment, a joinery detail, a BOQ extract, a coordination diagram, a QA checklist, and a render-to-detail progression.</p>
+    <p><b>Labels</b>Each study is tagged by what it is. The BOQ lines are generic sample quantities for format only, tied to no project.</p>
+    <p><b>No icons, no cards</b>Every visual is architectural content, not decoration.</p>
+  </div>
+</section>
+
+<!-- ================= 11 · TECHNICAL CAPABILITY SPREAD ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>11 · Rich technical capability spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">Technical capability</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:24mm">Representative drawing set</div>
+      <div class="abs display" style="top:20mm; left:11mm; font-size:64pt">Drawn to be</div>
+      <div class="abs display it" style="top:41mm; left:116.7mm; font-size:64pt">built.</div>
+      <div class="abs body" style="top:66mm; left:14mm; width:84mm">Managing interior projects end to end — concept and design development, technical drawings, material selection, BOQ preparation, pricing, supplier and contractor coordination, and final execution on site.</div>
+      <div class="note" style="top:64mm; left:102mm; width:84mm"><b>Representative examples</b>The drawings, schedules and tables on this spread were prepared for this portfolio to show drawing standards and method. They are not construction documents of a specific project; real project documents will be added when supplied.</div>
+      <div class="cad" data-cad="ceilingDetail" data-w="110" data-h="100" style="left:14mm; top:94mm"></div>
+      <div class="cad" data-cad="planFragment" data-w="60" data-h="100" style="left:126mm; top:94mm"></div>
+      <div class="abs lbl lbl--m" style="top:200mm; left:14mm">Drawing conventions</div>
+      <div class="cad" data-cad="conventions" data-w="172" data-h="34" style="left:14mm; top:206mm"></div>
+      <div class="abs" style="top:242mm; left:14mm; width:172mm">
+        <table class="t">
+          <tr><th style="width:16mm">Ref</th><th>Drawing</th><th>Status</th><th style="width:30mm">Source</th></tr>
+          <tr><td><b>RE-01</b></td><td>Plan fragment — dimensioning</td><td>Representative example</td><td>This portfolio</td></tr>
+          <tr><td><b>RD-02</b></td><td>Lighting cove — ceiling section</td><td>Representative detail</td><td>This portfolio</td></tr>
+          <tr><td><b>RE-02</b></td><td>Wardrobe — shop drawing format</td><td>Representative example</td><td>This portfolio</td></tr>
+          <tr><td><b>P-—</b></td><td>Project plans, elevations, shop drawings, BOQ</td><td class="tbc">To be supplied</td><td class="tbc">Project records</td></tr>
+        </table>
+      </div>
+      <div class="folio"><b>36</b><span>Technical capability</span></div>
+    </div>
+    <div class="page recto">
+      <div class="cad" data-cad="joinerySheet" data-w="172" data-h="112" style="left:24mm; top:14mm"></div>
+      <div class="abs lbl lbl--m" style="top:132mm; left:24mm">Bill of quantities — representative format · sample values</div>
+      <div class="abs" style="top:137mm; left:24mm; width:98.7mm">
+        <table class="t">
+          <tr><th style="width:10mm">Ref</th><th>Description</th><th style="width:8mm">Unit</th><th class="n" style="width:10mm">Qty</th><th class="n" style="width:10mm">Rate</th><th class="n" style="width:12mm">Amount</th></tr>
+          <tr><td>1.01</td><td>Suspended gypsum ceiling with lighting cove, painted</td><td>m²</td><td class="n">48.0</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>1.02</td><td>Timber veneer wall panelling on battens</td><td>m²</td><td class="n">22.5</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>1.03</td><td>Built-in wardrobe, veneered, glass doors, LED</td><td>m</td><td class="n">4.8</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>1.04</td><td>Stone ledge, polished, with lit recess</td><td>m</td><td class="n">3.6</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>1.05</td><td>Upholstered wall panels, fabric-wrapped</td><td>m²</td><td class="n">9.2</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>1.06</td><td>LED strip in aluminium profile, with driver</td><td>m</td><td class="n">26.0</td><td class="n">—</td><td class="n">—</td></tr>
+        </table>
+        <div class="cap" style="margin-top:1.5mm; color:var(--muted)">Quantities are sample values for format only; rates omitted.</div>
+      </div>
+      <div class="abs lbl lbl--m" style="top:132mm; left:126.7mm">Finish schedule — format</div>
+      <div class="abs" style="top:137mm; left:126.7mm; width:69.3mm">
+        <table class="t">
+          <tr><th style="width:11mm">Code</th><th style="width:9mm"></th><th>Finish</th></tr>
+          <tr><td><b>WD-01</b></td><td><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="100,300,240,160" style="position:relative; width:8mm"></div></td><td>Timber veneer, matt lacquer</td></tr>
+          <tr><td><b>ST-01</b></td><td><div class="crop" data-img="projects/walnut-suite-03.webp" data-r="1000,840,240,160" style="position:relative; width:8mm"></div></td><td>Stone, polished</td></tr>
+          <tr><td><b>UP-01</b></td><td><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="820,300,240,160" style="position:relative; width:8mm"></div></td><td>Upholstery fabric, velvet</td></tr>
+          <tr><td><b>GL-01</b></td><td><i style="display:block; width:8mm; height:5.3mm; background:#6d7072"></i></td><td>Tinted glass, 6 mm</td></tr>
+          <tr><td><b>LT-01</b></td><td><div class="crop" data-img="projects/walnut-suite-05.webp" data-r="560,300,240,160" style="position:relative; width:8mm"></div></td><td>LED linear, warm white</td></tr>
+        </table>
+      </div>
+      <div class="abs lbl lbl--m" style="top:198mm; left:24mm">Coordination matrix — format</div>
+      <div class="abs" style="top:203mm; left:24mm; width:84mm">
+        <table class="t">
+          <tr><th>Trade / package</th><th class="n">Drawings</th><th class="n">Samples</th><th class="n">Site check</th></tr>
+          <tr><td>Carpentry workshop — joinery</td><td class="n">●</td><td class="n">●</td><td class="n">●</td></tr>
+          <tr><td>Steel fabricator — metalwork</td><td class="n">●</td><td class="n">●</td><td class="n">●</td></tr>
+          <tr><td>Stone supplier — marble</td><td class="n">●</td><td class="n">●</td><td class="n">●</td></tr>
+          <tr><td>Glass supplier — doors, partitions</td><td class="n">●</td><td class="n">●</td><td class="n">●</td></tr>
+          <tr><td>Lighting — coves, profiles</td><td class="n">●</td><td class="n">○</td><td class="n">●</td></tr>
+        </table>
+      </div>
+      <div class="abs lbl lbl--m" style="top:198mm; left:112mm">Site inspection — checklist format</div>
+      <div class="abs" style="top:203mm; left:112mm; width:84mm" id="qa2"></div>
+      <div class="folio"><b>37</b><span>Technical capability</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>RD-02 lighting-cove ceiling section (hatches, hangers, LED cove, typical dimensions), RE-01 plan fragment (grid, dimension chains, door swing, room and finish tags), the drawing conventions, and a drawing register that separates representative sheets from project documents still to be supplied.</p>
+    <p><b>Right</b>RE-02 wardrobe sheet in shop-drawing format (elevation, section, codes, notes, title block), a BOQ format with sample quantities and no rates, a finish schedule, a coordination matrix by trade (the trades named in your CV), and a site checklist.</p>
+    <p><b>Honesty</b>Labelled as representative at page level, sheet level and in the register.</p>
+  </div>
+</section>
+
+<!-- ================= 12 · CONTACT + BACK COVER ================= -->
+<section class="board">
+  <div class="board__label"><span><b>Phase 5 · Rich architectural portfolio</b></span><span>12 · Contact + back cover</span></div>
+  <div class="pair">
+    <div><div class="spread"><div class="page verso">
+      <div class="abs lbl" style="top:14mm; left:14mm">Contact</div>
+      <div class="abs display" style="top:24mm; left:11mm; font-size:88pt">Let’s create</div>
+      <div class="abs display it" style="top:55mm; left:43.3mm; font-size:88pt">spaces</div>
+      <div class="abs display" style="top:86mm; left:11mm; font-size:88pt">that last.</div>
+      <div id="thumbs"></div>
+      <div class="block" style="left:-3mm; top:168mm; width:90.3mm; height:132mm"></div>
+      <div class="abs body" style="top:180mm; left:14mm; width:62mm">For private clients, developers, contractors, consultants and design studios — project enquiries, collaborations and professional opportunities.</div>
+      <div class="cad" data-cad="archElevation" data-w="40" data-h="62" data-arg='{"dims":false,"open":0.66}' style="left:22mm; top:208mm"></div>
+      <div class="abs rows" style="top:184mm; left:102mm; width:84mm">
+        <div class="row"><span class="lbl lbl--m">Email</span><span class="serif" style="font-size:14pt">info@alaamasri.com</span></div>
+        <div class="row"><span class="lbl lbl--m">Phone</span><span class="serif" style="font-size:14pt">+966 57 053 3358</span></div>
+        <div class="row"><span class="lbl lbl--m">WhatsApp</span><span class="serif" style="font-size:14pt">+966 57 053 3358</span></div>
+        <div class="row"><span class="lbl lbl--m">Online</span><span class="serif" style="font-size:14pt">alaamasri.com</span></div>
+        <div class="row"><span class="lbl lbl--m">Based in</span><span class="serif" style="font-size:14pt">Riyadh, Saudi Arabia</span></div>
+      </div>
+      <div class="folio"><b>39</b><span>Contact</span></div>
+    </div></div><div class="pair__cap">Contact — last inside page</div></div>
+    <div><div class="spread"><div class="page dark">
+      <div class="crop" data-img="projects/arched-retreat-07.webp" data-r="250,150,600,400" style="left:14mm; top:14mm; width:57.3mm"></div>
+      <div class="crop" data-img="projects/walnut-suite-03.webp" data-r="460,200,600,400" style="left:76.3mm; top:14mm; width:57.3mm"></div>
+      <div class="crop" data-img="projects/illuminated-villa-04.webp" data-r="500,100,600,400" style="left:138.6mm; top:14mm; width:57.3mm"></div>
+      <div class="abs lbl lbl--m" style="top:57mm; left:14mm">Arch · joinery · façade — details from the selected works</div>
+      <div class="crop" data-img="projects/illuminated-villa-02.webp" data-r="250,60,1400,700" style="left:14mm; top:68mm; width:128mm"></div>
+      <div class="abs cap" style="top:134mm; left:14mm; width:128mm"><b>Fig. 02</b>The illuminated villa at dusk</div>
+      <div class="cad" data-cad="archElevation" data-w="46" data-h="84" data-dark="1" data-arg='{"dims":false}' style="left:150mm; top:68mm"></div>
+      <div class="abs display" style="top:196mm; left:12mm; font-size:64pt">Alaa Masri</div>
+      <div class="abs" style="top:222mm; left:14mm; width:14mm; border-top:.5pt solid var(--bronze)"></div>
+      <div class="abs lbl" style="top:227mm; left:14mm">Interior Designer · Interior Architect</div>
+      <div class="abs lbl lbl--m" style="top:233mm; left:14mm">Portfolio 2026–2027</div>
+      <div class="hair" style="left:14mm; right:14mm; top:274mm"></div>
+      <div class="abs lbl lbl--m" style="top:277mm; left:14mm">Riyadh, Saudi Arabia</div>
+      <div class="abs lbl lbl--m" style="top:277mm; left:72.7mm">info@alaamasri.com</div>
+      <div class="abs lbl lbl--m" style="top:277mm; right:14mm">alaamasri.com</div>
+    </div></div><div class="pair__cap">Back cover — outside (dark)</div></div>
+  </div>
+  <div class="board__notes">
+    <p><b>Contact</b>Closing line, a seven-project index strip with page numbers, audience text, the contact register, and a small arch study tying back to the cover.</p>
+    <p><b>Back cover</b>Dark, and no longer empty: three detail crops (arch, joinery, façade) as a closing strip, the name, a bronze rule, an arch study in ivory linework, and the contact row.</p>
+    <p><b>Links</b>Clickable in the screen PDF.</p>
+  </div>
+</section>
+
+<script src="content.js"></script>
+<script src="palette.js"></script>
+<script src="cad.js"></script>
+<script>
+  // ---- page templates (same logic as the approved book) ----
+  var TBC = '<div class="val tbc">To confirm</div>';
+  document.querySelectorAll('[data-meta5]').forEach(function (el) {
+    var x = el.dataset.meta5 === 'recto' ? [24, 82.7, 112, 141.3, 170.7] : [14, 72.7, 102, 131.3, 160.7], top = el.dataset.top;
+    var cells = [['Category', '<div class="val">' + el.dataset.cat + '</div>', 54.7], ['Location', TBC, 25.3], ['Year', TBC, 25.3], ['Role', TBC, 25.3], ['Scope', TBC, 25.3]];
+    el.outerHTML = cells.map(function (c, i) { return '<div class="cell" style="top:' + top + 'mm; left:' + x[i] + 'mm; width:' + c[2] + 'mm"><div class="lbl lbl--m">' + c[0] + '</div>' + c[1] + '</div>'; }).join('');
+  });
+  // cover 2 axes
+  document.getElementById('c2axes').innerHTML = ['1','2','3','4','5','6','7','8'].map(function (n, i) { return '<div class="abs" style="left:' + (i * 25 + 12.5 - 2.4) + 'mm; top:0; width:4.8mm; height:4.8mm; border:.3pt solid var(--ink); border-radius:50%; font:500 6pt/4.6mm Inter; text-align:center; background:var(--paper)">' + n + '</div>'; }).join('');
+  // skyline board strip — crops of the material board, labelled as on the board
+  var BS = [['Wall panelling', 'Walnut, vertical grain', '120,260,160,160'], ['Flooring', 'Dark oak hardwood', '120,660,160,160'], ['Headboard', 'Taupe velvet', '720,230,160,160'], ['Bedding', 'Beige linen', '690,440,120,120'], ['Curtains', 'Gold-beige drapery', '960,450,160,160'], ['Rug', 'Cream shag pile', '700,660,160,160'], ['Bench', 'Dark brown leather', '1240,350,130,130'], ['Accent pillow', 'Woven brown leather', '1590,550,120,120']];
+  document.getElementById('boardstrip').innerHTML = BS.map(function (b, i) {
+    return '<div class="tx" style="left:' + (14 + i * 22) + 'mm; top:213mm; width:20mm"><div class="crop" data-img="projects/skyline-suite-06.webp" data-r="' + b[2] + '" style="width:15mm; height:15mm"></div><span><b>' + b[0] + '</b>' + b[1] + '</span></div>';
+  }).join('');
+  // expertise rows with studies
+  var E = window.EXP;
+  function row(i, y, h, x0, vis) {
+    var e = E[i], xv = x0 + 88;
+    return '<div class="hair" style="left:' + x0 + 'mm; width:172mm; top:' + y + 'mm"></div>' +
+      '<div class="abs num" style="top:' + (y + 2.4) + 'mm; left:' + x0 + 'mm; font-size:12pt">0' + (i + 1) + '</div>' +
+      '<div class="abs serif" style="top:' + (y + 2) + 'mm; left:' + (x0 + 9) + 'mm; width:76mm; font-size:17pt; line-height:1.05">' + e[0] + '</div>' +
+      '<div class="abs cap" style="top:' + (y + 11) + 'mm; left:' + (x0 + 9) + 'mm; width:74mm; font-size:6.8pt">' + e[1] + '</div>' +
+      '<div class="abs cap" style="top:' + (y + 26) + 'mm; left:' + (x0 + 9) + 'mm; width:74mm; color:var(--muted)">' + e[2] + '</div>' +
+      '<div class="abs" style="top:' + (y + 3) + 'mm; left:' + xv + 'mm; width:84mm; height:' + (h - 6) + 'mm">' + vis + '</div>';
+  }
+  var sw = function (img, r, x, y, w) { return '<div class="crop" data-img="' + img + '" data-r="' + r + '" style="left:' + x + 'mm; top:' + y + 'mm; width:' + w + 'mm"></div>'; };
+  var chip = function (k, x, y) { return '<div class="abs" style="left:' + x + 'mm; top:' + y + 'mm; width:12.5mm; height:6mm; background:' + window.PAL[k].hex + '"></div>'; };
+  var tagv = function (t, y) { return '<div class="stag" style="left:0; top:' + y + 'mm">' + t + '</div>'; };
+  var V = [
+    sw('projects/walnut-suite-03.webp', '100,300,240,160', 0, 6, 26) + sw('projects/walnut-suite-05.webp', '820,300,240,160', 29, 6, 26) + sw('projects/walnut-suite-03.webp', '1000,840,240,160', 58, 6, 26) +
+      ['walnut', 'walnutLit', 'velvet', 'marble', 'brass', 'linen'].map(function (k, i) { return chip(k, i * 14.3, 26); }).join('') + tagv('Concept & material study', 35),
+    '<div class="cad" style="left:0; top:0">' + CAD.ceilingDetail(60, 36, .42) + '</div><div class="abs cap" style="left:60mm; top:4mm; width:24mm">Bulkhead, cove and wall junction</div>' + tagv('Representative section', 37),
+    '<div class="cad" style="left:6mm; top:0">' + CAD.shelfDetail(40, 38, .42) + '</div><div class="cad" style="left:40mm; top:0">' + CAD.archElevation(22, 34, { dims: false }) + '</div><div class="abs cap" style="left:62mm; top:4mm; width:22mm">Lit shelf section · opening elevation</div>' + tagv('Representative detail', 37),
+    '<table class="t"><tr><th>Ref</th><th>Item</th><th>Unit</th><th class="n">Qty</th></tr><tr><td>1.01</td><td>Gypsum ceiling with cove</td><td>m²</td><td class="n">48.0</td></tr><tr><td>1.02</td><td>Veneer wall panelling</td><td>m²</td><td class="n">22.5</td></tr><tr><td>1.03</td><td>Built-in wardrobe</td><td>m</td><td class="n">4.8</td></tr></table>' + tagv('BOQ format · sample values', 35)
+  ];
+  var V2 = [
+    '<div class="cad" style="left:0; top:0">' + CAD.coordination(84, 44, ['Clients', 'Consultants', 'Contractors', 'Suppliers', 'Workshops', 'Factories', 'Site teams']) + '</div>' + tagv('Coordination — from the profile', 46),
+    ['Material samples reviewed against specification', 'Shop drawings coordinated for execution', 'Site inspection — quality standards', 'Technical and design issues resolved', 'Detail managed through to handover'].map(function (c) { return '<div class="check"><i></i><span>' + c + '</span></div>'; }).join('') + tagv('Representative checklist format', 46),
+    sw('projects/arched-retreat-01.webp', '100,0,1600,1005', 0, 8, 26) + '<div class="abs cap" style="left:0; top:26mm">Overall</div>' +
+      sw('projects/arched-retreat-01.webp', '560,0,700,440', 29, 8, 26) + '<div class="abs cap" style="left:29mm; top:26mm">Space</div>' +
+      sw('projects/arched-retreat-01.webp', '420,640,320,201', 58, 8, 26) + '<div class="abs cap" style="left:58mm; top:26mm">Detail</div>' + tagv('From render to detail — Fig. 01, An arched retreat', 46)
+  ];
+  document.getElementById('exp1').innerHTML = [0, 1, 2, 3].map(function (i) { return row(i, 84 + i * 48, 48, 14, V[i]); }).join('');
+  document.getElementById('exp2').innerHTML = [4, 5, 6].map(function (i, k) { return row(i, 18 + k * 64, 64, 24, V2[k]); }).join('');
+  document.getElementById('qa2').innerHTML = ['Setting-out checked against drawings', 'Joinery samples approved before production', 'Stone slabs viewed and matched', 'Lighting positions checked before closing ceilings', 'Finishes inspected — snag list issued', 'Handover documents complete'].map(function (c) { return '<div class="check"><i></i><span>' + c + '</span></div>'; }).join('') + '<div class="cap" style="margin-top:1.5mm; color:var(--muted)">Representative format — not a record of a specific project.</div>';
+  // contact thumbnails
+  var TH = [['01', 'arched-retreat-01', 9], ['02', 'skyline-suite-01', 15], ['03', 'walnut-suite-01', 19], ['04', 'illuminated-villa-02', 23], ['05', 'garden-lounge-01', 27], ['06', 'burgundy-salon-01', 30], ['07', 'earth-toned-majlis-01', 32]];
+  document.getElementById('thumbs').innerHTML = TH.map(function (t, i) {
+    return '<div class="fig fig--native" style="left:' + (14 + i * 24.66) + 'mm; top:132mm; width:22.66mm"><img src="../../projects/' + t[1] + '.webp" alt=""></div><div class="abs cap" style="left:' + (14 + i * 24.66) + 'mm; top:146mm; width:22.66mm"><b>' + t[0] + '</b>p. ' + (t[2] < 10 ? '0' : '') + t[2] + '</div>';
+  }).join('');
+  // annotation overlay on Fig. 03 (verso of board 08): px → mm on a 172 mm wide placement
+  (function () {
+    var k = 172 / 1800, P = CAD, s = '';
+    [[600, 245, 540, 150, '1'], [230, 520, 150, 620, '2'], [620, 560, 690, 700, '3'], [920, 360, 980, 290, '4'], [1150, 910, 1250, 820, '5'], [1000, 95, 1080, 40, '6']].forEach(function (t) { s += P.tag(t[0] * k, t[1] * k, t[2] * k, t[3] * k, t[4]); });
+    document.getElementById('annot').innerHTML = P.svg(172, 96, s);
+  })();
+</script>
+<script src="rich.js"></script>
+</body>
+</html>
