@@ -1,0 +1,311 @@
+{
+  "pages": 40,
+  "sideProblems": [],
+  "text": [],
+  "images": [
+    {
+      "page": 1,
+      "file": "arched-retreat-07.jpg",
+      "px": "1800×1005",
+      "printedMm": "47×104",
+      "ppi": 245,
+      "cropped": true
+    },
+    {
+      "page": 4,
+      "file": "portrait.png",
+      "px": "1254×1254",
+      "printedMm": "109×109",
+      "ppi": 292,
+      "cropped": false
+    },
+    {
+      "page": 7,
+      "file": "selection-12-1600.jpg",
+      "px": "1600×1600",
+      "printedMm": "84×84",
+      "ppi": 484,
+      "cropped": true
+    },
+    {
+      "page": 9,
+      "file": "arched-retreat-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "160×89",
+      "ppi": 286,
+      "cropped": true
+    },
+    {
+      "page": 10,
+      "file": "arched-retreat-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 11,
+      "file": "arched-retreat-04.jpg",
+      "px": "1800×1005",
+      "printedMm": "189×106",
+      "ppi": 242,
+      "cropped": true
+    },
+    {
+      "page": 11,
+      "file": "arched-retreat-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "113×63",
+      "ppi": 404,
+      "cropped": true
+    },
+    {
+      "page": 12,
+      "file": "arched-retreat-05.jpg",
+      "px": "1800×1005",
+      "printedMm": "190×106",
+      "ppi": 241,
+      "cropped": true
+    },
+    {
+      "page": 13,
+      "file": "arched-retreat-06.jpg",
+      "px": "1800×1005",
+      "printedMm": "147×82",
+      "ppi": 311,
+      "cropped": true
+    },
+    {
+      "page": 14,
+      "file": "arched-retreat-07.jpg",
+      "px": "1800×1005",
+      "printedMm": "172×96",
+      "ppi": 266,
+      "cropped": true
+    },
+    {
+      "page": 15,
+      "file": "skyline-suite-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "189×106",
+      "ppi": 242,
+      "cropped": true
+    },
+    {
+      "page": 16,
+      "file": "skyline-suite-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 17,
+      "file": "skyline-suite-04.jpg",
+      "px": "1800×1005",
+      "printedMm": "189×106",
+      "ppi": 242,
+      "cropped": true
+    },
+    {
+      "page": 17,
+      "file": "skyline-suite-05.jpg",
+      "px": "1800×1005",
+      "printedMm": "99×55",
+      "ppi": 463,
+      "cropped": true
+    },
+    {
+      "page": 18,
+      "file": "skyline-suite-06.jpg",
+      "px": "1800×1005",
+      "printedMm": "172×96",
+      "ppi": 266,
+      "cropped": true
+    },
+    {
+      "page": 19,
+      "file": "walnut-suite-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "160×89",
+      "ppi": 286,
+      "cropped": true
+    },
+    {
+      "page": 20,
+      "file": "walnut-suite-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 21,
+      "file": "walnut-suite-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "189×106",
+      "ppi": 242,
+      "cropped": true
+    },
+    {
+      "page": 21,
+      "file": "walnut-suite-04.jpg",
+      "px": "1344×768",
+      "printedMm": "84×48",
+      "ppi": 406,
+      "cropped": true
+    },
+    {
+      "page": 22,
+      "file": "walnut-suite-05.jpg",
+      "px": "1800×1005",
+      "printedMm": "110×110",
+      "ppi": 232,
+      "cropped": true
+    },
+    {
+      "page": 23,
+      "file": "illuminated-villa-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "189×106",
+      "ppi": 242,
+      "cropped": true
+    },
+    {
+      "page": 24,
+      "file": "illuminated-villa-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "190×106",
+      "ppi": 241,
+      "cropped": true
+    },
+    {
+      "page": 25,
+      "file": "illuminated-villa-05.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 25,
+      "file": "illuminated-villa-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "84×47",
+      "ppi": 544,
+      "cropped": true
+    },
+    {
+      "page": 26,
+      "file": "illuminated-villa-04.jpg",
+      "px": "1800×1005",
+      "printedMm": "172×96",
+      "ppi": 266,
+      "cropped": true
+    },
+    {
+      "page": 27,
+      "file": "garden-lounge-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "160×89",
+      "ppi": 286,
+      "cropped": true
+    },
+    {
+      "page": 28,
+      "file": "garden-lounge-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "190×106",
+      "ppi": 241,
+      "cropped": true
+    },
+    {
+      "page": 29,
+      "file": "garden-lounge-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "145×81",
+      "ppi": 315,
+      "cropped": true
+    },
+    {
+      "page": 29,
+      "file": "garden-lounge-05.jpg",
+      "px": "1800×1005",
+      "printedMm": "55×31",
+      "ppi": 836,
+      "cropped": true
+    },
+    {
+      "page": 30,
+      "file": "burgundy-salon-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "190×106",
+      "ppi": 241,
+      "cropped": true
+    },
+    {
+      "page": 31,
+      "file": "burgundy-salon-02.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 31,
+      "file": "burgundy-salon-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "69×39",
+      "ppi": 660,
+      "cropped": true
+    },
+    {
+      "page": 32,
+      "file": "earth-toned-majlis-01.jpg",
+      "px": "1800×1005",
+      "printedMm": "190×106",
+      "ppi": 241,
+      "cropped": true
+    },
+    {
+      "page": 33,
+      "file": "earth-toned-majlis-02.jpg",
+      "px": "1344×756",
+      "printedMm": "69×39",
+      "ppi": 493,
+      "cropped": true
+    },
+    {
+      "page": 33,
+      "file": "earth-toned-majlis-03.jpg",
+      "px": "1800×1005",
+      "printedMm": "128×71",
+      "ppi": 357,
+      "cropped": true
+    },
+    {
+      "page": 34,
+      "file": "fireside-lounge-1600.jpg",
+      "px": "1600×1195",
+      "printedMm": "170×127",
+      "ppi": 239,
+      "cropped": true
+    },
+    {
+      "page": 35,
+      "file": "selection-06-1600.jpg",
+      "px": "1600×1195",
+      "printedMm": "128×96",
+      "ppi": 318,
+      "cropped": true
+    },
+    {
+      "page": 35,
+      "file": "selection-10-1600.jpg",
+      "px": "1195×1600",
+      "printedMm": "60×80",
+      "ppi": 506,
+      "cropped": true
+    }
+  ]
+}
