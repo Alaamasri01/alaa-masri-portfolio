@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Concept B — Dark Cinematic</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  :root {
+    --paper: #151612; --paper-2: #20231b; --ink: #ece7dc; --ink-2: #b8b4a9; --muted: #85837a; --rule: #3b3d35; --bronze: #c2a37d;
+    --mt: 16mm; --mb: 18mm; --mi: 20mm; --mo: 14mm; --col: 25.17mm; --gut: 5mm;
+  }
+  body { background: #bdb8b0; }
+  .lbl { font: 500 6pt/1.3 "Inter"; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
+  .lbl--b { color: var(--bronze); }
+  .lbl--m { color: var(--muted); }
+  .val { font: 400 8pt/1.45 "Inter"; color: var(--ink); }
+  .body { font: 300 8.75pt/13.8pt "Inter"; color: var(--ink-2); }
+  .body p + p { margin-top: 3.4mm; }
+  .cap { font: 400 6.5pt/1.45 "Inter"; color: var(--ink-2); }
+  .cap b { font-weight: 500; color: var(--bronze); letter-spacing: .1em; margin-right: 1.8mm; }
+  .hair { position: absolute; height: 0; border-top: .35pt solid var(--rule); }
+  .folio { position: absolute; bottom: 9mm; display: flex; gap: 5mm; font: 500 6pt "Inter"; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .folio b { font-weight: 500; color: var(--bronze); }
+  .verso .folio { left: 14mm; } .recto .folio { right: 14mm; flex-direction: row-reverse; }
+  .cell { position: absolute; border-top: .35pt solid var(--rule); padding-top: 2.2mm; }
+  .cell .lbl { margin-bottom: 1.5mm; }
+  .row { display: grid; grid-template-columns: 22mm 1fr; border-top: .35pt solid var(--rule); padding: 1.9mm 0 2.1mm; }
+  .band { position: absolute; left: 0; width: 210mm; height: 117.25mm; overflow: hidden; }
+  .band img { width: 100%; height: 100%; object-fit: cover; }
+  .band::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 .01mm rgba(0,0,0,0); }
+  .panel { --sheet: rgba(236, 231, 220, .025); }
+</style>
+</head>
+<body>
+
+<!-- ============ SYSTEM ============ -->
+<section class="board board--system">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>00 · Design system</span></div>
+  <div class="system">
+    <div>
+      <section>
+        <h3>Concept</h3>
+        <p>The website, translated into print. Pages are a deep olive-black, and the renders run edge to edge as wide cinematic bands, so the light in each image becomes the main event. Typography is oversized, warm ivory, with bronze kept for numerals and captions. Each band keeps its native 16 : 9 proportion; the dark page frames it like a screen. Luxurious through restraint: no gradients, no gold foil, no ornament.</p>
+      </section>
+      <section>
+        <h3>Grid &amp; margins</h3>
+        <div style="display:flex; gap:6mm; align-items:flex-start">
+          <div class="mini"><div class="page recto" style="--paper:#151612"><div class="grid-overlay"></div>
+            <div class="band" style="top:0; background:rgba(194,163,125,.18)"></div>
+            <div class="abs lbl" style="top:122mm; left:20mm">Band · 210 × 117 mm, full bleed</div>
+            <div class="abs lbl" style="bottom:6mm; left:20mm">Bottom 18 · folio at 9</div></div></div>
+          <ul style="flex:1">
+            <li><span>Trim</span><span>A4 · 210 × 297 mm, 3 mm bleed</span></li>
+            <li><span>Margins</span><span>Top 16 · bottom 18 · inner 20 · outer 14</span></li>
+            <li><span>Columns</span><span>6 × 25.2 mm, 5 mm gutter</span></li>
+            <li><span>Bands</span><span>Full-bleed 210 × 117 mm at top, middle (90 mm) or foot</span></li>
+            <li><span>Safe zone</span><span>No text within 9 mm of trim</span></li>
+            <li><span>A3 landscape</span><span>Band becomes 420 mm wide — needs originals</span></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h3>Typography · Instrument Serif + Inter</h3>
+        <div class="spec"><small>Cover name · 128 pt</small><span class="serif" style="font-size:40pt; line-height:1">Alaa Masri</span></div>
+        <div class="spec"><small>Project numeral · 110 pt bronze</small><span class="serif" style="font-size:34pt; line-height:1; color:#9c7f5b">01</span></div>
+        <div class="spec"><small>Project title · 68 pt</small><span class="serif" style="font-size:28pt; line-height:1">An arched retreat</span></div>
+        <div class="spec"><small>Section title · 46 pt</small><span class="serif" style="font-size:22pt; line-height:1">Every space. <em>Every detail.</em></span></div>
+        <div class="spec"><small>Body · Inter 300, 8.75 / 13.8 pt</small><span style="font:300 8.75pt/13.8pt Inter; color:#4a4944">Light weight reversed out of dark — set slightly larger and looser.</span></div>
+        <div class="spec"><small>Label · Inter 500, 6 pt caps +18%</small><span style="font:500 6pt Inter; letter-spacing:.18em; text-transform:uppercase; color:#4a4944">Location · To confirm</span></div>
+      </section>
+      <section>
+        <h3>Colour · approximate CMYK, proofed in Phase 7</h3>
+        <div class="swatches">
+          <div class="sw"><i style="background:#151612"></i><div><b>Olive black</b>#151612 · rich black C60 M45 Y60 K95<br>Page ground</div></div>
+          <div class="sw"><i style="background:#20231b"></i><div><b>Deep olive</b>#20231B · C65 M50 Y70 K75<br>Panels, technical pages</div></div>
+          <div class="sw"><i style="background:#ece7dc"></i><div><b>Ivory</b>#ECE7DC · paper white, knocked out<br>Titles &amp; text</div></div>
+          <div class="sw"><i style="background:#c2a37d"></i><div><b>Bronze</b>#C2A37D · C20 M35 Y55 K5<br>Numerals, captions, one rule</div></div>
+          <div class="sw"><i style="background:#b8b4a9"></i><div><b>Ivory 2</b>#B8B4A9 · C25 M20 Y30 K5<br>Body text</div></div>
+          <div class="sw"><i style="background:#3b3d35"></i><div><b>Rule</b>#3B3D35 · C60 M45 Y60 K70<br>Hairlines ≥ 0.35 pt</div></div>
+        </div>
+      </section>
+      <section>
+        <h3>Image treatment &amp; print notes</h3>
+        <ul>
+          <li><span>Scale</span><span>Full-bleed bands at 210 mm ≈ 218 ppi (acceptable for renders; 300 ppi with originals).</span></li>
+          <li><span>Crops</span><span>None — the band is the image’s own 16 : 9 frame.</span></li>
+          <li><span>Print</span><span>Heavy ink coverage: needs coated silk stock and a matt laminate on the cover. Text reversed out never below 7 pt.</span></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A. COVER ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>A · Front cover — one strong render</span></div>
+  <div class="spread">
+    <div class="page recto">
+      <div class="abs lbl" style="top:14mm; left:14mm">Portfolio 2026–2027</div>
+      <div class="abs lbl lbl--m" style="top:14mm; right:14mm">Riyadh, Saudi Arabia</div>
+      <div class="abs serif" style="top:44mm; left:11mm; font-size:128pt; line-height:.9; letter-spacing:-.018em; white-space:nowrap">Alaa Masri</div>
+      <div class="band" style="top:112mm"><img src="../../projects/skyline-suite-01.webp" alt=""></div>
+      <div class="abs lbl lbl--b" style="top:240mm; left:14mm; font-size:7pt">Interior Designer</div>
+      <div class="abs lbl lbl--b" style="top:240mm; left:74.3mm; font-size:7pt">Interior Architect</div>
+      <div class="hair" style="top:274mm; left:14mm; right:14mm"></div>
+      <div class="abs lbl lbl--m" style="top:278mm; left:14mm">The skyline suite</div>
+      <div class="abs lbl lbl--m" style="top:278mm; right:14mm">alaamasri.com</div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Idea</b>One render, full bleed, as a cinematic band. The name sits above it at display scale, like a film title.</p>
+    <p><b>Image</b>skyline-suite-01 (the website hero) — 210 mm ≈ 218 ppi, uncropped. Alternatives: illuminated-villa-02, arched-retreat-01.</p>
+    <p><b>Finish</b>Matt laminate so the black stays deep and fingerprints don’t show.</p>
+  </div>
+</section>
+
+<!-- ============ B. INTRODUCTION / PROFILE ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>B · Introduction / Profile — spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl lbl--b" style="top:16mm; left:14mm">Introduction</div>
+      <div class="abs serif" style="top:30mm; left:13mm; font-size:50pt; line-height:.98; letter-spacing:-.01em">Design.<br>Technical development.<br><span class="it" style="color:var(--bronze)">Execution.</span></div>
+      <div class="abs body" style="top:96mm; left:14mm; width:85mm">Interior design and interior architecture — from the first concept to the final handover.</div>
+      <div class="abs" style="top:142mm; left:0; width:210mm; height:155mm; background:var(--paper-2)"></div>
+      <img class="abs" src="../../portrait.png" alt="" style="bottom:0; right:0; width:122mm; height:122mm">
+      <div class="abs" style="top:158mm; left:14mm; width:62mm">
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Based in</span><span class="val">Riyadh, Saudi Arabia</span></div>
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Email</span><span class="val">info@alaamasri.com</span></div>
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Phone / WhatsApp</span><span class="val">+966 57 053 3358</span></div>
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl lbl--m">Online</span><span class="val">alaamasri.com</span></div>
+      </div>
+      <div class="folio"><b>02</b><span>Introduction</span></div>
+    </div>
+    <div class="page recto">
+      <div class="abs lbl lbl--b" style="top:16mm; left:20mm">Profile</div>
+      <div class="abs serif" style="top:30mm; left:19mm; width:170mm; font-size:36pt; line-height:1.02">Imagination. <span class="it" style="color:var(--ink-2)">With the knowledge to make it real.</span></div>
+      <div class="abs body" style="top:80mm; left:20mm; width:85.5mm">
+        <p>I’m Alaa Masri, a Lebanese interior designer and interior architect based in Riyadh. Over 15 years of practice across the Gulf and Lebanon have shaped my approach to space.</p>
+        <p>I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</p>
+      </div>
+      <div class="abs body" style="top:80mm; left:110.5mm; width:85.5mm">
+        <p>My work spans luxury residential, hospitality, commercial and retail interiors — coordinating clients, consultants, contractors, workshops, factories and site teams so that the design holds from drawing to site.</p>
+      </div>
+      <div class="hair" style="top:150mm; left:20mm; right:14mm"></div>
+      <div class="abs serif" style="top:156mm; left:18.5mm; font-size:96pt; line-height:.9; color:var(--bronze)">15+</div>
+      <div class="abs lbl" style="top:192mm; left:20mm">Years of practice</div>
+      <div class="abs" style="top:158mm; left:110.5mm; width:85.5mm">
+        <div class="lbl lbl--m" style="margin-bottom:2mm">Practice across</div>
+        <div class="serif" style="font-size:19pt; line-height:1.18">Saudi Arabia<br>Qatar<br>United Arab Emirates<br>Lebanon</div>
+      </div>
+      <div class="cell" style="top:222mm; left:20mm; width:55.3mm"><div class="lbl lbl--m">Education</div><div class="val">BT — Interior Decoration / Interior Design, Lebanon · additional TS studies in Interior Design</div></div>
+      <div class="cell" style="top:222mm; left:80.3mm; width:55.3mm"><div class="lbl lbl--m">Languages</div><div class="val">Arabic — native<br>English — professional working proficiency</div></div>
+      <div class="cell" style="top:222mm; left:140.6mm; width:55.3mm"><div class="lbl lbl--m">Design toolkit</div><div class="val">AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator · Figma</div></div>
+      <div class="folio"><b>03</b><span>Profile</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>The website’s three-word line as the opening statement. Portrait cut-out rises out of an olive panel (1254 px at 122 mm ≈ 260 ppi).</p>
+    <p><b>Right</b>First-person profile verbatim; “15+” as the single bronze numeral on the spread.</p>
+    <p><b>Contrast</b>Body text in Inter Light at 8.75 pt — reversed type needs air, not weight.</p>
+  </div>
+</section>
+
+<!-- ============ C. PROJECT OPENER ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>C · Project opening page (right-hand)</span></div>
+  <div class="spread">
+    <div class="page recto">
+      <div class="band" style="top:0"><img src="../../projects/arched-retreat-01.webp" alt=""></div>
+      <div class="abs serif" style="top:134mm; left:18mm; font-size:110pt; line-height:.85; color:var(--bronze)">01</div>
+      <div class="abs lbl lbl--m" style="top:128mm; left:80.3mm">Selected works — 01 / 07</div>
+      <div class="abs serif" style="top:136mm; left:79mm; font-size:68pt; line-height:.88; letter-spacing:-.012em">An arched<br>retreat</div>
+      <div class="abs serif it" style="top:196mm; left:80.3mm; width:115mm; font-size:14pt; line-height:1.25; color:var(--ink-2)">A hospitality design study connecting vaulted interiors, dining spaces, guest accommodation and quiet leisure areas.</div>
+      <div class="cell" style="top:240mm; left:20mm; width:55.3mm"><div class="lbl lbl--m">Category</div><div class="val">Hospitality — Design study</div></div>
+      <div class="cell" style="top:240mm; left:80.3mm; width:25.2mm"><div class="lbl lbl--m">Location</div><div class="val tbc0">To confirm</div></div>
+      <div class="cell" style="top:240mm; left:110.5mm; width:25.2mm"><div class="lbl lbl--m">Year</div><div class="val tbc0">To confirm</div></div>
+      <div class="cell" style="top:240mm; left:140.6mm; width:25.2mm"><div class="lbl lbl--m">Role</div><div class="val tbc0">To confirm</div></div>
+      <div class="cell" style="top:240mm; left:170.8mm; width:25.2mm"><div class="lbl lbl--m">Scope</div><div class="val tbc0">To confirm</div></div>
+      <div class="abs cap" style="top:121mm; left:20mm"><b>01</b>Arched reception hall</div>
+      <div class="folio"><b>08</b><span>An arched retreat</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Idea</b>A chapter opening like a film title card: image band at the head, a large bronze numeral, the title set big beside it.</p>
+    <p><b>Placeholders</b>Project facts sit in a single quiet row at the foot — “To confirm” in muted grey.</p>
+    <p><b>Image</b>arched-retreat-01, bleeding off top and sides (≈ 218 ppi).</p>
+  </div>
+</section>
+
+<!-- ============ D. FULL IMAGE SPREAD ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>D · Full image spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl lbl--m" style="top:16mm; left:14mm">01 — An arched retreat</div>
+      <div class="band" style="top:90mm"><img src="../../projects/arched-retreat-05.webp" alt=""></div>
+      <div class="abs cap" style="top:212mm; left:14mm; width:90mm"><b>05</b>Indoor pool framed by illuminated arched niches and stone columns.</div>
+      <div class="folio"><b>12</b><span>An arched retreat</span></div>
+    </div>
+    <div class="page recto">
+      <div class="abs lbl lbl--m" style="top:16mm; right:14mm">Leisure</div>
+      <div class="band" style="top:90mm"><img src="../../projects/arched-retreat-06.webp" alt=""></div>
+      <div class="abs cap" style="top:212mm; left:106mm; width:90mm; text-align:right"><b>06</b>Rooftop lounge beneath an arched loggia, overlooking the city at sunset.</div>
+      <div class="folio"><b>13</b><span>An arched retreat</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Idea</b>Two full-bleed bands on the same horizon read as one continuous cinema strip across the spine — indoor light on the left, dusk on the right.</p>
+    <p><b>Resolution</b>Each band is one image at 210 mm (≈ 218 ppi). Nothing is stretched across the gutter.</p>
+    <p><b>Silence</b>The black above and below is the frame; captions are the only text.</p>
+  </div>
+</section>
+
+<!-- ============ E. MIXED PROJECT SPREAD ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>E · Mixed image + text project spread</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="band" style="top:0"><img src="../../projects/walnut-suite-01.webp" alt=""></div>
+      <div class="abs cap" style="top:121mm; left:14mm"><b>01</b>Symmetrical bedroom with an upholstered burgundy headboard wall and walnut panelling.</div>
+      <div class="abs lbl lbl--b" style="top:138mm; left:14mm">03 — Residential / Bedroom</div>
+      <div class="abs serif" style="top:144mm; left:12.5mm; font-size:56pt; line-height:.92; letter-spacing:-.01em">The walnut<br><span class="it">suite</span></div>
+      <div class="abs serif" style="top:148mm; left:104.3mm; width:85mm; font-size:13.5pt; line-height:1.28; color:var(--ink-2)">Rich walnut, burgundy accents and integrated lighting connect the bedroom and its bespoke joinery.</div>
+      <div class="abs" style="top:204mm; left:14mm; width:85.5mm">
+        <div class="row"><span class="lbl lbl--m">Location</span><span class="val tbc0">To confirm</span></div>
+        <div class="row"><span class="lbl lbl--m">Year</span><span class="val tbc0">To confirm</span></div>
+        <div class="row"><span class="lbl lbl--m">Status</span><span class="val tbc0">To confirm</span></div>
+        <div class="row"><span class="lbl lbl--m">Role</span><span class="val tbc0">To confirm</span></div>
+        <div class="row" style="border-bottom:.35pt solid var(--rule)"><span class="lbl lbl--m">Scope</span><span class="val tbc0">To confirm</span></div>
+      </div>
+      <div class="cell" style="top:204mm; left:104.3mm; width:85.5mm"><div class="lbl lbl--m">Design intent</div><div class="body tbc">Two or three sentences in Alaa’s words</div></div>
+      <div class="folio"><b>20</b><span>The walnut suite</span></div>
+    </div>
+    <div class="page recto">
+      <div class="fig fig--native" style="top:16mm; left:20mm; width:85.5mm"><img src="../../projects/walnut-suite-05.webp" alt=""></div>
+      <div class="fig" style="top:16mm; left:110.5mm; width:85.5mm; height:47.7mm"><img src="../../projects/walnut-suite-04.webp" alt=""></div>
+      <div class="abs cap" style="top:66mm; left:20mm; width:80mm"><b>05</b>Burgundy velvet meets walnut and a lit reveal.</div>
+      <div class="abs cap" style="top:66mm; left:110.5mm; width:80mm"><b>04</b>Bedside detail with a marble side table and upholstered panels.</div>
+      <div class="abs serif it" style="top:104mm; left:20mm; width:150mm; font-size:24pt; line-height:1.12; color:var(--ink)">Walnut panelling, burgundy velvet, marble and concealed linear light.</div>
+      <div class="abs lbl lbl--m" style="top:97mm; left:20mm">Materials shown</div>
+      <div class="abs cap" style="top:171mm; left:20mm"><b>03</b>Detail of the walnut joinery, integrated shelving and concealed linear lighting.</div>
+      <div class="band" style="top:179.75mm"><img src="../../projects/walnut-suite-03.webp" alt=""></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Left</b>Band at the head, title and facts below. Missing data is one compact muted table.</p>
+    <p><b>Right</b>Two details at 85 mm (≈ 400 ppi), a material line in serif italic, and the joinery band running off the foot of the page.</p>
+    <p><b>Rhythm</b>Head band → text → foot band: the spread reads top-left to bottom-right.</p>
+  </div>
+</section>
+
+<!-- ============ F. EXPERTISE / TECHNICAL ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>F · Expertise / Technical capability</span></div>
+  <div class="spread spread--two">
+    <div class="page verso">
+      <div class="abs lbl lbl--b" style="top:16mm; left:14mm">Expertise</div>
+      <div class="abs serif" style="top:28mm; left:13mm; font-size:48pt; line-height:.95">Every space.<br><span class="it" style="color:var(--bronze)">Every detail.</span></div>
+      <div class="abs body" style="top:72mm; left:104.3mm; width:85.5mm">From the first sketch to the final handover — design authorship backed by the technical and site knowledge to deliver it.</div>
+      <div class="abs" style="top:100mm; left:14mm; width:176mm; display:grid; grid-template-columns:1fr 1fr; column-gap:5mm" id="exp-b"></div>
+      <div class="folio"><b>06</b><span>Expertise</span></div>
+    </div>
+    <div class="page recto panel" style="--paper:#20231b">
+      <div class="abs lbl lbl--b" style="top:16mm; left:20mm">Technical capability</div>
+      <div class="abs serif" style="top:28mm; left:19mm; font-size:48pt; line-height:.95">Drawn to be<br><span class="it">built.</span></div>
+      <div class="abs body" style="top:72mm; left:110.5mm; width:85.5mm">Managing interior projects end to end — concept and design development, technical drawings, material selection, BOQ preparation, pricing, supplier and contractor coordination, and final execution on site.</div>
+      <div class="sheet" style="top:112mm; left:20mm; width:176mm; height:62mm"><div class="sheet__label"><span>01 Plans</span><span>Layout · reflected ceiling</span></div><div class="sheet__note">Reserved — drawing to be supplied</div></div>
+      <div class="sheet" style="top:180mm; left:20mm; width:85.5mm; height:38mm"><div class="sheet__label"><span>02 Elevations</span><span>Sections</span></div><div class="sheet__note">Reserved</div></div>
+      <div class="sheet" style="top:180mm; left:110.5mm; width:85.5mm; height:38mm"><div class="sheet__label"><span>03 Shop drawings</span></div><div class="sheet__note">Reserved</div></div>
+      <div class="sheet" style="top:224mm; left:20mm; width:85.5mm; height:38mm"><div class="sheet__label"><span>04 Joinery details</span></div><div class="sheet__note">Reserved</div></div>
+      <div class="sheet" style="top:224mm; left:110.5mm; width:85.5mm; height:38mm"><div class="sheet__label"><span>05 BOQ</span><span>Material schedule</span></div><div class="sheet__note">Reserved — may be anonymised</div></div>
+      <div class="sheet" style="top:268mm; left:20mm; width:176mm; height:12mm"><div class="sheet__label" style="top:3.6mm"><span>06 Execution &amp; site documentation</span><span style="color:var(--muted)">Reserved — site photographs</span></div></div>
+      <div class="folio" style="bottom:6mm"><b>35</b><span>Technical capability</span></div>
+    </div>
+  </div>
+  <div class="board__notes">
+    <p><b>Expertise</b>Seven disciplines in two columns, each with a bronze numeral — the website section, printed.</p>
+    <p><b>Technical</b>The facing page shifts to deep olive: a “drawing room” inside the book. One large sheet for plans, four medium, one strip for site documentation.</p>
+    <p><b>Honesty</b>Frames stay empty until real drawings arrive.</p>
+  </div>
+</section>
+
+<!-- ============ G. CONTACT / BACK COVER ============ -->
+<section class="board">
+  <div class="board__label"><span><b>Concept B</b> — Dark Cinematic</span><span>G · Contact page + back cover</span></div>
+  <div class="pair">
+    <div><div class="spread"><div class="page verso">
+      <div class="abs lbl lbl--b" style="top:16mm; left:14mm">Contact</div>
+      <div class="abs serif" style="top:40mm; left:12.5mm; width:180mm; font-size:66pt; line-height:.92; letter-spacing:-.012em">Let’s create<br>spaces <span class="it" style="color:var(--bronze)">that last.</span></div>
+      <div class="abs body" style="top:112mm; left:14mm; width:85.5mm">For private clients, developers, contractors, consultants and design studios — project enquiries, collaborations and professional opportunities.</div>
+      <div class="band" style="top:140mm; height:62mm"><img src="../../projects/garden-lounge-03.webp" alt="" style="object-position:50% 62%"></div>
+      <div class="abs" style="top:214mm; left:14mm; width:176mm">
+        <div class="row" style="grid-template-columns:42mm 1fr"><span class="lbl lbl--m">Email</span><span class="serif" style="font-size:17pt">info@alaamasri.com</span></div>
+        <div class="row" style="grid-template-columns:42mm 1fr"><span class="lbl lbl--m">Phone / WhatsApp</span><span class="serif" style="font-size:17pt">+966 57 053 3358</span></div>
+        <div class="row" style="grid-template-columns:42mm 1fr"><span class="lbl lbl--m">Online</span><span class="serif" style="font-size:17pt">alaamasri.com</span></div>
+        <div class="row" style="grid-template-columns:42mm 1fr; border-bottom:.35pt solid var(--rule)"><span class="lbl lbl--m">Based in</span><span class="serif" style="font-size:17pt">Riyadh, Saudi Arabia</span></div>
+      </div>
+      <div class="folio"><b>39</b><span>Contact</span></div>
+    </div></div><div class="pair__cap">Contact — last inside page</div></div>
+    <div><div class="spread"><div class="page" style="--paper:#20231b">
+      <div class="abs" style="top:128mm; left:0; right:0; text-align:center">
+        <div class="serif" style="font-size:30pt; line-height:1">Alaa Masri</div>
+        <div class="lbl lbl--b" style="margin-top:3.5mm">Interior Designer · Interior Architect</div>
+      </div>
+      <div class="hair" style="top:274mm; left:14mm; right:14mm"></div>
+      <div class="abs lbl lbl--m" style="top:278mm; left:14mm">Riyadh, Saudi Arabia</div>
+      <div class="abs lbl lbl--m" style="top:278mm; right:14mm">alaamasri.com</div>
+    </div></div><div class="pair__cap">Back cover — outside</div></div>
+  </div>
+  <div class="board__notes">
+    <p><b>Contact</b>Closing line at display scale; a shallow crop of the fireplace wall (garden-lounge-03 — 62 mm tall slice, no enlargement) as a last warm note.</p>
+    <p><b>Back cover</b>Deep olive, centred name, one rule. Matt laminate.</p>
+    <p><b>Links</b>Clickable in the screen PDF.</p>
+  </div>
+</section>
+
+<script src="content.js"></script>
+<script>
+  document.getElementById('exp-b').innerHTML = window.EXP.map(function (e, i) {
+    return '<div style="border-top:.35pt solid var(--rule); padding-top:2.4mm; height:44mm">' +
+      '<div style="display:flex; gap:3mm; align-items:baseline"><span class="serif" style="font-size:20pt; color:var(--bronze); line-height:1">0' + (i + 1) + '</span>' +
+      '<span class="serif" style="font-size:15pt; line-height:1.05">' + e[0] + '</span></div>' +
+      '<div class="cap" style="margin-top:2.2mm; font-size:6.8pt">' + e[1] + '</div>' +
+      '<div class="cap" style="margin-top:1.6mm; color:var(--muted)">' + e[2] + '</div></div>';
+  }).join('') + '<div style="border-top:.35pt solid var(--rule); padding-top:2.4mm"><div class="lbl lbl--m">Toolkit</div><div class="cap" style="margin-top:2mm">AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator</div></div>';
+</script>
+</body>
+</html>
