@@ -145,7 +145,19 @@
         reveal.unobserve(entry.target);
       });
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
-    $$('[data-reveal], [data-split], [data-reveal-img]').forEach(el => reveal.observe(el));
+    const atEdge = el => el.closest('.site-footer');
+    $$('[data-reveal], [data-split], [data-reveal-img]').filter(el => !atEdge(el)).forEach(el => reveal.observe(el));
+
+    // The footer sits at the very end of the page, so it may never clear the
+    // bottom margin above; reveal it as soon as part of it is on screen.
+    const edge = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        edge.unobserve(entry.target);
+      });
+    }, { threshold: 0.2 });
+    $$('.site-footer [data-split]').forEach(el => edge.observe(el));
 
     // Project panels reveal once a good part of them is on screen.
     const panels = new IntersectionObserver(entries => {
