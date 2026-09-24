@@ -311,7 +311,7 @@
     <div class="profile__content">
       <p class="profile__lead" data-reveal>I’m Alaa Masri, a Lebanese interior designer and interior architect based in Riyadh. Over 15 years of practice across the Gulf and Lebanon have shaped my approach to space.</p>
       <div class="profile__text" data-reveal>
-        <p>I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</p>
+        <p class="profile__extra">I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</p>
         <p>My work spans luxury residential, hospitality, commercial and retail interiors — coordinating clients, consultants, contractors, workshops, factories and site teams so that the design holds from drawing to site.</p>
         <a class="link-arrow" href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Read the full professional profile (PDF) <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
@@ -420,35 +420,47 @@
 </section>
 
 <!-- Approach -->
-<section class="section approach" id="approach" aria-labelledby="approach-title" data-theme="dark">
-  <div class="wrap">
-    <header class="section-head">
+<section class="approach" id="approach" aria-labelledby="approach-title" data-theme="dark">
+  <div class="approach__band">
+    <div class="approach__media" aria-hidden="true">
+      <img src="projects/garden-lounge-03.webp" srcset="projects/garden-lounge-03-sm.webp 1000w, projects/garden-lounge-03.webp 1800w" sizes="100vw" width="1800" height="1005" alt="" loading="lazy" decoding="async" data-parallax>
+    </div>
+    <header class="approach__head wrap">
       <p class="eyebrow eyebrow--plain">Process — from vision to reality</p>
-      <h2 class="display" id="approach-title" data-split>One vision. <em>Every step.</em></h2>
+      <h2 class="approach__title" id="approach-title" data-split>One vision. <em>Every step.</em></h2>
     </header>
+  </div>
+  <div class="wrap">
     <ol class="process">
       <li class="process__step" data-reveal>
         <p class="process__no" aria-hidden="true">01</p>
-        <p class="process__label">Envision</p>
-        <h3>Listen. Explore. Find the direction.</h3>
-        <p>Understand the brief, study the space and develop a concept that balances aesthetics with everyday function.</p>
+        <div class="process__head">
+          <p class="process__label">Envision</p>
+          <h3>Listen. Explore. Find the direction.</h3>
+        </div>
+        <p class="process__text">Understand the brief, study the space and develop a concept that balances aesthetics with everyday function.</p>
       </li>
       <li class="process__step" data-reveal>
         <p class="process__no" aria-hidden="true">02</p>
-        <p class="process__label">Develop</p>
-        <h3>Refine the idea. Resolve the details.</h3>
-        <p>Translate the vision into layouts, materials, technical drawings and clear quantities and cost estimates.</p>
+        <div class="process__head">
+          <p class="process__label">Develop</p>
+          <h3>Refine the idea. Resolve the details.</h3>
+        </div>
+        <p class="process__text">Translate the vision into layouts, materials, technical drawings and clear quantities and cost estimates.</p>
       </li>
       <li class="process__step" data-reveal>
         <p class="process__no" aria-hidden="true">03</p>
-        <p class="process__label">Deliver</p>
-        <h3>Coordinate. Bring it to life.</h3>
-        <p>Work with clients, contractors, suppliers and site teams to resolve challenges and maintain quality through handover.</p>
+        <div class="process__head">
+          <p class="process__label">Deliver</p>
+          <h3>Coordinate. Bring it to life.</h3>
+        </div>
+        <p class="process__text">Work with clients, contractors, suppliers and site teams to resolve challenges and maintain quality through handover.</p>
       </li>
     </ol>
   </div>
 </section>
 
+<!-- Gallery -->
 <section class="section gallery theme-light" id="gallery" aria-labelledby="gallery-title" data-theme="light">
   <div class="wrap">
     <header class="section-head">
@@ -607,7 +619,7 @@
       <p class="site-footer__copy">© <span data-year>2026</span> Alaa Masri</p>
       <a class="site-footer__top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
     </div>
-    <p class="site-footer__word" aria-hidden="true">Alaa Masri</p>
+    <p class="site-footer__word" aria-hidden="true" data-split>Alaa Masri</p>
   </div>
 </footer>
 
