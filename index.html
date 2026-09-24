@@ -26,7 +26,9 @@
 
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preload" as="image" href="portrait-720.webp" imagesrcset="portrait-720.webp 720w, portrait.webp 1254w" imagesizes="(max-width: 760px) 86vw, 40vw" type="image/webp" fetchpriority="high">
+<link rel="preload" as="image" href="projects/skyline-suite-01.webp" imagesrcset="projects/skyline-suite-cover.webp 1000w, projects/skyline-suite-01.webp 1800w" imagesizes="100vw" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" href="fonts/instrument-serif.woff2" type="font/woff2" crossorigin>
+<link rel="preload" as="font" href="fonts/inter-var.woff2" type="font/woff2" crossorigin>
 <script>document.documentElement.classList.add('js');if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion-ok');</script>
 <link rel="stylesheet" href="style.css">
 <script src="projects.js" defer></script>
@@ -71,6 +73,7 @@
 </script>
 </head>
 <body>
+
 <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M6 18 18 6M8 6h10v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16M6 14l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/></symbol>
@@ -92,17 +95,23 @@
       <span class="menu-toggle__icon" aria-hidden="true"></span>
     </button>
     <nav class="site-nav" id="site-nav" aria-label="Main">
-      <ul class="site-nav__list">
-        <li><a href="#projects"><span class="site-nav__no" aria-hidden="true">01</span>Projects</a></li>
-        <li><a href="#gallery"><span class="site-nav__no" aria-hidden="true">02</span>Gallery</a></li>
-        <li><a href="#profile"><span class="site-nav__no" aria-hidden="true">03</span>Profile</a></li>
-        <li><a href="#expertise"><span class="site-nav__no" aria-hidden="true">04</span>Expertise</a></li>
-        <li><a class="site-nav__cta" href="#contact"><span class="site-nav__no" aria-hidden="true">05</span>Contact</a></li>
-      </ul>
-      <div class="site-nav__meta">
-        <a href="mailto:info@alaamasri.com">info@alaamasri.com</a>
-        <a href="tel:+966570533358">+966 57 053 3358</a>
-        <span>Riyadh, Saudi Arabia</span>
+      <div class="site-nav__inner">
+        <ul class="site-nav__list">
+          <li><a href="#projects"><span class="site-nav__no" aria-hidden="true">01</span><span class="site-nav__text">Work</span></a></li>
+          <li><a href="#profile"><span class="site-nav__no" aria-hidden="true">02</span><span class="site-nav__text">Profile</span></a></li>
+          <li><a href="#expertise"><span class="site-nav__no" aria-hidden="true">03</span><span class="site-nav__text">Expertise</span></a></li>
+          <li><a href="#gallery"><span class="site-nav__no" aria-hidden="true">04</span><span class="site-nav__text">Gallery</span></a></li>
+          <li><a class="site-nav__cta" href="#contact"><span class="site-nav__no" aria-hidden="true">05</span><span class="site-nav__text">Contact</span></a></li>
+        </ul>
+        <div class="site-nav__aside">
+          <p class="site-nav__statement">Interior design and interior architecture — from the first concept to the final handover.</p>
+          <p class="site-nav__clock" data-clock hidden>Riyadh <time data-clock-time></time> <span>GMT+3</span></p>
+          <div class="site-nav__meta">
+            <a href="mailto:info@alaamasri.com">info@alaamasri.com</a>
+            <a href="tel:+966570533358">+966 57 053 3358</a>
+            <a href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Download CV (PDF)</a>
+          </div>
+        </div>
       </div>
     </nav>
   </div>
@@ -111,168 +120,340 @@
 <main id="main">
 
 <!-- Hero -->
-<section class="hero" id="top" aria-labelledby="hero-title">
-  <div class="hero__grid wrap">
-    <div class="hero__copy">
-      <p class="hero__kicker">
-        <span>Interior Design</span><span>Interior Architecture</span><span>Riyadh, Saudi Arabia</span>
-      </p>
-      <h1 class="hero__name" id="hero-title">
-        <span class="hero__line"><span>Alaa</span></span>
-        <span class="hero__line hero__line--indent"><span>Masri</span></span>
-      </h1>
-      <p class="hero__role"><span class="nowrap">Senior Interior Designer &amp;</span> <span class="nowrap">Interior Architect</span></p>
-      <p class="hero__statement"><span>Design.</span> <span>Technical development.</span> <em>Execution.</em></p>
-      <p class="hero__intro">Over 15 years taking residential, hospitality and commercial interiors from concept and design development through technical drawings, BOQ and site coordination to final handover.</p>
-      <div class="hero__actions">
-        <a class="btn btn--solid" href="#projects">View selected projects <svg class="icon icon--down" aria-hidden="true"><use href="#i-down"/></svg></a>
-        <a class="btn btn--line" href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Download CV <span class="btn__note">PDF</span></a>
-      </div>
+<section class="hero" id="top" aria-labelledby="hero-title" data-theme="dark">
+  <div class="hero__media" data-hero-media>
+    <img class="hero__img" src="projects/skyline-suite-01.webp" srcset="projects/skyline-suite-cover.webp 1000w, projects/skyline-suite-01.webp 1800w" sizes="100vw" width="1800" height="1005" alt="Timber-lined bedroom with floor-to-ceiling windows overlooking a city skyline at night, from the skyline suite." fetchpriority="high" decoding="async">
+  </div>
+  <div class="hero__content wrap">
+    <div class="hero__top">
+      <p class="hero__role">Senior Interior Designer<br>&amp; Interior Architect</p>
+      <p class="hero__statement">Design. Technical development. <em>Execution.</em></p>
     </div>
-    <figure class="hero__portrait">
-      <div class="hero__frame">
+    <h1 class="hero__name" id="hero-title" data-hero-name><span class="hero__line"><span>Alaa</span></span> <span class="hero__line"><span>Masri</span></span></h1>
+    <div class="hero__bottom">
+      <p class="hero__place">Riyadh, Saudi Arabia</p>
+      <p class="hero__credit">Featured — The skyline suite</p>
+      <a class="hero__cue" href="#projects">Selected work <svg class="icon icon--down" aria-hidden="true"><use href="#i-down"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- Selected work -->
+<section class="selected" id="projects" aria-labelledby="projects-title" data-theme="dark">
+  <header class="selected__intro wrap">
+    <p class="eyebrow"><span>01</span>Selected work</p>
+    <h2 class="display" id="projects-title" data-split>A closer look. <em>Seven design stories.</em></h2>
+    <p class="selected__lede">Each project opens as a complete sequence of views — from the overall space to its materials, lighting and details.</p>
+  </header>
+
+  <ol class="project-list">
+    <li class="project project--full" style="--pos: 30% 60%">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/burgundy-salon-01.webp" srcset="projects/burgundy-salon-cover.webp 1000w, projects/burgundy-salon-01.webp 1800w" sizes="100vw" width="1800" height="1005" alt="Double-height salon with a curved burgundy sofa, full-height glazing and a burgundy feature wall." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info wrap">
+          <p class="project__no">01<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/burgundy-salon" data-project="burgundy-salon"><span>The burgundy salon</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Residential · Living</p>
+          </div>
+          <div class="project__foot">
+            <p class="project__desc">A double-height salon defined by burgundy seating, tall windows and fine architectural detailing.</p>
+            <span class="project__cue" aria-hidden="true">View project · 03 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          </div>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--split">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/arched-retreat-01.webp" srcset="projects/arched-retreat-cover.webp 1000w, projects/arched-retreat-01.webp 1800w" sizes="(max-width: 760px) 100vw, 62vw" width="1800" height="1005" alt="Arched reception hall with a stone-clad counter, gold chandelier and polished marble floor." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info">
+          <p class="project__no">02<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/arched-retreat" data-project="arched-retreat"><span>An arched retreat</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Hospitality · Design study</p>
+          </div>
+          <p class="project__desc">A hospitality design study connecting vaulted interiors, dining spaces, guest accommodation and quiet leisure areas.</p>
+          <span class="project__cue" aria-hidden="true">View project · 07 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          <div class="project__detail">
+            <img src="projects/arched-retreat-05-sm.webp" width="1000" height="558" alt="Indoor pool framed by illuminated arched niches and stone columns." loading="lazy" decoding="async">
+          </div>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--full" style="--pos: 50% 50%">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/walnut-suite-01.webp" srcset="projects/walnut-suite-cover.webp 1000w, projects/walnut-suite-01.webp 1800w" sizes="100vw" width="1800" height="1005" alt="Symmetrical bedroom with an upholstered burgundy headboard wall, walnut panelling and a glass pendant." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info wrap">
+          <p class="project__no">03<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/walnut-suite" data-project="walnut-suite"><span>The walnut suite</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Residential · Bedroom</p>
+          </div>
+          <div class="project__foot">
+            <p class="project__desc">Rich walnut, burgundy accents and integrated lighting connect the bedroom and its bespoke joinery.</p>
+            <span class="project__cue" aria-hidden="true">View project · 05 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          </div>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--inset" style="--pos: 38% 50%">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/illuminated-villa-02.webp" srcset="projects/illuminated-villa-02-sm.webp 1000w, projects/illuminated-villa-02.webp 1800w" sizes="(max-width: 760px) 100vw, 70vw" width="1800" height="1005" alt="The villa facade at dusk, showing cantilevered volumes, vertical screens and linear lighting." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info">
+          <p class="project__no">04<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/illuminated-villa" data-project="illuminated-villa"><span>The illuminated villa</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Architecture · Exterior</p>
+          </div>
+          <p class="project__desc">A contemporary villa study exploring stone, vertical screening and architectural lighting from day to dusk.</p>
+          <span class="project__cue" aria-hidden="true">View project · 05 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--full" style="--pos: 62% 50%">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/garden-lounge-01.webp" srcset="projects/garden-lounge-cover.webp 1000w, projects/garden-lounge-01.webp 1800w" sizes="100vw" width="1800" height="1005" alt="Open-plan living and dining space with a linear fireplace, timber wall and garden views." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info wrap">
+          <p class="project__no">05<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/garden-lounge" data-project="garden-lounge"><span>Living by the garden</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Residential · Living</p>
+          </div>
+          <div class="project__foot">
+            <p class="project__desc">A warm family living and dining space with garden views, textured fabrics and a linear fireplace.</p>
+            <span class="project__cue" aria-hidden="true">View project · 05 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          </div>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--split project--reverse">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/skyline-suite-02.webp" srcset="projects/skyline-suite-02-sm.webp 1000w, projects/skyline-suite-02.webp 1800w" sizes="(max-width: 760px) 100vw, 62vw" width="1800" height="1005" alt="The bedroom looking towards the illuminated glass-fronted wardrobes." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info">
+          <p class="project__no">06<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/skyline-suite" data-project="skyline-suite"><span>The skyline suite</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Residential · Bedroom</p>
+          </div>
+          <p class="project__desc">A timber-lined bedroom with skyline views, illuminated wardrobes and coordinated material details.</p>
+          <span class="project__cue" aria-hidden="true">View project · 06 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          <div class="project__detail">
+            <img src="projects/skyline-suite-04-sm.webp" width="1000" height="558" alt="Illuminated walk-in wardrobe with glass doors and walnut frames." loading="lazy" decoding="async">
+          </div>
+        </div>
+      </article>
+    </li>
+
+    <li class="project project--full" style="--pos: 45% 50%">
+      <article class="project__panel">
+        <div class="project__media">
+          <img class="project__img" src="projects/earth-toned-majlis-01.webp" srcset="projects/earth-toned-majlis-cover.webp 1000w, projects/earth-toned-majlis-01.webp 1800w" sizes="100vw" width="1800" height="1005" alt="Majlis with low perimeter seating, a patterned frieze and a softly lit plaster feature wall." loading="lazy" decoding="async">
+        </div>
+        <div class="project__info wrap">
+          <p class="project__no">07<span>/ 07</span></p>
+          <div class="project__head">
+            <h3 class="project__title"><a class="project__link" href="#project/earth-toned-majlis" data-project="earth-toned-majlis"><span>An earthy welcome</span></a></h3>
+            <span class="project__rule" aria-hidden="true"></span>
+            <p class="project__cat">Residential · Majlis</p>
+          </div>
+          <div class="project__foot">
+            <p class="project__desc">Soft neutral seating, warm timber and patterned walls create a generous space for gathering.</p>
+            <span class="project__cue" aria-hidden="true">View project · 05 views <svg class="icon"><use href="#i-arrow"/></svg></span>
+          </div>
+        </div>
+      </article>
+    </li>
+  </ol>
+</section>
+
+<!-- Profile -->
+<section class="section profile theme-light" id="profile" aria-labelledby="profile-title" data-theme="light">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow"><span>02</span>Profile</p>
+      <h2 class="display" id="profile-title" data-split>Imagination. <em>With the knowledge to make it real.</em></h2>
+    </header>
+  </div>
+  <div class="wrap profile__grid">
+    <figure class="profile__portrait" data-reveal-img>
+      <div class="profile__frame">
         <picture>
-          <source type="image/webp" srcset="portrait-720.webp 720w, portrait.webp 1254w" sizes="(max-width: 760px) 86vw, 40vw">
-          <img src="portrait.png" width="1254" height="1254" alt="Portrait of Alaa Masri, Senior Interior Designer and Interior Architect." fetchpriority="high" decoding="async">
+          <source type="image/webp" srcset="portrait-720.webp 720w, portrait.webp 1254w" sizes="(max-width: 760px) 100vw, 40vw">
+          <img src="portrait.png" width="1254" height="1254" alt="Portrait of Alaa Masri, Senior Interior Designer and Interior Architect." loading="lazy" decoding="async">
         </picture>
       </div>
-      <figcaption class="hero__caption"><span>Alaa Masri</span><span>Riyadh</span></figcaption>
+      <figcaption>Alaa Masri — Riyadh, Saudi Arabia</figcaption>
     </figure>
+
+    <div class="profile__content">
+      <p class="profile__lead" data-reveal>I’m Alaa Masri, a Lebanese interior designer and interior architect based in Riyadh. Over 15 years of practice across the Gulf and Lebanon have shaped my approach to space.</p>
+      <div class="profile__text" data-reveal>
+        <p>I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</p>
+        <p>My work spans luxury residential, hospitality, commercial and retail interiors — coordinating clients, consultants, contractors, workshops, factories and site teams so that the design holds from drawing to site.</p>
+        <a class="link-arrow" href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Read the full professional profile (PDF) <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+    </div>
   </div>
+
   <div class="wrap">
-    <dl class="hero__facts">
-      <div><dt>Practice</dt><dd><strong>15+</strong> years</dd></div>
-      <div><dt>Regions</dt><dd>Saudi Arabia · Qatar · UAE · Lebanon</dd></div>
-      <div><dt>Scope</dt><dd>Concept to handover</dd></div>
-      <div><dt>Sectors</dt><dd>Residential · Hospitality · Commercial</dd></div>
+    <div class="figure-band" data-reveal>
+      <p class="figure-band__num" aria-hidden="true">15+</p>
+      <p class="figure-band__text"><span class="visually-hidden">15+ </span>years in interior design, interior architecture, fit-out and project coordination.</p>
+      <div class="figure-band__regions">
+        <p class="figure-band__label">Practice across</p>
+        <ul class="regions"><li>Saudi Arabia</li><li>Qatar</li><li>United Arab Emirates</li><li>Lebanon</li></ul>
+      </div>
+    </div>
+
+    <dl class="credentials" data-reveal>
+      <div class="credentials__item">
+        <dt>Education</dt>
+        <dd><ul class="plain-list"><li>BT — Interior Decoration / Interior Design, Lebanon</li><li>Additional TS studies in Interior Design</li></ul></dd>
+      </div>
+      <div class="credentials__item">
+        <dt>Languages</dt>
+        <dd><ul class="plain-list"><li>Arabic — native</li><li>English — professional working proficiency</li></ul></dd>
+      </div>
+      <div class="credentials__item">
+        <dt>Design toolkit</dt>
+        <dd>AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator</dd>
+      </div>
+      <div class="credentials__item">
+        <dt>Beyond the drawing board</dt>
+        <dd>AI-assisted design &amp; visualization · Figma · Design presentation</dd>
+      </div>
     </dl>
   </div>
 </section>
 
-<!-- Projects -->
-<section class="section projects" id="projects" aria-labelledby="projects-title">
+<!-- Expertise -->
+<section class="section expertise" id="expertise" aria-labelledby="expertise-title" data-theme="dark">
   <div class="wrap">
     <header class="section-head">
-      <p class="section-index"><span>01</span>Selected projects</p>
-      <h2 id="projects-title">A closer look. <em>Seven design stories.</em></h2>
-      <p class="section-intro">Each project opens as a complete sequence of views — from the overall space to its materials, lighting and details.</p>
+      <p class="eyebrow"><span>03</span>Expertise</p>
+      <h2 class="display" id="expertise-title" data-split>Every space. <em>Every detail.</em></h2>
+      <p class="section-intro">From the first sketch to the final handover — design authorship backed by the technical and site knowledge to deliver it.</p>
     </header>
 
-    <ol class="project-list">
-      <li class="project project--full" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/burgundy-salon-cover.webp" srcset="projects/burgundy-salon-cover.webp 1000w, projects/burgundy-salon-01.webp 1800w" sizes="(max-width: 760px) 100vw, 94vw" width="1800" height="1005" alt="Double-height salon with a curved burgundy sofa, full-height glazing and a burgundy feature wall." decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">01</span>
-            <h3 class="project__title"><a class="project__link" href="#project/burgundy-salon" data-project="burgundy-salon">The burgundy salon</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Residential</dd></div><div><dt>Type</dt><dd>Living</dd></div><div><dt>Views</dt><dd>03</dd></div></dl>
-            <p class="project__desc">A double-height salon defined by burgundy seating, tall windows and fine architectural detailing.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+    <ol class="services">
+      <li class="service" data-reveal>
+        <span class="service__no">01</span>
+        <h3 class="service__name">Interior design</h3>
+        <div class="service__body">
+          <p>Creative, functional concepts for luxury residential, commercial and retail interiors — planned around the way each space will be lived in and used.</p>
+          <ul class="service__list"><li>Space planning &amp; furniture layouts</li><li>Concept design &amp; mood boards</li><li>Material &amp; finish selection</li><li>Furniture design &amp; custom joinery</li></ul>
+        </div>
       </li>
-
-      <li class="project project--wide" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/arched-retreat-cover.webp" srcset="projects/arched-retreat-cover.webp 1000w, projects/arched-retreat-01.webp 1800w" sizes="(max-width: 760px) 100vw, 56vw" width="1800" height="1005" alt="Arched reception hall with a stone-clad counter, gold chandelier and polished marble floor." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">02</span>
-            <h3 class="project__title"><a class="project__link" href="#project/arched-retreat" data-project="arched-retreat">An arched retreat</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Hospitality</dd></div><div><dt>Type</dt><dd>Design study</dd></div><div><dt>Views</dt><dd>07</dd></div></dl>
-            <p class="project__desc">A hospitality design study connecting vaulted interiors, dining spaces, guest accommodation and quiet leisure areas.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">02</span>
+        <h3 class="service__name">Interior architecture</h3>
+        <div class="service__body">
+          <p>The architectural elements of the interior — entrances, ceilings, partitions and feature walls — designed as one coherent whole.</p>
+          <ul class="service__list"><li>Entrance &amp; foyer design</li><li>Decorative ceilings</li><li>Feature walls &amp; partitions</li><li>Staircase areas</li></ul>
+        </div>
       </li>
-
-      <li class="project project--narrow project--drop" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/walnut-suite-cover.webp" srcset="projects/walnut-suite-cover.webp 1000w, projects/walnut-suite-01.webp 1800w" sizes="(max-width: 760px) 100vw, 38vw" width="1800" height="1005" alt="Symmetrical bedroom with an upholstered burgundy headboard wall, walnut panelling and a glass pendant." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">03</span>
-            <h3 class="project__title"><a class="project__link" href="#project/walnut-suite" data-project="walnut-suite">The walnut suite</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Residential</dd></div><div><dt>Type</dt><dd>Bedroom</dd></div><div><dt>Views</dt><dd>05</dd></div></dl>
-            <p class="project__desc">Rich walnut, burgundy accents and integrated lighting connect the bedroom and its bespoke joinery.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">03</span>
+        <h3 class="service__name">Technical &amp; shop drawings</h3>
+        <div class="service__body">
+          <p>Preparing technical drawings and coordinating shop drawings so that the design can be built exactly as intended.</p>
+          <ul class="service__list"><li>Technical drawings</li><li>Shop drawing coordination</li><li>Construction &amp; execution details</li></ul>
+        </div>
       </li>
-
-      <li class="project project--full" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/illuminated-villa-cover.webp" srcset="projects/illuminated-villa-cover.webp 1000w, projects/illuminated-villa-01.webp 1800w" sizes="(max-width: 760px) 100vw, 94vw" width="1800" height="1005" alt="Aerial view of a contemporary stone villa with landscaped courtyards and warm facade lighting." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">04</span>
-            <h3 class="project__title"><a class="project__link" href="#project/illuminated-villa" data-project="illuminated-villa">The illuminated villa</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Architecture</dd></div><div><dt>Type</dt><dd>Exterior</dd></div><div><dt>Views</dt><dd>05</dd></div></dl>
-            <p class="project__desc">A contemporary villa study exploring stone, vertical screening and architectural lighting from day to dusk.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">04</span>
+        <h3 class="service__name">BOQ &amp; cost estimation</h3>
+        <div class="service__body">
+          <p>Bills of quantities, take-offs and cost estimates, with interior works priced and quotations coordinated with suppliers and subcontractors.</p>
+          <ul class="service__list"><li>BOQ &amp; quantity take-off</li><li>Cost estimation &amp; pricing</li><li>Supplier quotations</li></ul>
+        </div>
       </li>
-
-      <li class="project project--narrow" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/garden-lounge-cover.webp" srcset="projects/garden-lounge-cover.webp 1000w, projects/garden-lounge-01.webp 1800w" sizes="(max-width: 760px) 100vw, 38vw" width="1800" height="1005" alt="Open-plan living and dining space with a linear fireplace, timber wall and garden views." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">05</span>
-            <h3 class="project__title"><a class="project__link" href="#project/garden-lounge" data-project="garden-lounge">Living by the garden</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Residential</dd></div><div><dt>Type</dt><dd>Living</dd></div><div><dt>Views</dt><dd>05</dd></div></dl>
-            <p class="project__desc">A warm family living and dining space with garden views, textured fabrics and a linear fireplace.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">05</span>
+        <h3 class="service__name">Fit-out &amp; coordination</h3>
+        <div class="service__body">
+          <p>Coordinating clients, contractors, suppliers, factories and site teams, and reviewing material samples against the project specifications.</p>
+          <ul class="service__list"><li>Joinery &amp; woodwork</li><li>Stone, marble &amp; glass</li><li>Steel &amp; metal fabrication</li><li>Lighting coordination</li></ul>
+        </div>
       </li>
-
-      <li class="project project--wide project--drop" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/skyline-suite-cover.webp" srcset="projects/skyline-suite-cover.webp 1000w, projects/skyline-suite-01.webp 1800w" sizes="(max-width: 760px) 100vw, 56vw" width="1800" height="1005" alt="Timber-lined bedroom with floor-to-ceiling windows overlooking a city skyline at night." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">06</span>
-            <h3 class="project__title"><a class="project__link" href="#project/skyline-suite" data-project="skyline-suite">The skyline suite</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Residential</dd></div><div><dt>Type</dt><dd>Bedroom</dd></div><div><dt>Views</dt><dd>06</dd></div></dl>
-            <p class="project__desc">A timber-lined bedroom with skyline views, illuminated wardrobes and coordinated material details.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">06</span>
+        <h3 class="service__name">Site supervision</h3>
+        <div class="service__body">
+          <p>Following execution on site, resolving technical and design issues and maintaining quality from design approval through to final handover.</p>
+          <ul class="service__list"><li>Site inspections</li><li>Quality control</li><li>Handover</li></ul>
+        </div>
       </li>
-
-      <li class="project project--row" data-reveal>
-        <article>
-          <div class="project__media">
-            <img src="projects/earth-toned-majlis-cover.webp" srcset="projects/earth-toned-majlis-cover.webp 1000w, projects/earth-toned-majlis-01.webp 1800w" sizes="(max-width: 760px) 100vw, 62vw" width="1800" height="1005" alt="Majlis with low perimeter seating, a patterned frieze and a softly lit plaster feature wall." loading="lazy" decoding="async">
-          </div>
-          <div class="project__info">
-            <span class="project__no">07</span>
-            <h3 class="project__title"><a class="project__link" href="#project/earth-toned-majlis" data-project="earth-toned-majlis">An earthy welcome</a></h3>
-            <dl class="project__meta"><div><dt>Sector</dt><dd>Residential</dd></div><div><dt>Type</dt><dd>Majlis</dd></div><div><dt>Views</dt><dd>05</dd></div></dl>
-            <p class="project__desc">Soft neutral seating, warm timber and patterned walls create a generous space for gathering.</p>
-            <span class="project__cue" aria-hidden="true">View project <svg class="icon"><use href="#i-arrow"/></svg></span>
-          </div>
-        </article>
+      <li class="service" data-reveal>
+        <span class="service__no">07</span>
+        <h3 class="service__name">3D visualization</h3>
+        <div class="service__body">
+          <p>Concepts made tangible through 3D modeling, rendering and design presentation — exploring proportion, light and texture before execution begins.</p>
+          <ul class="service__list"><li>3ds Max · V-Ray</li><li>Chaos Vantage · Blender</li><li>Design presentation</li></ul>
+        </div>
       </li>
     </ol>
   </div>
 </section>
 
-<!-- Gallery -->
-<section class="section gallery" id="gallery" aria-labelledby="gallery-title">
+<!-- Approach -->
+<section class="section approach" id="approach" aria-labelledby="approach-title" data-theme="dark">
   <div class="wrap">
     <header class="section-head">
-      <p class="section-index"><span>02</span>Selected views</p>
-      <h2 id="gallery-title">A sense of place. <em>An eye for detail.</em></h2>
+      <p class="eyebrow eyebrow--plain">Process — from vision to reality</p>
+      <h2 class="display" id="approach-title" data-split>One vision. <em>Every step.</em></h2>
+    </header>
+    <ol class="process">
+      <li class="process__step" data-reveal>
+        <p class="process__no" aria-hidden="true">01</p>
+        <p class="process__label">Envision</p>
+        <h3>Listen. Explore. Find the direction.</h3>
+        <p>Understand the brief, study the space and develop a concept that balances aesthetics with everyday function.</p>
+      </li>
+      <li class="process__step" data-reveal>
+        <p class="process__no" aria-hidden="true">02</p>
+        <p class="process__label">Develop</p>
+        <h3>Refine the idea. Resolve the details.</h3>
+        <p>Translate the vision into layouts, materials, technical drawings and clear quantities and cost estimates.</p>
+      </li>
+      <li class="process__step" data-reveal>
+        <p class="process__no" aria-hidden="true">03</p>
+        <p class="process__label">Deliver</p>
+        <h3>Coordinate. Bring it to life.</h3>
+        <p>Work with clients, contractors, suppliers and site teams to resolve challenges and maintain quality through handover.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section gallery theme-light" id="gallery" aria-labelledby="gallery-title" data-theme="light">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="eyebrow"><span>04</span>Gallery</p>
+      <h2 class="display" id="gallery-title" data-split>A sense of place. <em>An eye for detail.</em></h2>
       <p class="section-intro">Selected interiors and design visualizations — space, proportion and material, in conversation.</p>
     </header>
 
@@ -375,198 +556,58 @@
   </div>
 </section>
 
-<!-- Profile -->
-<section class="section profile" id="profile" aria-labelledby="profile-title">
-  <div class="wrap">
-    <header class="section-head">
-      <p class="section-index"><span>03</span>Profile</p>
-      <h2 id="profile-title">Imagination. <em>With the knowledge to make it real.</em></h2>
-    </header>
 
-    <div class="profile__body" data-reveal>
-      <p class="profile__lead">I’m Alaa Masri, a Lebanese interior designer and interior architect based in Riyadh. Over 15 years of practice across the Gulf and Lebanon have shaped my approach to space.</p>
-      <div class="profile__text">
-        <p>I work from the first concept through to final handover, connecting design, materials and craftsmanship with the precision that execution demands.</p>
-        <p>My work spans luxury residential, hospitality, commercial and retail interiors — coordinating clients, consultants, contractors, workshops, factories and site teams so that the design holds from drawing to site.</p>
-        <a class="link-arrow" href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Read the full professional profile (PDF) <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+<!-- Contact -->
+<section class="contact" id="contact" aria-labelledby="contact-title" data-theme="dark">
+  <div class="contact__media" aria-hidden="true">
+    <img src="projects/walnut-suite-03.webp" srcset="projects/walnut-suite-03-sm.webp 1000w, projects/walnut-suite-03.webp 1800w" sizes="100vw" width="1800" height="1005" alt="" loading="lazy" decoding="async" data-parallax>
+  </div>
+  <div class="contact__inner wrap">
+    <p class="eyebrow"><span>05</span>Contact</p>
+    <h2 class="contact__title" id="contact-title" data-split>Let’s create <em>spaces that last.</em></h2>
+    <div class="contact__row-main">
+      <p class="contact__intro" data-reveal>For private clients, developers, contractors, consultants and design studios — project enquiries, collaborations and professional opportunities.</p>
+      <div class="contact__actions" data-reveal>
+        <a class="contact__mail" href="mailto:info@alaamasri.com">info@alaamasri.com <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn--line" href="https://wa.me/966570533358" target="_blank" rel="noopener noreferrer">WhatsApp <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a>
       </div>
     </div>
-
-    <dl class="credentials" data-reveal>
-      <div class="credentials__item">
-        <dt>Experience</dt>
-        <dd><strong class="credentials__figure">15+</strong> years in interior design, interior architecture, fit-out and project coordination.</dd>
+    <dl class="contact__list" data-reveal>
+      <div class="contact__item">
+        <dt>Email</dt>
+        <dd><a href="mailto:info@alaamasri.com">info@alaamasri.com</a></dd>
       </div>
-      <div class="credentials__item">
-        <dt>Regions</dt>
-        <dd><ul class="plain-list"><li>Saudi Arabia</li><li>Qatar</li><li>United Arab Emirates</li><li>Lebanon</li></ul></dd>
+      <div class="contact__item">
+        <dt>Phone</dt>
+        <dd><a href="tel:+966570533358">+966 57 053 3358</a></dd>
       </div>
-      <div class="credentials__item">
-        <dt>Education</dt>
-        <dd><ul class="plain-list"><li>BT — Interior Decoration / Interior Design, Lebanon</li><li>Additional TS studies in Interior Design</li></ul></dd>
+      <div class="contact__item">
+        <dt>WhatsApp</dt>
+        <dd><a href="https://wa.me/966570533358" target="_blank" rel="noopener noreferrer">Message on WhatsApp<span class="visually-hidden"> (opens in a new tab)</span></a></dd>
       </div>
-      <div class="credentials__item">
-        <dt>Languages</dt>
-        <dd><ul class="plain-list"><li>Arabic — native</li><li>English — professional working proficiency</li></ul></dd>
+      <div class="contact__item">
+        <dt>Profile</dt>
+        <dd><a href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Download CV (PDF)</a></dd>
       </div>
-      <div class="credentials__item credentials__item--wide">
-        <dt>Design toolkit</dt>
-        <dd>AutoCAD · 3ds Max · V-Ray · Chaos Vantage · Blender · Photoshop · Illustrator</dd>
-      </div>
-      <div class="credentials__item credentials__item--wide">
-        <dt>Beyond the drawing board</dt>
-        <dd>AI-assisted design &amp; visualization · Figma · Design presentation</dd>
+      <div class="contact__item">
+        <dt>Based in</dt>
+        <dd>Riyadh, Saudi Arabia</dd>
       </div>
     </dl>
   </div>
 </section>
 
-<!-- Expertise -->
-<section class="section expertise" id="expertise" aria-labelledby="expertise-title">
-  <div class="wrap">
-    <header class="section-head">
-      <p class="section-index"><span>04</span>Expertise</p>
-      <h2 id="expertise-title">Every space. <em>Every detail.</em></h2>
-      <p class="section-intro">From the first sketch to the final handover — design authorship backed by the technical and site knowledge to deliver it.</p>
-    </header>
-
-    <ol class="disciplines">
-      <li class="discipline" data-reveal>
-        <span class="discipline__no">01</span>
-        <h3>Residential interiors</h3>
-        <p>Thoughtfully planned homes with a focus on luxury, comfort and the way people live. Villas, apartments, majlis and reception spaces, bedrooms and bespoke interior features.</p>
-        <p class="discipline__tags">Space planning · Luxury villas · Custom furniture</p>
-      </li>
-      <li class="discipline" data-reveal>
-        <span class="discipline__no">02</span>
-        <h3>Commercial &amp; retail</h3>
-        <p>Functional, considered interiors for offices, retail spaces and showrooms. Aligning client requirements, spatial planning, finishes and presentation into a coherent design.</p>
-        <p class="discipline__tags">Offices · Retail · Showrooms</p>
-      </li>
-      <li class="discipline" data-reveal>
-        <span class="discipline__no">03</span>
-        <h3>Fit-out &amp; execution</h3>
-        <p>Hands-on coordination of joinery, stone, metal, glass, ceilings and lighting. Technical drawings, BOQs, pricing, supplier coordination and site supervision to carry the design through to completion.</p>
-        <p class="discipline__tags">Technical detailing · BOQ &amp; pricing · Site coordination</p>
-      </li>
-      <li class="discipline" data-reveal>
-        <span class="discipline__no">04</span>
-        <h3>Visualization &amp; materials</h3>
-        <p>Concepts made tangible through mood boards, 3D visualization, finish selections and material samples. Exploring proportion, light and texture before execution begins.</p>
-        <p class="discipline__tags">3D visualization · Mood boards · Material selection</p>
-      </li>
-    </ol>
-
-    <div class="capabilities" data-reveal>
-      <div class="capabilities__lists">
-        <div>
-          <h3 class="capabilities__title">Design</h3>
-          <ul class="capabilities__list">
-            <li>Interior design &amp; space planning</li>
-            <li>Interior architecture</li>
-            <li>Concept design &amp; mood boards</li>
-            <li>Design development</li>
-            <li>Material &amp; finish selection</li>
-            <li>Furniture design &amp; custom joinery</li>
-            <li>3D visualization &amp; rendering</li>
-          </ul>
-        </div>
-        <div>
-          <h3 class="capabilities__title">Technical &amp; delivery</h3>
-          <ul class="capabilities__list">
-            <li>Technical drawings &amp; shop drawings</li>
-            <li>BOQ &amp; quantity take-off</li>
-            <li>Cost estimation &amp; pricing</li>
-            <li>Supplier &amp; factory coordination</li>
-            <li>Contractor coordination</li>
-            <li>Site coordination &amp; supervision</li>
-            <li>Quality control through handover</li>
-          </ul>
-        </div>
-      </div>
-      <figure class="capabilities__figure">
-        <img src="projects/skyline-suite-06.webp" width="1800" height="1005" alt="Material palette board for the skyline suite: wall panelling, flooring, bedding, curtains, rug and leather samples." loading="lazy" decoding="async" sizes="(max-width: 760px) 100vw, 42vw">
-        <figcaption>Material palette — The skyline suite</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<!-- Approach -->
-<section class="section approach" id="approach" aria-labelledby="approach-title">
-  <div class="wrap">
-    <header class="section-head">
-      <p class="section-index section-index--sub">Process — from vision to reality</p>
-      <h2 id="approach-title">One vision. <em>Every step.</em></h2>
-    </header>
-    <ol class="process">
-      <li class="process__step" data-reveal>
-        <p class="process__no"><span>01</span>Envision</p>
-        <h3>Listen. Explore. Find the direction.</h3>
-        <p>Understand the brief, study the space and develop a concept that balances aesthetics with everyday function.</p>
-      </li>
-      <li class="process__step" data-reveal>
-        <p class="process__no"><span>02</span>Develop</p>
-        <h3>Refine the idea. Resolve the details.</h3>
-        <p>Translate the vision into layouts, materials, technical drawings and clear quantities and cost estimates.</p>
-      </li>
-      <li class="process__step" data-reveal>
-        <p class="process__no"><span>03</span>Deliver</p>
-        <h3>Coordinate. Bring it to life.</h3>
-        <p>Work with clients, contractors, suppliers and site teams to resolve challenges and maintain quality through handover.</p>
-      </li>
-    </ol>
-  </div>
-</section>
-
-<!-- Contact -->
-<section class="section contact" id="contact" aria-labelledby="contact-title">
-  <div class="wrap">
-    <div class="contact__grid">
-      <header class="contact__head" data-reveal>
-        <p class="section-index"><span>05</span>Contact</p>
-        <h2 id="contact-title">Let’s discuss <em>your space.</em></h2>
-        <p class="contact__intro">For private clients, developers, contractors, consultants and design studios — project enquiries, collaborations and professional opportunities.</p>
-        <div class="contact__actions">
-          <a class="btn btn--solid" href="mailto:info@alaamasri.com">Send an email <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-          <a class="btn btn--line" href="https://wa.me/966570533358" target="_blank" rel="noopener noreferrer">WhatsApp <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </div>
-      </header>
-      <dl class="contact__list" data-reveal>
-        <div class="contact__row">
-          <dt>Email</dt>
-          <dd><a href="mailto:info@alaamasri.com">info@alaamasri.com</a></dd>
-        </div>
-        <div class="contact__row">
-          <dt>Phone</dt>
-          <dd><a href="tel:+966570533358">+966 57 053 3358</a></dd>
-        </div>
-        <div class="contact__row">
-          <dt>WhatsApp</dt>
-          <dd><a href="https://wa.me/966570533358" target="_blank" rel="noopener noreferrer">Message on WhatsApp<span class="visually-hidden"> (opens in a new tab)</span></a></dd>
-        </div>
-        <div class="contact__row">
-          <dt>Profile</dt>
-          <dd><a href="Alaa-Masri-CV-2026-2027.pdf" target="_blank" rel="noopener" type="application/pdf">Download CV (PDF)</a></dd>
-        </div>
-        <div class="contact__row">
-          <dt>Based in</dt>
-          <dd>Riyadh, Saudi Arabia</dd>
-        </div>
-      </dl>
-    </div>
-  </div>
-</section>
-
 </main>
 
-<footer class="site-footer">
-  <div class="wrap site-footer__inner">
-    <a class="brand" href="#top" aria-label="Alaa Masri — back to top"><span class="brand__mark" aria-hidden="true">AM<span>.</span></span></a>
-    <p class="site-footer__name">Alaa Masri<span>Senior Interior Designer · Interior Architect</span></p>
-    <p class="site-footer__place">Riyadh, Saudi Arabia</p>
-    <p class="site-footer__copy">© <span data-year>2026</span> Alaa Masri</p>
-    <a class="site-footer__top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
+<footer class="site-footer" data-theme="dark">
+  <div class="wrap">
+    <div class="site-footer__inner">
+      <p class="site-footer__name">Alaa Masri<span>Senior Interior Designer · Interior Architect</span></p>
+      <p class="site-footer__place">Riyadh, Saudi Arabia</p>
+      <p class="site-footer__copy">© <span data-year>2026</span> Alaa Masri</p>
+      <a class="site-footer__top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
+    </div>
+    <p class="site-footer__word" aria-hidden="true">Alaa Masri</p>
   </div>
 </footer>
 

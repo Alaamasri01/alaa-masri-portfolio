@@ -17,44 +17,64 @@
   }
 
   /* ---------------------------------------------------------------------
-     Header: solid background once scrolled, hides on scroll down
+     Header: hides on scroll down, returns on scroll up
      ------------------------------------------------------------------- */
   const header = $('[data-header]');
   const nav = $('#site-nav');
   const toggle = $('.menu-toggle');
   let lastY = window.scrollY;
-  let ticking = false;
 
-  function onScroll() {
-    const y = window.scrollY;
-    const menuOpen = nav.classList.contains('is-open');
-    header.classList.toggle('is-scrolled', y > 24);
-    if (!menuOpen) header.classList.toggle('is-hidden', y > lastY && y > 480);
+  function updateHeader(y) {
+    if (!nav.classList.contains('is-open')) header.classList.toggle('is-hidden', y > lastY && y > 480);
     lastY = y;
-    ticking = false;
   }
-  window.addEventListener('scroll', () => {
-    if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
-  }, { passive: true });
-  onScroll();
   // Keyboard users tabbing into the header should always see it.
   header.addEventListener('focusin', () => header.classList.remove('is-hidden'));
 
+  // Match the header's ink to the section beneath it.
+  if ('IntersectionObserver' in window) {
+    const tone = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) header.dataset.tone = entry.target.dataset.theme;
+      });
+    }, { rootMargin: '0px 0px -96% 0px' });
+    $$('[data-theme]').forEach(section => tone.observe(section));
+  }
+
   /* ---------------------------------------------------------------------
-     Mobile menu
+     Full-screen menu
      ------------------------------------------------------------------- */
   const outside = [$('main'), $('.site-footer')];
-  const menuQuery = window.matchMedia('(max-width: 900px)');
+  const clock = $('[data-clock]');
+  const clockTime = $('[data-clock-time]');
+  let clockTimer = null;
+  let clockFormat = null;
+  try {
+    clockFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch (error) { clockFormat = null; }
+
+  function tick() {
+    const now = new Date();
+    clockTime.textContent = clockFormat.format(now);
+    clockTime.dateTime = now.toISOString();
+  }
+  function runClock(on) {
+    if (!clockFormat) return;
+    clearInterval(clockTimer);
+    if (on) { tick(); clock.hidden = false; clockTimer = setInterval(tick, 15000); }
+  }
 
   function setMenu(open, { restoreFocus = true } = {}) {
     nav.classList.toggle('is-open', open);
+    header.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', String(open));
     $('.menu-toggle__label', toggle).textContent = open ? 'Close' : 'Menu';
     outside.forEach(el => { if (el) el.inert = open; });
     lock('menu', open);
+    runClock(open);
     if (open) {
       header.classList.remove('is-hidden');
-      $('a', nav).focus();
+      $('a', nav).focus({ preventScroll: true });
     } else if (restoreFocus) {
       toggle.focus();
     }
@@ -65,9 +85,6 @@
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && nav.classList.contains('is-open')) setMenu(false);
-  });
-  menuQuery.addEventListener('change', () => {
-    if (!menuQuery.matches && nav.classList.contains('is-open')) setMenu(false, { restoreFocus: false });
   });
 
   /* ---------------------------------------------------------------------
@@ -92,17 +109,105 @@
   /* ---------------------------------------------------------------------
      Reveal on scroll (only when motion is allowed)
      ------------------------------------------------------------------- */
-  const revealEls = $$('[data-reveal]');
+  // Wrap each word of a split heading so it can rise out of its own line.
+  function splitWords(root) {
+    let i = 0;
+    (function walk(node) {
+      Array.from(node.childNodes).forEach(child => {
+        if (child.nodeType === 3) {
+          const parts = child.textContent.split(/(\s+)/);
+          const frag = document.createDocumentFragment();
+          parts.forEach(part => {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.append(part); return; }
+            const outer = document.createElement('span');
+            const inner = document.createElement('span');
+            outer.className = 'w';
+            inner.textContent = part;
+            inner.style.setProperty('--i', i++);
+            outer.append(inner);
+            frag.append(outer);
+          });
+          child.replaceWith(frag);
+        } else if (child.nodeType === 1) {
+          walk(child);
+        }
+      });
+    })(root);
+  }
+
   if (motionOK) {
+    $$('[data-split]').forEach(splitWords);
     const reveal = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
         entry.target.classList.add('is-visible');
         reveal.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
-    revealEls.forEach(el => reveal.observe(el));
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+    $$('[data-reveal], [data-split], [data-reveal-img]').forEach(el => reveal.observe(el));
+
+    // Project panels reveal once a good part of them is on screen.
+    const panels = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        panels.unobserve(entry.target);
+      });
+    }, { threshold: 0.15 });
+    $$('.project').forEach(el => panels.observe(el));
   }
+
+  /* ---------------------------------------------------------------------
+     Scroll-linked motion: hero drift, stacked project panels, contact
+     ------------------------------------------------------------------- */
+  const heroMedia = $('[data-hero-media]');
+  const heroName = $('[data-hero-name]');
+  const projectItems = $$('.project');
+  const parallax = $$('[data-parallax]');
+  const stacked = window.matchMedia('(min-width: 761px)');
+  const clamp01 = n => Math.min(1, Math.max(0, n));
+
+  function updateMotion() {
+    const vh = window.innerHeight;
+    const y = window.scrollY;
+    if (y < vh * 1.2) {
+      heroMedia.style.transform = 'translate3d(0,' + (y * 0.32).toFixed(1) + 'px,0)';
+      heroName.style.transform = 'translate3d(0,' + (y * -0.12).toFixed(1) + 'px,0)';
+    }
+    if (stacked.matches) {
+      projectItems.forEach((item, i) => {
+        const top = item.getBoundingClientRect().top;
+        if (top > vh * 1.1) return;
+        item.style.setProperty('--enter', clamp01(top / vh).toFixed(3));
+        const next = projectItems[i + 1];
+        const cover = next ? clamp01(1 - next.getBoundingClientRect().top / vh) : 0;
+        item.style.setProperty('--cover', cover.toFixed(3));
+      });
+    }
+    parallax.forEach(img => {
+      const rect = img.parentElement.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > vh) return;
+      const progress = (rect.top + rect.height / 2 - vh / 2) / vh;
+      img.style.transform = 'translate3d(0,' + (progress * -8).toFixed(2) + '%,0)';
+    });
+  }
+  stacked.addEventListener('change', () => {
+    if (!stacked.matches) projectItems.forEach(item => { item.style.removeProperty('--enter'); item.style.removeProperty('--cover'); });
+  });
+
+  let ticking = false;
+  function onScroll() {
+    const y = window.scrollY;
+    updateHeader(y);
+    if (motionOK) updateMotion();
+    ticking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+  }, { passive: true });
+  window.addEventListener('resize', () => { if (motionOK) updateMotion(); }, { passive: true });
+  onScroll();
 
   /* ---------------------------------------------------------------------
      Lightbox: one full-screen viewer for gallery and project images
@@ -307,6 +412,15 @@
 
   const baseTitle = document.title;
 
+  // Sticky panels report their stuck position, so measure each one unstuck.
+  function scrollToPanel(item) {
+    const previous = item.style.position;
+    item.style.position = 'relative';
+    const top = item.getBoundingClientRect().top + window.scrollY;
+    item.style.position = previous;
+    window.scrollTo({ top, behavior: 'instant' });
+  }
+
   function showProject(slug) {
     const project = projects[slug];
     if (!project) return;
@@ -351,7 +465,7 @@
     const target = card || pvOpener;
     if (target) {
       target.focus({ preventScroll: true });
-      if (card && card !== pvOpener) card.closest('.project').scrollIntoView({ block: 'center' });
+      if (card && card !== pvOpener) scrollToPanel(card.closest('.project'));
     }
   });
 
