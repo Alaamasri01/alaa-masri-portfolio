@@ -1,5 +1,7 @@
 /*
- * Alaa Masri — Portfolio book 2026–2027 · final design system (approved Phase 4)
+ * Alaa Masri — Portfolio book 2026–2027 · rich edition (approved Phase 5 direction)
+ * Design system from Phase 4, density and technical components from Phase 5,
+ * type sizes raised for comfortable A4 print reading (smallest text 6.5 pt).
  * Base: Concept C (light editorial). Structure: Concept A (grid, tables,
  * captions, folios, technical sheets). Pauses: Concept B (.dark pages).
  *
@@ -60,15 +62,15 @@ img { display: block; }
 .caps { text-transform: uppercase; letter-spacing: .01em; }
 .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
 .it { font-style: italic; }
-.lead { font-family: "Instrument Serif", Georgia, serif; font-size: 13.5pt; line-height: 1.2; color: var(--ink-2); }
-.body { font: 400 8.5pt/13.2pt "Inter"; color: var(--ink-2); }
+.lead { font-family: "Instrument Serif", Georgia, serif; font-size: 14.5pt; line-height: 1.2; color: var(--ink-2); }
+.body { font: 400 9pt/14pt "Inter"; color: var(--ink-2); }
 .dark .body { font-weight: 300; }
 .body p + p { margin-top: 3.2mm; }
-.lbl { font: 500 6pt/1.3 "Inter"; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
+.lbl { font: 500 6.6pt/1.3 "Inter"; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
 .lbl--m { color: var(--muted); }
 .lbl--b { color: var(--bronze); }
-.val { font: 400 8pt/1.45 "Inter"; color: var(--ink); }
-.cap { font: 400 6.5pt/1.45 "Inter"; color: var(--ink-2); }
+.val { font: 400 8.6pt/1.42 "Inter"; color: var(--ink); }
+.cap { font: 400 7.3pt/1.42 "Inter"; color: var(--ink-2); }
 .cap b { font-weight: 500; color: var(--ink); letter-spacing: .08em; margin-right: 1.6mm; }
 .num { font-family: "Instrument Serif", Georgia, serif; color: var(--bronze); font-feature-settings: "lnum"; }
 
@@ -80,7 +82,7 @@ img { display: block; }
 .tbc { color: var(--muted) !important; }
 
 /* Folio: page number + section, outer corner */
-.folio { position: absolute; bottom: 8mm; display: flex; gap: 4.5mm; font: 500 6pt "Inter"; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.folio { position: absolute; bottom: 8mm; display: flex; gap: 4.5mm; font: 500 6.6pt "Inter"; z-index: 5; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .folio b { font-weight: 500; color: var(--ink); letter-spacing: .1em; }
 .verso .folio { left: 14mm; } .recto .folio { right: 14mm; flex-direction: row-reverse; }
 
@@ -106,7 +108,7 @@ a { color: inherit; text-decoration: none; }
 /* #marks — bleed box on a 236 × 323 mm sheet with crop marks and slug */
 .slug { width: 236mm; height: 323mm; position: relative; background: #fff; break-after: page; }
 .slug > .bleed { position: absolute; left: 10mm; top: 10mm; break-after: auto; }
-.crop { position: absolute; background: #000; }
+.cropmark { position: absolute; background: #000; }
 .slug__info { position: absolute; left: 13mm; bottom: 3mm; font: 400 5.5pt "Inter"; color: #000; letter-spacing: .04em; }
 /* preview — spreads on a desk, for proofing */
 .proof { background: #d8d3cb; padding: 12mm 0; }
@@ -117,44 +119,44 @@ a { color: inherit; text-decoration: none; }
 .proof .spreadrow__no { position: absolute; bottom: -6mm; left: 0; right: 0; text-align: center; font: 500 7pt "Inter"; letter-spacing: .16em; color: #5a5852; }
 .proof.guides .page::before { content: ""; position: absolute; inset: 8mm; outline: .4pt dashed rgba(200, 40, 40, .55); z-index: 50; pointer-events: none; }
 
-/* ---------- Presentation boards (screen only) ---------- */
-.board { width: 484mm; margin: 0 auto; padding: 14mm 25mm 16mm; display: flex; flex-direction: column; align-items: center; }
-.board__label { width: 100%; display: flex; justify-content: space-between; align-items: baseline; font: 500 7.5pt "Inter"; letter-spacing: .16em; text-transform: uppercase; color: #3a3935; border-bottom: .5pt solid #a29e95; padding-bottom: 2.5mm; margin-bottom: 9mm; }
-.board__label b { font-weight: 600; color: #171715; }
-.board__notes { width: 100%; margin-top: 8mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; font: 400 7.5pt/1.55 "Inter"; color: #45443f; }
-.board__notes p b { display: block; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: 6.5pt; color: #1d1d1b; margin-bottom: 1mm; }
-.spread { display: flex; position: relative; box-shadow: 0 5mm 12mm rgba(20, 18, 14, .22), 0 .6mm 2mm rgba(20, 18, 14, .18); }
-.spread--two::after { content: ""; position: absolute; top: 0; bottom: 0; left: calc(50% - 9mm); width: 18mm; pointer-events: none;
-  background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 38%, rgba(0,0,0,.15) 50%, rgba(255,255,255,.04) 52%, rgba(0,0,0,.04) 64%, rgba(0,0,0,0) 100%); }
-.pair { display: flex; gap: 14mm; align-items: flex-start; }
-.pair__cap { font: 500 6.5pt "Inter"; letter-spacing: .16em; text-transform: uppercase; color: #5a5852; margin-top: 3.5mm; text-align: center; }
-
-/* System sheet */
-.system { width: 434mm; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12mm; background: #f7f5f1; color: #1d1d1b; padding: 14mm; box-shadow: 0 5mm 12mm rgba(20,18,14,.18); }
-.system h3 { font: 500 6.5pt "Inter"; letter-spacing: .16em; text-transform: uppercase; color: #6b675f; margin: 0 0 3mm; padding-bottom: 1.6mm; border-bottom: .4pt solid #cfcac1; }
-.system section + section { margin-top: 7mm; }
-.system p { font: 400 8pt/1.55 "Inter"; color: #3b3a36; }
-.system ul { list-style: none; }
-.system li { font: 400 7.5pt/1.5 "Inter"; color: #3b3a36; padding: 1.3mm 0; border-bottom: .3pt solid #e1ddd5; display: grid; grid-template-columns: 30mm 1fr; gap: 3mm; }
-.system li span:first-child { font-weight: 500; color: #1d1d1b; }
-.spec { display: grid; grid-template-columns: 30mm 1fr; align-items: baseline; gap: 4mm; padding: 1.8mm 0; border-bottom: .3pt solid #e1ddd5; }
-.spec small { font: 400 6.5pt/1.4 "Inter"; color: #6b675f; }
-.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
-.sw { border: .3pt solid #d6d1c8; }
-.sw i { display: block; height: 13mm; }
-.sw div { padding: 1.6mm 1.8mm; font: 400 6pt/1.45 "Inter"; color: #4a4843; }
-.sw div b { display: block; font-weight: 600; color: #1d1d1b; font-size: 6.5pt; }
-.mini { width: calc(210mm * .42); height: calc(297mm * .42); position: relative; box-shadow: 0 1mm 4mm rgba(0,0,0,.18); flex: none; }
-.mini > .page { transform: scale(.42); transform-origin: 0 0; position: absolute; top: 0; left: 0; }
-.grid-overlay { position: absolute; top: var(--mt); bottom: var(--mb); left: var(--mi); right: var(--mo); pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(196, 120, 90, .15) 0 var(--col), transparent var(--col) calc(var(--col) + var(--gut))); outline: .5pt solid rgba(196, 90, 60, .6); }
-
 @media print {
   .proof { background: none; padding: 0; }
   body { background: none; }
-  .board { width: auto; padding: 0; margin: 0; display: block; }
-  .board--system, .board__label, .board__notes, .pair__cap { display: none !important; }
-  .spread, .pair { display: block; box-shadow: none; }
-  .spread::after { display: none; }
   .page { break-after: page; }
 }
+
+/* ---------- Rich components (Phase 5) ---------- */
+.crop { position: absolute; overflow: hidden; }
+.crop img { position: absolute; max-width: none; }
+.cad { position: absolute; }
+.gridpaper { position: absolute; left: -3mm; top: -3mm; }
+.stag { position: absolute; display: inline-block; border: .3pt solid var(--bronze); padding: 1mm 1.8mm .8mm; font: 600 6.6pt/1 "Inter"; letter-spacing: .14em; text-transform: uppercase; color: var(--bronze); white-space: nowrap; }
+.chip { position: absolute; }
+.chip i { display: block; width: 100%; height: var(--ch, 14mm); }
+.chip span { display: block; margin-top: 1.4mm; font: 400 6.8pt/1.35 "Inter"; color: var(--muted); letter-spacing: .01em; }
+.chip span b { display: block; font-weight: 500; color: var(--ink); font-size: 7.2pt; letter-spacing: 0; }
+.tx { position: absolute; }
+.tx .crop { position: relative; }
+.tx span { display: block; margin-top: 1.3mm; font: 400 6.8pt/1.35 "Inter"; color: var(--muted); }
+.tx span b { display: block; font-weight: 500; color: var(--ink); font-size: 7.2pt; }
+.vlabel { position: absolute; writing-mode: vertical-rl; transform: rotate(180deg); font: 500 6.6pt "Inter"; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+table.t { border-collapse: collapse; width: 100%; font: 400 7.3pt/1.32 "Inter"; color: var(--ink); }
+table.t th { font: 500 6.6pt "Inter"; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 1.3mm 1.4mm 1.3mm 0; border-bottom: .5pt solid var(--ink); }
+table.t td { padding: 1.4mm 1.4mm 1.4mm 0; border-bottom: .3pt solid var(--rule); vertical-align: top; }
+table.t td.n, table.t th.n { text-align: right; }
+table.t td b { font-weight: 500; }
+.note { position: absolute; border: .3pt solid var(--bronze); padding: 2.6mm 3.2mm; font: 400 7.8pt/1.45 "Inter"; color: var(--ink-2); background: rgba(147,115,78,.05); }
+.note b { display: block; font: 600 6.6pt "Inter"; letter-spacing: .14em; text-transform: uppercase; color: var(--bronze); margin-bottom: 1.2mm; }
+.key { position: absolute; display: grid; column-gap: 4mm; row-gap: 1.4mm; font: 400 7.3pt/1.3 "Inter"; color: var(--ink-2); }
+.key div { display: grid; grid-template-columns: 5.5mm 1fr; }
+.key div b { font-weight: 600; color: var(--bronze); }
+.check { display: grid; grid-template-columns: 5mm 1fr; align-items: start; font: 400 7.4pt/1.3 "Inter"; color: var(--ink-2); padding: 1.4mm 0; border-bottom: .3pt solid var(--rule); }
+.check i { width: 3mm; height: 3mm; border: .35pt solid var(--ink); position: relative; margin-top: .1mm; }
+.check i::after { content: ""; position: absolute; left: .95mm; top: .25mm; width: .9mm; height: 1.7mm; border: solid var(--bronze); border-width: 0 .5mm .5mm 0; transform: rotate(40deg); }
+.dot { display: inline-block; width: 1.8mm; height: 1.8mm; border-radius: 50%; background: var(--ink); vertical-align: -.1mm; }
+.dot.o { background: none; border: .35pt solid var(--ink); }
+.chain { position: absolute; display: grid; grid-template-columns: repeat(7, 1fr); }
+.chain div { border-top: .5pt solid var(--ink); padding-top: 2.6mm; position: relative; padding-right: 2mm; }
+.chain div::before { content: ""; position: absolute; top: -1.2mm; left: 0; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: var(--bronze); }
+.chain b { display: block; font: 400 11pt "Instrument Serif"; color: var(--bronze); }
+.chain span { display: block; margin-top: 1mm; font: 400 7.2pt/1.3 "Inter"; color: var(--ink-2); }

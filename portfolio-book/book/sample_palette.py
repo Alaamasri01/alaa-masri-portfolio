@@ -1,0 +1,64 @@
+"""Sample real colours from named regions of the project renders → palette.js.
+Each chip records its source file and pixel region, so every colour is traceable."""
+import json
+from pathlib import Path
+from PIL import Image
+import statistics as st
+
+ROOT = Path(__file__).parent.parent.parent
+REGIONS = {
+  # key: (label, file, (x, y, w, h))
+  'walnut':   ('Walnut veneer',          'projects/walnut-suite-03.webp', (120, 320, 220, 260)),
+  'walnutLit':('Walnut, lit',            'projects/walnut-suite-05.webp', (480, 150, 180, 700)),
+  'velvet':   ('Burgundy velvet',        'projects/walnut-suite-05.webp', (830, 150, 230, 700)),
+  'marble':   ('Black marble',           'projects/walnut-suite-02.webp', (700, 680, 220, 50)),
+  'brass':    ('Brass accent',           'projects/walnut-suite-03.webp', (820, 895, 90, 35)),
+  'linen':    ('Beige linen',            'projects/walnut-suite-01.webp', (560, 770, 200, 90), 'lit'),
+  'led':      ('Warm linear light',      'projects/walnut-suite-05.webp', (700, 150, 30, 700)),
+  'stone':    ('Limestone',              'projects/arched-retreat-01.webp', (300, 120, 120, 180), 'lit'),
+  'floor':    ('Polished marble floor',  'projects/arched-retreat-01.webp', (820, 860, 300, 110), 'lit'),
+  'gold':     ('Gold metalwork',         'projects/arched-retreat-01.webp', (780, 180, 60, 40)),
+  'mosaic':   ('Lit mosaic niche',       'projects/arched-retreat-05.webp', (850, 420, 100, 100)),
+  'sTimber':  ('Walnut wall panelling',  'projects/skyline-suite-01.webp', (1490, 260, 180, 220), 'lit'),
+  'sTaupe':   ('Taupe velvet headboard', 'projects/skyline-suite-01.webp', (1230, 528, 190, 28)),
+  'sOak':     ('Dark oak floor',         'projects/skyline-suite-01.webp', (1620, 890, 150, 80), 'lit'),
+  'sLeather': ('Dark leather bench',     'projects/skyline-suite-01.webp', (840, 772, 330, 18)),
+  'vStone':   ('Limestone cladding',     'projects/illuminated-villa-05.webp', (900, 280, 200, 220), 'lit'),
+  'vScreen':  ('Timber screen',          'projects/illuminated-villa-05.webp', (380, 300, 150, 150)),
+  'vFascia':  ('Dark bronze fascia',     'projects/illuminated-villa-05.webp', (300, 505, 500, 20)),
+  'vDoor':    ('Timber entrance door',   'projects/illuminated-villa-05.webp', (720, 620, 100, 180)),
+  'vGlow':    ('Warm facade light',      'projects/illuminated-villa-04.webp', (1012, 360, 50, 300)),
+  'gTimber':  ('Walnut slats',           'projects/garden-lounge-03.webp', (200, 100, 220, 400), 'lit'),
+  'gTrav':    ('Travertine',             'projects/garden-lounge-03.webp', (1000, 150, 500, 220), 'lit'),
+  'gBoucle':  ('Boucle upholstery',      'projects/garden-lounge-05.webp', (700, 450, 250, 200), 'lit'),
+  'gLinen':   ('Sofa fabric',            'projects/garden-lounge-01.webp', (1250, 675, 150, 25), 'lit'),
+  'gCharcoal':('Charcoal chair weave',   'projects/garden-lounge-02.webp', (250, 730, 100, 70)),
+  'bVelvet':  ('Burgundy velvet',        'projects/burgundy-salon-01.webp', (850, 420, 120, 160), 'lit'),
+  'bTimber':  ('Walnut panel',           'projects/burgundy-salon-01.webp', (1130, 400, 80, 250)),
+  'bFloor':   ('Pale timber floor',      'projects/burgundy-salon-01.webp', (1300, 850, 250, 80), 'lit'),
+  'bWhite':   ('Gallery wall, in shade',          'projects/burgundy-salon-01.webp', (1480, 560, 80, 140), 'lit'),
+  'mPlaster': ('Textured plaster',       'projects/earth-toned-majlis-01.webp', (1100, 300, 250, 200), 'lit'),
+  'mOak':     ('Light oak',              'projects/earth-toned-majlis-01.webp', (925, 300, 55, 250), 'lit'),
+  'mTerra':   ('Terracotta',             'projects/earth-toned-majlis-03.webp', (380, 200, 100, 150)),
+  'mLinen':   ('Linen seating',          'projects/earth-toned-majlis-01.webp', (1040, 664, 160, 14), 'lit'),
+  'mFrieze':  ('Frieze pigment',         'projects/earth-toned-majlis-03.webp', (1166, 596, 16, 16)),
+  'mFloor':   ('Stone floor',            'projects/earth-toned-majlis-01.webp', (700, 800, 300, 100), 'lit'),
+}
+def med(im, box, lit=False):
+    x, y, w, h = box
+    px = list(im.crop((x, y, x + w, y + h)).convert('RGB').get_flattened_data())
+    if lit:  # textured surfaces: median of the lit half, so shadows in the texture don't darken the chip
+        px.sort(key=lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2])
+        px = px[len(px) // 2:]
+    return tuple(int(st.median(c[i] for c in px)) for i in range(3))
+def cmyk(r, g, b):
+    r, g, b = r / 255, g / 255, b / 255
+    k = 1 - max(r, g, b)
+    if k >= 1: return (0, 0, 0, 100)
+    return tuple(round(100 * v) for v in ((1 - r - k) / (1 - k), (1 - g - k) / (1 - k), (1 - b - k) / (1 - k), k))
+out = {}
+for key, (label, f, box, *opt) in REGIONS.items():
+    rgb = med(Image.open(ROOT / f), box, bool(opt))
+    out[key] = {'label': label, 'hex': '#%02X%02X%02X' % rgb, 'cmyk': 'C%d M%d Y%d K%d' % cmyk(*rgb), 'src': f.split('/')[-1], 'box': box}
+    print(f'{key:10s} {out[key]["hex"]} {out[key]["cmyk"]:18s} {label}')
+Path(__file__).with_name('palette.js').write_text('// Generated by sample_palette.py — median colours sampled from the renders.\nwindow.PAL = ' + json.dumps(out, indent=1) + ';\n')

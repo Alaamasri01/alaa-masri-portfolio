@@ -128,6 +128,11 @@
     }
   });
   window.bookProblems = problems;
+  // Page references: <span data-pref="walnut"></span> → number of the page carrying data-anchor="walnut"
+  $('[data-pref]').forEach(function (el) {
+    var t = document.querySelector('[data-anchor="' + el.dataset.pref + '"]');
+    if (t) el.textContent = pad(+t.dataset.page); else problems.push('Missing anchor ' + el.dataset.pref);
+  });
 
   fill('toc', pages.filter(function (p) { return p.dataset.toc; }).map(function (p) {
     var sub = p.dataset.tocLevel === '2';
@@ -181,7 +186,7 @@
           [l - off - len, b, len, w], [l, b + off, w, len], [r + off, b, len, w], [r, b + off, w, len]
         ];
         marks.forEach(function (m) {
-          slug.insertAdjacentHTML('beforeend', '<div class="crop" style="left:' + m[0] + 'mm; top:' + m[1] + 'mm; width:' + m[2] + 'mm; height:' + m[3] + 'mm"></div>');
+          slug.insertAdjacentHTML('beforeend', '<div class="cropmark" style="left:' + m[0] + 'mm; top:' + m[1] + 'mm; width:' + m[2] + 'mm; height:' + m[3] + 'mm"></div>');
         });
         slug.insertAdjacentHTML('beforeend', '<div class="slug__info">Alaa Masri — Portfolio 2026–2027 · page ' + p.dataset.page + ' / ' + pages.length + ' · A4 210 × 297 mm trim · 3 mm bleed</div>');
       }

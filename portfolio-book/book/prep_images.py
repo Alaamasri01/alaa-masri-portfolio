@@ -14,7 +14,7 @@ from PIL import Image
 HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
 html = (HERE / 'book.html').read_text()
-srcs = sorted(set(re.findall(r'src="\.\./\.\./([^"]+)"', html)))
+srcs = sorted(set(re.findall(r'((?:projects|gallery)/[\w-]+\.(?:webp|png))', html)) | {'portrait.png'})
 
 for rel in srcs:
     src = ROOT / rel
