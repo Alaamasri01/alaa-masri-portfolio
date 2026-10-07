@@ -1,0 +1,48 @@
+# Supabase CLI configuration for local development (`npx supabase start`).
+project_id = "pickly"
+
+[api]
+enabled = true
+port = 54321
+# Only `public` is exposed. The `private` schema (authorization helpers) must never be added here.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Accounts are provisioned by schools (invitations), never by public sign-up.
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.sms]
+# Phone OTP is the intended primary login for parents in production (Milestone 6).
+enable_signup = false
