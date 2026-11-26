@@ -1,0 +1,10 @@
+{
+  "name": "maqadi",
+  "private": true,
+  "type": "module",
+  "description": "مقاضي — خطة أكل الأسبوع وقائمة مشتريات مبنية على عروض السوبرماركت",
+  "scripts": {
+    "test": "node --test ../tests/maqadi/*.test.mjs",
+    "data": "node ../tools/maqadi/build-data.mjs"
+  }
+}
