@@ -10,6 +10,7 @@ import {
 } from './lib/plan.js';
 import { scannedGtin } from './lib/barcode.js';
 import { lookupScan } from './lib/scan.js';
+import { fitBudget, budgetBreakdown } from './lib/budget.js';
 
 const CONFIG = {
   name: 'مقاضي',
@@ -116,6 +117,13 @@ function activePlan(plan, storedPicks, mealCount) {
   return Object.assign({}, plan, { meals: ids.slice(0, mealCount).map(id => byId.get(id)), choices });
 }
 
+/* Fitting a week to a budget tries every swap; the answer is kept until something changes. */
+let fitMemo = { key: null, value: null };
+function memoFit(key, compute) {
+  if (fitMemo.key !== key) fitMemo = { key, value: compute() };
+  return fitMemo.value;
+}
+
 /* ---------------------------------------------------------------------
    Pictures
    ------------------------------------------------------------------- */
@@ -186,7 +194,9 @@ const ICONS = {
   scan: 'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 9v6M10 9v6M13 9v6M16.5 9v6',
   flash: 'M13 3 5 14h6l-1 7 8-11h-6l1-7Z',
   keys: 'M4 7h16v10H4zM7 10h.01M10 10h.01M13 10h.01M16 10h.01M8 14h8',
-  plus: 'M12 5v14M5 12h14'
+  plus: 'M12 5v14M5 12h14',
+  pen: 'M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4',
+  wand: 'M4 20 15 9M14 4v2M19 9h2M17.5 5.5 19 4M9 5l1 1M18 14l1 1'
 };
 const Icon = ({ name, size = 22, stroke = 1.9 }) => html`
   <svg class="icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -332,9 +342,121 @@ const SectionTitle = ({ title, emoji, href, more }) => html`
   </div>`;
 
 /* ---------------------------------------------------------------------
+   Budget
+   ------------------------------------------------------------------- */
+const BUDGET_PRESETS = [150, 200, 250, 300, 400];
+const mealsWord = n => (n === 1 ? 'طبخة واحدة' : n === 2 ? 'طبختين' : n + ' طبخات');
+
+/* The meter under the week's total in the green header. */
+function BudgetMeter({ budget, total, onEdit }) {
+  const limit = budget * 100;
+  const over = total > limit;
+  return html`
+    <div class=${'meter' + (over ? ' is-over' : '')}>
+      <div class="meter__row">
+        <span>ميزانيتك <b dir="ltr">${budget}</b> ريال <button type="button" class="meter__edit" onClick=${onEdit}><${Icon} name="pen" size=${13} stroke=${2} /> تعديل</button></span>
+        <span class="meter__state">${over ? html`أغلى بـ <span dir="ltr">${money(total - limit)}</span>` : html`باقي <span dir="ltr">${money(limit - total)}</span> ريال`}</span>
+      </div>
+      <div class="meter__bar" role="progressbar" aria-label="ما تصرفه من الميزانية" aria-valuemin="0" aria-valuemax=${budget} aria-valuenow=${Math.round(total / 100)}>
+        <i style=${'width:' + Math.min(100, total / limit * 100) + '%'}></i>
+      </div>
+    </div>`;
+}
+
+/* Under the search bar on the home screen: over budget, or just brought within it. */
+function BudgetCard({ budget, over, fit, done, onFit, onEdit, onMeals, onDismiss }) {
+  if (over && fit) {
+    if (!fit.swaps.length) {
+      return html`
+        <section class="budget-card is-over">
+          <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>السفرة أغلى من ميزانيتك</b><span>لا توجد طبخات أرخص تكفي لـ ${budget} ريال هذا الأسبوع. يمكنك تقليل عدد الطبخات أو رفع الميزانية.</span></div></div>
+          <div class="budget-card__actions"><button type="button" class="btn" onClick=${onMeals}>قلّل الطبخات</button><button type="button" class="btn btn--ghost" onClick=${onEdit}>عدّل الميزانية</button></div>
+        </section>`;
+    }
+    return html`
+      <section class="budget-card is-over">
+        <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>السفرة أغلى من ميزانيتك</b><span>${fit.fits
+          ? `يمكننا ترتيبها ضمن ${budget} ريال بتبديل ${mealsWord(fit.swaps.length)} بأرخص منها.`
+          : `أقرب ما نصل إليه ${money(fit.after)} ريال بتبديل ${mealsWord(fit.swaps.length)}.`}</span></div></div>
+        <button type="button" class="btn btn--wide" onClick=${onFit}><${Icon} name="wand" size=${20} stroke=${2} /> ${fit.fits ? 'رتّبها ضمن ميزانيتي' : 'اقترب من ميزانيتي'}</button>
+      </section>`;
+  }
+  if (done && !over) {
+    return html`
+      <section class="budget-card is-done">
+        <div class="budget-card__top"><${Emoji} char="✨" size=${36} /><div><b>سفرتك ضمن ميزانيتك</b><span>بدّلنا ${mealsWord(done.count)} ووفّرنا <b class="inline" dir="ltr">${money(done.saved)}</b> ريال.</span></div>
+          <button type="button" class="budget-card__close" aria-label="إخفاء" onClick=${onDismiss}><${Icon} name="close" size=${16} /></button></div>
+      </section>`;
+  }
+  return null;
+}
+
+function BudgetSheet({ budget, total, breakdown, set, onClose }) {
+  const suggested = Math.max(50, Math.ceil(total / 1000) * 10);
+  const [value, setValue] = useState(budget || suggested);
+  const save = amount => { set.budget(amount); onClose(); };
+  return html`
+    <${Sheet} title="ميزانية الأسبوع" onClose=${onClose}>
+      <p class="sheet__sub">كم تريد أن تصرف على المقاضي هذا الأسبوع؟</p>
+      <div class="budget-amount">
+        <${Stepper} cls="stepper--budget" value=${value} min=${50} max=${3000} step=${10} label="ميزانية الأسبوع بالريال" onChange=${setValue} format=${v => html`<b dir="ltr">${v}</b><small>ريال</small>`} />
+      </div>
+      <div class="pills pills--sheet" role="group" aria-label="مبالغ جاهزة">
+        ${BUDGET_PRESETS.map(amount => html`<button type="button" class="pill" aria-pressed=${value === amount} onClick=${() => setValue(amount)}>${amount}</button>`)}
+      </div>
+      <div class="budget-includes">
+        <b>الميزانية تشمل كل ما في قائمتك:</b>
+        <ul>
+          <li><span>الطبخات</span><span dir="ltr">${money(breakdown.meals)}</span></li>
+          ${breakdown.basics ? html`<li><span>الأساسيات${breakdown.basicsNames ? ': ' + breakdown.basicsNames : ''}</span><span dir="ltr">${money(breakdown.basics)}</span></li>` : null}
+          <li><span>أغراض أضفتها بنفسك</span><span dir="ltr">${money(breakdown.added)}</span></li>
+          <li class="is-total"><span>المجموع الآن</span><span dir="ltr">${money(breakdown.total)}</span></li>
+        </ul>
+      </div>
+      <button type="button" class="btn btn--wide" onClick=${() => save(value)}>حفظ</button>
+      ${budget ? html`<button type="button" class="sheet__link" onClick=${() => save(null)}>بدون ميزانية</button>` : null}
+    <//>`;
+}
+
+function FitSheet({ fit, budget, onApply, onClose }) {
+  const diff = budget * 100 - fit.after;
+  return html`
+    <${Sheet} title=${fit.fits ? 'ضمن ميزانية ' + budget + ' ريال' : 'أقرب ما يمكن لميزانيتك'} onClose=${onClose}>
+      <p class="sheet__sub">بدّلنا ${mealsWord(fit.swaps.length)} بأرخص منها من عروض هذا الأسبوع. باقي السفرة كما هي.</p>
+      <ul class="fit-list">
+        ${fit.swaps.map((swap, i) => html`
+          <li class="fit-swap">
+            <span class="fit-swap__pics" aria-hidden="true">
+              <span class=${'fit-swap__pic tile-' + ((i * 2 + 2) % 6)}><${Emoji} char=${swap.from.emoji} size=${30} /></span>
+              <span class="fit-swap__arrow">←</span>
+              <span class=${'fit-swap__pic tile-' + ((i * 2 + 4) % 6)}><${Emoji} char=${swap.to.emoji} size=${30} /></span>
+            </span>
+            <span class="fit-swap__body">
+              <s>${swap.from.name}</s>
+              <b>${swap.to.name}</b>
+              <small>${[swap.to.cuisine, swap.to.minutes + ' دقيقة'].filter(Boolean).join(' · ')}</small>
+            </span>
+            <span class="fit-swap__save" dir="ltr">−${money(swap.saves)}</span>
+          </li>`)}
+      </ul>
+      <div class="fit-sum">
+        <div><span>السفرة الآن</span><s dir="ltr">${money(fit.before)}</s></div>
+        <div><span>بعد التبديل</span><span dir="ltr">${money(fit.after)}</span></div>
+        <div class=${'fit-sum__result' + (diff < 0 ? ' is-over' : '')}><span>${diff >= 0 ? 'تحت ميزانيتك بـ' : 'أغلى من ميزانيتك بـ'}</span><span><b dir="ltr">${money(Math.abs(diff))}</b> ريال</span></div>
+      </div>
+      ${fit.fits ? null : html`<p class="fit-hint">لتصل إلى ${budget} ريال يمكنك أيضاً تقليل عدد الطبخات من «الخطة».</p>`}
+      <div class="sheet__actions">
+        <button type="button" class="btn" onClick=${onApply}>طبّق التبديلات</button>
+        <button type="button" class="btn btn--ghost" onClick=${onClose}>لا، اتركها</button>
+      </div>
+      <p class="sheet__note">يمكنك تبديل أي طبخة لاحقاً من «الخطة».</p>
+    <//>`;
+}
+
+/* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, list, offers, locked, set, openFamily, scanTip }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, list, offers, locked, set, openFamily, scanTip, budgetInfo }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -348,10 +470,12 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
         <button type="button" class="head__family" onClick=${openFamily} aria-label=${'عدد أفراد الأسرة ' + persons + '. تغيير'}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${persons} أفراد</button>
       </p>
       <p class="head__total"><${Sum} value=${list.totals.cost} /><span>ريال للأسبوع</span></p>
+      ${budgetInfo.budget ? html`<${BudgetMeter} budget=${budgetInfo.budget} total=${list.totals.cost} onEdit=${budgetInfo.openBudget} />` : null}
       <div class="head__chips">
         ${list.totals.saved ? html`<span class="hchip hchip--gold">وفّرت <b dir="ltr">${money(list.totals.saved)}</b> ريال</span>` : null}
         <span class="hchip">${cooked} طبخات · ${list.totals.items} صنف</span>
         ${list.unpriced.length ? html`<span class="hchip">${list.unpriced.length} بدون سعر</span>` : null}
+        ${budgetInfo.budget ? null : html`<button type="button" class="hchip hchip--button" onClick=${budgetInfo.openBudget}><${Icon} name="plus" size=${14} stroke=${2.4} /> ميزانية الأسبوع</button>`}
       </div>
     <//>
     <div class="float searchbar">
@@ -363,6 +487,9 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
         <b>جديد: امسح وقارن</b>
         وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.
       </button>` : null}
+
+    <${BudgetCard} budget=${budgetInfo.budget} over=${budgetInfo.over} fit=${budgetInfo.fit} done=${week.budgetFit}
+      onFit=${budgetInfo.openFit} onEdit=${budgetInfo.openBudget} onMeals=${openFamily} onDismiss=${set.hideFitNote} />
 
     ${storeRows.length > 1 ? html`<${StoreCards} data=${data} rows=${storeRows} onPick=${set.store} />` : null}
 
@@ -379,7 +506,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
           <article class=${'mcard' + (off ? ' is-off' : '') + (isLocked ? ' is-locked' : '')}>
             <a class="mcard__link" href=${isLocked ? '#/me' : '#/meal/' + meal.id} aria-label=${meal.name}>
               <span class=${'mcard__art tile-' + (index % 6)}>
-                <span class="mcard__day">اليوم ${index + 1}</span>
+                <span class="mcard__tags"><span class="mcard__day">اليوم ${index + 1}</span>${week.fresh.includes(meal.id) ? html`<span class="mcard__new">جديد</span>` : null}</span>
                 <${Emoji} char=${meal.emoji} size=${84} />
               </span>
               <span class="mcard__body">
@@ -488,7 +615,7 @@ function PlanTab({ data, head, plans, plan, persons, mealsPerWeek, maxMeals, wee
             <a class="meal__main" href=${isLocked ? '#/me' : '#/meal/' + meal.id}>
               <span class=${'meal__tile tile-' + (index % 6)}><${Emoji} char=${meal.emoji} size=${48} /></span>
               <span class="meal__body">
-                <span class="meal__day">اليوم ${index + 1}</span>
+                <span class="meal__day">اليوم ${index + 1}${week.fresh.includes(meal.id) ? html` <span class="badge badge--gold">جديد</span>` : null}</span>
                 <span class="meal__name">${meal.name}</span>
                 ${isLocked
                   ? html`<span class="meal__meta"><${Icon} name="lock" size=${13} /> مع مقاضي بلس</span>`
@@ -624,7 +751,7 @@ function shareText(data, list, period) {
   return rows.join('\n');
 }
 
-function ListTab({ data, head, list, week, set, period, compare }) {
+function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
   const done = key => week.checked.includes(key);
   const total = list.lines.length + list.unpriced.length;
   const ticked = list.lines.filter(line => done(line.key)).length + list.unpriced.filter(item => done('u:' + item.name)).length;
@@ -678,6 +805,12 @@ function ListTab({ data, head, list, week, set, period, compare }) {
         const missing = other.unmatched ? (other.unmatched === 1 ? 'صنف أضفته غير موجود هناك' : other.unmatched + ' أصناف أضفتها غير موجودة هناك') : '';
         return html`<p class="summary__compare"><${StoreDot} id=${other.id} />نفس القائمة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? 'أغلى' : 'أرخص'} بـ <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ` · ${other.unpriced} بدون سعر هناك` : ''}</p>`;
       })}
+      ${budgetInfo.budget ? html`
+        <p class=${'summary__budget' + (budgetInfo.over ? ' is-over' : '')}>
+          ميزانيتك <b dir="ltr">${budgetInfo.budget}</b> ريال ·
+          ${budgetInfo.over ? html`أغلى بـ <b dir="ltr">${money(list.totals.cost - budgetInfo.budget * 100)}</b>` : html`باقي <b dir="ltr">${money(budgetInfo.budget * 100 - list.totals.cost)}</b> ريال`}
+          <button type="button" class="link link--green" onClick=${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? budgetInfo.openFit : budgetInfo.openBudget}>${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? 'رتّبها ضمن ميزانيتي' : 'تعديل'}</button>
+        </p>` : null}
       <div class="summary__progress">
         <span>تم ${ticked} من ${total}</span>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax=${total} aria-valuenow=${ticked} aria-label="ما تم شراؤه"><span style=${'width:' + (total ? ticked / total * 100 : 0) + '%'}></span></div>
@@ -1054,7 +1187,7 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
 /* ---------------------------------------------------------------------
    Account and settings
    ------------------------------------------------------------------- */
-function MeTab({ data, head, plans, store, plan, persons, mealsPerWeek, maxMeals, set, plusOn, openStore }) {
+function MeTab({ data, head, plans, store, plan, persons, mealsPerWeek, maxMeals, set, plusOn, openStore, budgetInfo }) {
   const stores = Object.keys(data.offers.stores).map(id => data.offers.stores[id]);
   return html`
     <${Head} ...${head} small>
@@ -1069,6 +1202,10 @@ function MeTab({ data, head, plans, store, plan, persons, mealsPerWeek, maxMeals
 
     <section class="float panel">
       <div class="row"><span>عدد أفراد الأسرة</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} /></div>
+      <button type="button" class="row row--button" onClick=${budgetInfo.openBudget}>
+        <span>ميزانية الأسبوع</span>
+        <span class="row__value">${budgetInfo.budget ? html`<span dir="ltr">${budgetInfo.budget}</span> ريال` : 'بدون'} <${Icon} name="chevron" size=${18} /></span>
+      </button>
       <button type="button" class="row row--button" onClick=${openStore}>
         <span>المتجر الذي تتسوّق منه</span>
         <span class="row__value"><${StoreDot} id=${store} />${storeName(data, store)} <${Icon} name="chevron" size=${18} /></span>
@@ -1116,7 +1253,7 @@ function MeTab({ data, head, plans, store, plan, persons, mealsPerWeek, maxMeals
 /* ---------------------------------------------------------------------
    Welcome (first visit)
    ------------------------------------------------------------------- */
-function Welcome({ data, rows, persons, set, onDone }) {
+function Welcome({ data, rows, persons, budget, set, onDone }) {
   const [step, setStep] = useState(0);
   if (step === 0) {
     return html`
@@ -1147,6 +1284,15 @@ function Welcome({ data, rows, persons, set, onDone }) {
         <div class="welcome__q">
           <span>كم شخصاً في أسرتك؟</span>
           <${Stepper} cls="stepper--big" value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} />
+        </div>
+        <div class="welcome__q welcome__q--budget">
+          <span>كم ميزانيتك للمقاضي في الأسبوع؟</span>
+          <div class="pills pills--wrap" role="group" aria-label="ميزانية الأسبوع">
+            <button type="button" class="pill" aria-pressed=${!budget} onClick=${() => set.budget(null)}>بدون ميزانية</button>
+            ${BUDGET_PRESETS.map(amount => html`<button type="button" class="pill" aria-pressed=${budget === amount} onClick=${() => set.budget(amount)}>${amount} ريال</button>`)}
+          </div>
+          ${budget ? html`<${Stepper} cls="stepper--budget stepper--compact" value=${budget} min=${50} max=${3000} step=${10} label="ميزانية الأسبوع بالريال" onChange=${set.budget} format=${v => html`<b dir="ltr">${v}</b><small>ريال</small>`} />` : null}
+          <small class="welcome__hint">تشمل كل ما في قائمتك: الطبخات والأساسيات وما تضيفه.</small>
         </div>
         <p class="welcome__label">من أين تتسوّق عادة؟</p>
         <div class="welcome__stores">
@@ -1236,7 +1382,9 @@ function App() {
     skipped: stored.skipped || [],
     checked: stored.checked || [],
     extras: stored.extras || {},
-    essentials: stored.essentials !== false
+    essentials: stored.essentials !== false,
+    fresh: stored.fresh || [],
+    budgetFit: stored.budgetFit || null
   };
   // Plans are published per store, for the same meals; the family picks where they shop.
   const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
@@ -1252,6 +1400,12 @@ function App() {
   const locked = new Set(plusOn ? plan.meals.slice(CONFIG.plus.freeMeals).map(meal => meal.id) : []);
   const skipped = new Set(week.skipped.concat(Array.from(locked)));
   const list = buildList({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras });
+
+  // The week's budget covers the whole list; swaps are worked out only when it is over.
+  const budget = prefs.budget > 0 ? prefs.budget : null;
+  const over = budget !== null && list.totals.cost > budget * 100;
+  const fitKey = [store, plan.id, plan.meals.map(m => m.id).join(','), persons, Array.from(skipped).join(','), week.essentials, JSON.stringify(week.extras), budget].join('|');
+  const fit = over ? memoFit(fitKey, () => fitBudget({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras, budget: budget * 100 })) : null;
 
   // The same week at the other stores: same meals, each store's own products;
   // hand-added products follow when the other store sells the same one.
@@ -1308,6 +1462,14 @@ function App() {
       return { extras };
     }),
     welcomed: () => patch({ welcomed: true }),
+    budget: value => patch({ budget: value > 0 ? Math.round(value) : null }),
+    applyFit: () => setWeek(current => {
+      const picks = Object.assign({}, current.picks);
+      picks[plan.id] = fit.ids;
+      const fresh = Array.from(new Set((current.fresh || []).concat(fit.swaps.map(swap => swap.to.id))));
+      return { picks, fresh, budgetFit: { count: fit.swaps.length, saved: fit.before - fit.after } };
+    }),
+    hideFitNote: () => setWeek(() => ({ budgetFit: null })),
     scanTipSeen: () => { if (!prefs.scanTipSeen) patch({ scanTipSeen: true }); },
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
@@ -1315,6 +1477,7 @@ function App() {
   const period = pricePeriod(data, store);
   const openStore = () => setSheet('store');
   const head = { data, store, period, onStore: openStore };
+  const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
   const tab = route.tab === 'meal' || route.tab === 'scan' ? lastTab.current : route.tab;
@@ -1323,11 +1486,11 @@ function App() {
     <div class="shell">
       <main class="main" id="main">
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} offers=${offers} backHref=${'#/' + lastTab.current} />`
-          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} compare=${compare} />`
+          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} compare=${compare} budgetInfo=${budgetInfo} />`
           : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} />`}
+          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} budgetInfo=${budgetInfo} />`
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} />`}
       </main>
 
       <nav class="tabbar" aria-label="الأقسام">
@@ -1347,7 +1510,10 @@ function App() {
       ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} />` : null}
-      ${prefs.welcomed ? null : html`<${Welcome} data=${data} rows=${storeRows} persons=${persons} set=${set} onDone=${set.welcomed} />`}
+      ${sheet === 'budget' ? html`<${BudgetSheet} budget=${budget} total=${list.totals.cost} set=${set} onClose=${() => setSheet(null)}
+          breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(item => item.name).join('، ') : '' })} />` : null}
+      ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
+      ${prefs.welcomed ? null : html`<${Welcome} data=${data} rows=${storeRows} persons=${persons} budget=${budget} set=${set} onDone=${set.welcomed} />`}
     </div>`;
 }
 
