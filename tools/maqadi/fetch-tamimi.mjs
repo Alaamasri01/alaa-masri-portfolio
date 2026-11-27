@@ -51,7 +51,12 @@ export function readPage(html) {
 
 /* "6 x 200 ML" → { qty: 200, unit: 'ml', count: 6 }; "1.5 L" → { qty: 1.5, unit: 'l', count: 1 } */
 export function parseSize(text) {
-  const t = String(text || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  let t = String(text || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  // "6 pcs - 240g": the count is what a recipe buys by.
+  const counted = /^(\d+)\s*PCS?\b\s*-/.exec(t);
+  if (counted) return { qty: Number(counted[1]), unit: 'pcs', count: 1 };
+  // Imported goods are sized in ounces.
+  t = t.replace(/(\d+(?:\.\d+)?)\s*OZ\b/, (all, n) => String(Math.round(Number(n) * 28.35)) + 'G');
   const units = { G: 'g', GM: 'g', GR: 'g', GRAM: 'g', GRAMS: 'g', KG: 'kg', ML: 'ml', L: 'l', LTR: 'l', LITRE: 'l', LITER: 'l', PC: 'pcs', PCS: 'pcs', PIECE: 'pcs', PIECES: 'pcs' };
   let m = /^(\d+)\s*[X×*]\s*(\d+(?:\.\d+)?)\s*([A-Z]+)$/.exec(t);
   if (m && units[m[3]]) return { qty: Number(m[2]), unit: units[m[3]], count: Number(m[1]) };
@@ -110,6 +115,12 @@ export function categoryOf(product) {
     if (/OLIVE|PICKLE/.test(parent)) return 'canned';
     if (/PASTA/.test(parent)) return 'pasta_noodles';
   }
+  if (/CANNED|PACKED/.test(sub)) {
+    if (/CREAM/.test(name)) return 'butter_cream';
+    if (/LABN/.test(parent + ' ' + name)) return 'dairy_yogurt_labneh';
+    if (/CREAM/.test(parent)) return 'butter_cream';
+    if (/VEGETABLE|BEAN|TOMATO|FRUIT/.test(parent)) return 'canned';
+  }
   // "FOOD & BEVERAGES" names the whole grocery department, not drinks.
   for (const level of [parent, sub, /FOOD & BEVERAGE/.test(dept) ? '' : dept]) {
     for (const [pattern, category] of AISLE_RULES) if (level && pattern.test(level)) return category;
@@ -122,13 +133,16 @@ export function categoryOf(product) {
 /* Not household shopping: pet supplies, toys and luggage stay out. */
 export const outOfScope = product => /^PETS/.test(up(product.departmentName)) || /TOYS|LUGGAGE|TRAVEL/.test(up(product.subDepartmentName) + ' ' + up(product.parentCategoryName));
 
-/* One offer per discounted variant, in the flyer-transcription shape. */
+/* One entry per variant, in the flyer-transcription shape. Discounted
+   variants carry the old price in `was`; the rest are regular prices, used
+   to cost the meal plans but never shown as offers. */
 export function toOffers(products) {
   const offers = [];
   products.forEach(product => {
     if (outOfScope(product)) return;
     (product.variants || []).forEach(variant => {
-      if (!variant.hasOffer || !(variant.oldPrice > variant.price) || !(variant.price > 0) || variant.isActive === false || variant.isDelete) return;
+      if (!(variant.price > 0) || variant.isActive === false || variant.isDelete) return;
+      const discounted = Boolean(variant.hasOffer) && variant.oldPrice > variant.price;
       const size = parseSize(variant.variantEn);
       offers.push({
         page: 1,
@@ -142,7 +156,7 @@ export function toOffers(products) {
         pack_count: size ? size.count : 1,
         sold_by: null,
         price: Math.round(variant.price * 100) / 100,
-        was: Math.round(variant.oldPrice * 100) / 100,
+        was: discounted ? Math.round(variant.oldPrice * 100) / 100 : null,
         promo: null,
         note: null,
         category: categoryOf(product),
@@ -188,7 +202,8 @@ async function main() {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(offers, null, 1) + '\n');
   const sized = offers.filter(offer => offer.size_qty).length;
-  console.log(`tamimi: ${products.length} products on ${total} pages, ${offers.length} discounted variants (${sized} with a readable size) → ${out}`);
+  const discounted = offers.filter(offer => offer.was).length;
+  console.log(`tamimi: ${products.length} products on ${total} pages → ${offers.length} priced variants, ${discounted} discounted, ${sized} with a readable size → ${out}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

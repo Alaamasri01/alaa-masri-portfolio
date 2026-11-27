@@ -15,6 +15,9 @@ const UNITS = {
   pcs: { family: 'count', factor: 1 }
 };
 
+/* Fresh food does not wait in the cupboard for next week. */
+const PERISHABLE = new Set(['produce_fruit', 'produce_veg', 'meat', 'poultry', 'fish', 'eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream', 'bakery']);
+
 /* Loose items priced per kilo are bought in quarter-kilo steps. */
 const LOOSE_STEP_G = 250;
 
@@ -133,8 +136,8 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
     lines.push({
       key: 'o:' + entry.offer.id, offer: entry.offer, name: entry.name, need: entry.need, sources: entry.sources,
       units: bought.units, loose: bought.loose, bought: bought.bought, cost: bought.cost, saved: bought.saved, approx: bought.approx,
-      // More than three times what the week needs: the rest stays in the cupboard.
-      keeps: Boolean(bought.bought && entry.need && bought.bought.family === entry.need.family && bought.bought.qty >= entry.need.qty * 3),
+      // More than three times what the week needs, of something that keeps: the rest stays in the cupboard.
+      keeps: !PERISHABLE.has(entry.offer.category) && Boolean(bought.bought && entry.need && bought.bought.family === entry.need.family && bought.bought.qty >= entry.need.qty * 3),
       extra: false
     });
   });

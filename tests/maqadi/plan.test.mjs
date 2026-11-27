@@ -98,7 +98,7 @@ const plan = {
 };
 const offers = mapOf([
   offer({ id: 'chicken', name: 'دجاج مبرد', price: 16.99, was: 21.5, size_qty: 1100 }),
-  offer({ id: 'rice', name: 'أرز بسمتي', price: 35.99, was: 44.5, size_qty: 5, size_unit: 'kg', sold_by: 'bag' }),
+  offer({ id: 'rice', name: 'أرز بسمتي', price: 35.99, was: 44.5, size_qty: 5, size_unit: 'kg', sold_by: 'bag', category: 'rice_grains' }),
   offer({ id: 'onion', name: 'بصل أحمر', price: 2.99, was: null, sold_by: 'kg', size_qty: 1, size_unit: 'kg' }),
   offer({ id: 'eggs', name: 'بيض', price: 13.99, was: 17.5, size_qty: 30, size_unit: 'pcs', sold_by: 'plate' })
 ]);
@@ -112,6 +112,8 @@ test('the shopping list adds the same item across meals', () => {
   assert.deepEqual(byKey['o:chicken'].sources, ['كبسة دجاج', 'مقلوبة']);
   assert.equal(byKey['o:rice'].units, 1);
   assert.equal(byKey['o:rice'].keeps, true);
+  // 30 eggs for a week that needs 20 is not "keeps for more than a week".
+  assert.equal(byKey['o:eggs'].keeps, false);
   assert.equal(byKey['o:onion'].units, 0.5);
   assert.equal(byKey['o:onion'].cost, 150); // 2.99 × 0.5 = 1.495 → 150
   assert.equal(byKey['o:eggs'].units, 1);
@@ -184,4 +186,16 @@ test('money and amounts read the way a shopper expects', () => {
   assert.equal(ingredientAmount({ qty: 300, unit: 'g', display: '2 حبة متوسطة' }, 2), '600 جم');
   assert.equal(ingredientAmount({ qty: 1, unit: 'tbsp' }, 1.5), '1.5 ملعقة كبيرة');
   assert.equal(ingredientAmount({ qty: 0, unit: 'taste' }, 1), 'حسب الرغبة');
+});
+
+test('fresh food is never marked as lasting beyond the week', () => {
+  const single = (category, sizeQty) => buildList({
+    plan: { base_persons: 4, meals: [{ id: 'm', name: 'طبخة', ingredients: [{ name: 'صنف', qty: 300, unit: 'g', offer: 'x' }] }] },
+    offers: mapOf([offer({ id: 'x', price: 5, was: null, size_qty: sizeQty, size_unit: 'g', category })]),
+    persons: 4,
+    essentials: false
+  }).lines[0];
+  assert.equal(single('produce_veg', 2000).keeps, false);
+  assert.equal(single('rice_grains', 2000).keeps, true);
+  assert.equal(single('rice_grains', 600).keeps, false);
 });

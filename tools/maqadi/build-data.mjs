@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildList, toBase, packContent, isLoose, money } from '../../maqadi/lib/plan.js';
+import { autoPlans } from './plan-week.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CATEGORIES = ['produce_fruit', 'produce_veg', 'meat', 'poultry', 'fish', 'eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream', 'bakery', 'rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'frozen_chicken', 'frozen_veg', 'frozen_other', 'breakfast_spreads', 'drinks_water', 'drinks_juice', 'tea_coffee', 'dates_sweets', 'snacks', 'household', 'personal_care', 'baby', 'other'];
@@ -173,17 +174,46 @@ function main() {
     stores[id] = Object.assign({ offers: offers.filter(offer => offer.store === id).length }, rest);
   });
   const out = join(ROOT, 'maqadi/data', week);
-  writeJSON(join(out, 'offers.json'), { week: meta.week, city: meta.city, stores, offers });
+  // Phones only need real discounts (the deals screen) and the products the plans buy.
+  const publish = used => {
+    const kept = offers.filter(offer => offer.was > offer.price || used.has(offer.id));
+    Object.keys(stores).forEach(id => { stores[id].offers = kept.filter(offer => offer.store === id).length; });
+    writeJSON(join(out, 'offers.json'), { week: meta.week, city: meta.city, stores, offers: kept });
+    return kept.length;
+  };
 
+  // A hand-written plans.json wins; otherwise the plans are chosen from the
+  // plan store's products (see plan-week.mjs).
   const plansPath = join(dir, 'plans.json');
-  if (!existsSync(plansPath)) { console.log('no plans.json yet: offers written, plans skipped'); return; }
-  const plans = readJSON(plansPath);
+  let plans;
+  if (existsSync(plansPath)) plans = readJSON(plansPath);
+  else if (meta.plan_store) {
+    console.log(`plans: chosen automatically from ${meta.plan_store}`);
+    const auto = autoPlans({
+      recipes: readJSON(join(ROOT, 'tools/maqadi/recipes.json')),
+      ingredients: readJSON(join(ROOT, 'tools/maqadi/ingredients.json')).ingredients,
+      offers,
+      store: meta.plan_store,
+      log: console.log
+    });
+    plans = Object.assign({ store: meta.plan_store }, auto.plans);
+    const seen = new Set();
+    Object.keys(auto.choices).forEach(cuisine => Object.entries(auto.choices[cuisine].chosen).forEach(([key, offer]) => {
+      if (seen.has(key + offer.id)) return;
+      seen.add(key + offer.id);
+      console.log(`    ${key.padEnd(16)} → ${offer.name} ${offer.size_text || ''} · ${offer.price}${offer.was ? ' (was ' + offer.was + ')' : ''}`);
+    }));
+  } else { publish(new Set()); console.log('no plans.json and no plan_store: offers written, plans skipped'); return; }
   const problems = checkPlans(plans, offers);
   if (problems.length) {
     console.error(`\n${problems.length} problem(s) in plans.json — nothing published:`);
     problems.forEach(problem => console.error('  ✗ ' + problem));
     process.exit(1);
   }
+  const used = new Set();
+  plans.plans.forEach(plan => plan.meals.flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
+    .forEach(item => { if (item.offer) used.add(item.offer); }));
+  console.log(`published ${publish(used)} of ${offers.length} products (discounts and the ones the plans buy)`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));
   writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, plans: `${week}/plans.json`, updated: meta.updated });
 
@@ -191,7 +221,7 @@ function main() {
   plans.plans.forEach(plan => {
     const list = buildList({ plan, offers: byId, persons: plans.base_persons });
     const flagged = list.lines.filter(line => line.approx).map(line => line.offer.id);
-    console.log(`plan ${plan.id}: ${plan.meals.length} meals, ${list.lines.length} offer items, ${list.unpriced.length} without offer, pays ${money(list.totals.cost)} SAR, saves ${money(list.totals.saved)} SAR (${list.totals.percent}%)${flagged.length ? ' — APPROX: ' + flagged.join(',') : ''}`);
+    console.log(`plan ${plan.id}: ${plan.meals.length} meals, ${list.lines.length} priced items, ${list.unpriced.length} without a price, pays ${money(list.totals.cost)} SAR, saves ${money(list.totals.saved)} SAR (${list.totals.percent}%)${flagged.length ? ' — APPROX: ' + flagged.join(',') : ''}`);
   });
   console.log('published ' + week);
 }

@@ -1,7 +1,8 @@
 {
   "week": "2026-W48",
   "city": "riyadh",
-  "updated": "2026-11-26",
+  "updated": "2026-11-27",
+  "plan_store": "tamimi",
   "stores": {
     "othaim": {
       "prefix": "ot",

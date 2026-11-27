@@ -1,11 +1,41 @@
 {
+ "_note": "Recipes are week-independent. Each week the build matches every ingredient key to the plan store's cheapest product (ingredients.json) and picks meals_per_week meals per cuisine whose main ingredients are available, favouring the biggest savings.",
  "base_persons": 4,
- "plans": [
+ "meals_per_week": 6,
+ "essentials": {
+  "name": "أساسيات الفطور والعشاء",
+  "items": [
+   {
+    "key": "eggs",
+    "name": "بيض",
+    "qty": 20,
+    "unit": "pcs"
+   },
+   {
+    "key": "labneh",
+    "name": "لبنة",
+    "qty": 500,
+    "unit": "g"
+   },
+   {
+    "key": "bread_toast",
+    "name": "خبز توست",
+    "qty": 1200,
+    "unit": "g"
+   },
+   {
+    "key": "cheese_slices",
+    "name": "شرائح جبن",
+    "qty": 300,
+    "unit": "g"
+   }
+  ]
+ },
+ "cuisines": [
   {
    "id": "khaliji",
    "name": "خليجية",
    "tagline": "كبسة ومرق وصواني، مبنية على عروض هذا الأسبوع.",
-   "base_persons": 4,
    "meals": [
     {
      "id": "k1",
@@ -13,40 +43,44 @@
      "emoji": "🍗",
      "minutes": 70,
      "summary": "دجاج كامل مع أرز بسمتي بنكهة البهارات، طبخة البيت الأولى.",
+     "main": [
+      "chicken_whole",
+      "rice_basmati"
+     ],
      "ingredients": [
       {
+       "key": "chicken_whole",
        "name": "دجاج كامل",
        "qty": 1100,
        "unit": "g",
-       "offer": "ot-17-12",
        "display": "دجاجة واحدة (1100 جم)"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 600,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "3 أكواب"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 300,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبتان متوسطتان"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 60,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "ملعقتان كبيرتان"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 20,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "4 فصوص"
       },
       {
@@ -82,52 +116,56 @@
      "emoji": "🍲",
      "minutes": 50,
      "summary": "قطع دجاج مع بامية وصلصة طماطم، تُقدَّم مع أرز أبيض.",
+     "main": [
+      "chicken_pieces",
+      "okra"
+     ],
      "ingredients": [
       {
+       "key": "chicken_pieces",
        "name": "قطع دجاج",
        "qty": 750,
-       "unit": "g",
-       "offer": "ot-17-16"
+       "unit": "g"
       },
       {
+       "key": "okra",
        "name": "بامية مجمدة",
        "qty": 400,
-       "unit": "g",
-       "offer": "ot-28-09"
+       "unit": "g"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 500,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان ونصف"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 60,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "ملعقتان كبيرتان"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 20,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "4 فصوص"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
@@ -163,45 +201,49 @@
      "emoji": "🍝",
      "minutes": 35,
      "summary": "مكرونة حمراء بصلصة لحم مفروم وفلفل، يحبها الصغار.",
+     "main": [
+      "pasta_short",
+      "beef_minced"
+     ],
      "ingredients": [
       {
+       "key": "pasta_short",
        "name": "مكرونة",
        "qty": 400,
-       "unit": "g",
-       "offer": "ot-04-02"
+       "unit": "g"
       },
       {
+       "key": "beef_minced",
        "name": "لحم بقري مفروم",
        "qty": 500,
-       "unit": "g",
-       "offer": "ot-16-08"
+       "unit": "g"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أخضر",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-12-06",
        "display": "حبة واحدة"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 90,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "3 ملاعق كبيرة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 15,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "3 فصوص"
       },
       {
@@ -236,38 +278,41 @@
      "emoji": "🥔",
      "minutes": 60,
      "summary": "أفخاذ دجاج مع بطاطس وليمون وثوم في صينية واحدة بالفرن.",
+     "main": [
+      "chicken_legs"
+     ],
      "ingredients": [
       {
+       "key": "chicken_legs",
        "name": "أفخاذ دجاج",
        "qty": 900,
-       "unit": "g",
-       "offer": "ot-17-13"
+       "unit": "g"
       },
       {
+       "key": "potato",
        "name": "بطاطس",
        "qty": 1000,
-       "unit": "g",
-       "offer": "ot-04-01"
+       "unit": "g"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 30,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "6 فصوص"
       },
       {
@@ -308,52 +353,56 @@
      "emoji": "🍆",
      "minutes": 50,
      "summary": "باذنجان مشوي بالفرن مع لحم مفروم وصلصة طماطم، مع أرز أبيض.",
+     "main": [
+      "eggplant",
+      "beef_minced"
+     ],
      "ingredients": [
       {
+       "key": "eggplant",
        "name": "باذنجان",
        "qty": 1000,
-       "unit": "g",
-       "offer": "ot-12-08"
+       "unit": "g"
       },
       {
+       "key": "beef_minced",
        "name": "لحم بقري مفروم",
        "qty": 500,
-       "unit": "g",
-       "offer": "ot-16-08"
+       "unit": "g"
       },
       {
+       "key": "tomatoes_canned",
        "name": "طماطم مقطعة معلبة",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-37-07",
        "display": "علبة واحدة"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أخضر",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-12-06",
        "display": "حبة واحدة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 20,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "4 فصوص"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان"
       },
       {
@@ -388,32 +437,36 @@
      "emoji": "🐟",
      "minutes": 50,
      "summary": "فيليه سمك مع أرز بالبصل المحمّر والكمون.",
+     "main": [
+      "fish_fillet",
+      "rice_basmati"
+     ],
      "ingredients": [
       {
+       "key": "fish_fillet",
        "name": "فيليه سمك",
        "qty": 1000,
-       "unit": "g",
-       "offer": "ot-07-06"
+       "unit": "g"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 500,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان ونصف"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 500,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "3 حبات كبيرة"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
@@ -448,43 +501,182 @@
       "يُقلى السمك أو يُشوى في الفرن على 200 درجة 15 دقيقة.",
       "يُقدَّم الأرز والسمك فوقه مع البصل المحمّر."
      ]
+    },
+    {
+     "id": "k7",
+     "name": "مندي دجاج",
+     "emoji": "🍗",
+     "minutes": 90,
+     "summary": "دجاج متبّل يُطهى فوق أرز بسمتي بنكهة الهيل والكمون.",
+     "main": [
+      "chicken_whole",
+      "rice_basmati"
+     ],
+     "ingredients": [
+      {
+       "key": "chicken_whole",
+       "name": "دجاج كامل",
+       "qty": 1100,
+       "unit": "g",
+       "display": "دجاجة واحدة (1100 جم)"
+      },
+      {
+       "key": "rice_basmati",
+       "name": "أرز بسمتي",
+       "qty": 600,
+       "unit": "g",
+       "display": "3 أكواب"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "garlic",
+       "name": "ثوم",
+       "qty": 15,
+       "unit": "g",
+       "display": "3 فصوص"
+      },
+      {
+       "key": "lemon",
+       "name": "ليمون",
+       "qty": 100,
+       "unit": "g",
+       "display": "حبة واحدة"
+      },
+      {
+       "name": "بهارات مندي",
+       "qty": 1.5,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "هيل",
+       "qty": 4,
+       "unit": "pinch",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 3,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُتبَّل الدجاج المشقوق نصفين بالبهارات والثوم والليمون والملح والزيت، ويُترك ساعة إن أمكن.",
+      "يُذبَّل البصل في قدر، ثم يُضاف الأرز المغسول والهيل و5 أكواب ماء مغلي وملح.",
+      "يُوضع الدجاج على شبك فوق الأرز داخل القدر، ويُغطّى القدر بإحكام على نار هادئة جداً 60 دقيقة.",
+      "يُحمَّر وجه الدجاج في الفرن 10 دقائق، ثم يُقدَّم فوق الأرز."
+     ],
+     "tip": "وقت التتبيل غير محسوب ضمن مدة التحضير."
+    },
+    {
+     "id": "k8",
+     "name": "صالونة دجاج بالخضار",
+     "emoji": "🍲",
+     "minutes": 55,
+     "summary": "مرق دجاج بالبطاطس والخضار والطماطم، يُقدَّم مع أرز أبيض.",
+     "main": [
+      "chicken_pieces"
+     ],
+     "ingredients": [
+      {
+       "key": "chicken_pieces",
+       "name": "قطع دجاج",
+       "qty": 900,
+       "unit": "g"
+      },
+      {
+       "key": "mixed_veg",
+       "name": "خضار مشكلة مجمدة",
+       "qty": 400,
+       "unit": "g",
+       "display": "كيس واحد"
+      },
+      {
+       "key": "potato",
+       "name": "بطاطس",
+       "qty": 500,
+       "unit": "g",
+       "display": "3 حبات متوسطة"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "tomato_paste",
+       "name": "معجون طماطم",
+       "qty": 60,
+       "unit": "g",
+       "display": "ملعقتان كبيرتان"
+      },
+      {
+       "key": "garlic",
+       "name": "ثوم",
+       "qty": 15,
+       "unit": "g",
+       "display": "3 فصوص"
+      },
+      {
+       "key": "rice_basmati",
+       "name": "أرز بسمتي",
+       "qty": 500,
+       "unit": "g",
+       "display": "كوبان ونصف"
+      },
+      {
+       "name": "بهارات مشكلة",
+       "qty": 1,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "لومي",
+       "qty": 1,
+       "unit": "pcs",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُحمَّر الدجاج في الزيت ثم يُرفع. يُذبَّل البصل والثوم في القدر نفسه.",
+      "يُضاف معجون الطماطم والبهارات واللومي، ثم يُعاد الدجاج مع 4 أكواب ماء ساخن.",
+      "بعد 20 دقيقة تُضاف البطاطس المقطّعة مكعبات، وبعد 10 دقائق الخضار المجمدة، وتُترك 10 دقائق أخرى.",
+      "يُسلق الأرز جانباً ويُقدَّم مع الصالونة."
+     ]
     }
-   ],
-   "essentials": {
-    "name": "أساسيات الفطور والعشاء",
-    "items": [
-     {
-      "name": "بيض",
-      "qty": 20,
-      "unit": "pcs",
-      "offer": "ot-01-08"
-     },
-     {
-      "name": "لبنة",
-      "qty": 500,
-      "unit": "g",
-      "offer": "ot-20-15"
-     },
-     {
-      "name": "خبز توست",
-      "qty": 2,
-      "unit": "pcs",
-      "offer": "ot-15-09"
-     },
-     {
-      "name": "شرائح جبن",
-      "qty": 300,
-      "unit": "g",
-      "offer": "ot-20-04"
-     }
-    ]
-   }
+   ]
   },
   {
    "id": "shami",
    "name": "شامية",
    "tagline": "مقلوبة وملوخية ومجدّرة على الطريقة الشامية.",
-   "base_persons": 4,
    "meals": [
     {
      "id": "s1",
@@ -492,32 +684,36 @@
      "emoji": "🍚",
      "minutes": 80,
      "summary": "دجاج وباذنجان وأرز تُقلب في صينية واحدة.",
+     "main": [
+      "chicken_whole",
+      "eggplant"
+     ],
      "ingredients": [
       {
+       "key": "chicken_whole",
        "name": "دجاج كامل",
        "qty": 1100,
        "unit": "g",
-       "offer": "ot-17-12",
        "display": "دجاجة واحدة (1100 جم)"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 500,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان ونصف"
       },
       {
+       "key": "eggplant",
        "name": "باذنجان",
        "qty": 800,
-       "unit": "g",
-       "offer": "ot-12-08"
+       "unit": "g"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
@@ -559,39 +755,43 @@
      "emoji": "🥬",
      "minutes": 50,
      "summary": "ملوخية بتقلية الثوم والكزبرة مع دجاج وأرز أبيض.",
+     "main": [
+      "molokhia",
+      "chicken_breast"
+     ],
      "ingredients": [
       {
+       "key": "molokhia",
        "name": "ملوخية مجمدة",
        "qty": 800,
        "unit": "g",
-       "offer": "ot-28-12",
        "display": "كيسان"
       },
       {
+       "key": "chicken_breast",
        "name": "صدور دجاج",
        "qty": 450,
-       "unit": "g",
-       "offer": "ot-17-14"
+       "unit": "g"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 40,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "8 فصوص"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان"
       },
       {
@@ -626,44 +826,48 @@
      "emoji": "🥘",
      "minutes": 60,
      "summary": "أصابع كفتة فوق بطاطس وصلصة طماطم بالفرن.",
+     "main": [
+      "beef_minced"
+     ],
      "ingredients": [
       {
+       "key": "beef_minced",
        "name": "لحم بقري مفروم",
        "qty": 500,
-       "unit": "g",
-       "offer": "ot-16-08"
+       "unit": "g"
       },
       {
+       "key": "potato",
        "name": "بطاطس",
        "qty": 700,
-       "unit": "g",
-       "offer": "ot-04-01"
+       "unit": "g"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 200,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة كبيرة"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أخضر",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-12-06",
        "display": "حبة واحدة"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 60,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "ملعقتان كبيرتان"
       },
       {
+       "key": "parsley",
        "name": "بقدونس",
-       "qty": 1,
-       "unit": "pcs",
+       "qty": 100,
+       "unit": "g",
        "display": "حزمة صغيرة"
       },
       {
@@ -698,46 +902,49 @@
      "emoji": "🍢",
      "minutes": 45,
      "summary": "مكعبات دجاج متبّلة بالزبادي والليمون مع بطاطس مشوية.",
+     "main": [
+      "chicken_breast"
+     ],
      "ingredients": [
       {
+       "key": "chicken_breast",
        "name": "صدور دجاج",
        "qty": 900,
-       "unit": "g",
-       "offer": "ot-17-14"
+       "unit": "g"
       },
       {
+       "key": "yogurt",
        "name": "زبادي",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-21-11",
        "display": "علبة واحدة"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 25,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "5 فصوص"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 30,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "ملعقة كبيرة"
       },
       {
+       "key": "potato",
        "name": "بطاطس",
        "qty": 700,
-       "unit": "g",
-       "offer": "ot-04-01"
+       "unit": "g"
       },
       {
        "name": "بابريكا",
@@ -772,33 +979,37 @@
      "emoji": "🍛",
      "minutes": 45,
      "summary": "عدس وأرز مع بصل مقرمش، تُقدَّم مع الزبادي.",
+     "main": [
+      "lentils",
+      "rice_basmati"
+     ],
      "ingredients": [
       {
+       "key": "lentils",
        "name": "عدس",
        "qty": 300,
        "unit": "g",
-       "offer": "ot-14-12",
        "display": "كوب ونصف"
       },
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 250,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوب وربع"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 600,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "4 حبات متوسطة"
       },
       {
+       "key": "yogurt",
        "name": "زبادي",
        "qty": 450,
        "unit": "g",
-       "offer": "ot-21-11",
        "display": "3 علب"
       },
       {
@@ -833,49 +1044,54 @@
      "emoji": "🧀",
      "minutes": 60,
      "summary": "طبقات مكرونة ولحم مفروم وبشاميل بوجه من الموزاريلا.",
+     "main": [
+      "pasta_short",
+      "beef_minced"
+     ],
      "ingredients": [
       {
+       "key": "pasta_short",
        "name": "مكرونة",
        "qty": 400,
-       "unit": "g",
-       "offer": "ot-04-02"
+       "unit": "g"
       },
       {
+       "key": "beef_minced",
        "name": "لحم بقري مفروم",
        "qty": 500,
-       "unit": "g",
-       "offer": "ot-16-08"
+       "unit": "g"
       },
       {
+       "key": "milk",
        "name": "حليب",
        "qty": 1,
        "unit": "l",
        "display": "4 أكواب"
       },
       {
+       "key": "butter",
        "name": "زبدة",
        "qty": 50,
-       "unit": "g",
-       "offer": "ot-21-08"
+       "unit": "g"
       },
       {
+       "key": "mozzarella",
        "name": "جبنة موزاريلا مبشورة",
        "qty": 200,
-       "unit": "g",
-       "offer": "ot-20-02"
+       "unit": "g"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "tomato_paste",
        "name": "معجون طماطم",
        "qty": 30,
        "unit": "g",
-       "offer": "ot-37-08",
        "display": "ملعقة كبيرة"
       },
       {
@@ -903,43 +1119,175 @@
       "في صينية: نصف المكرونة مخلوطة بقليل من البشاميل، ثم اللحم، ثم باقي المكرونة، ثم البشاميل والجبنة.",
       "تدخل فرناً على 200 درجة 25 دقيقة حتى يتحمّر الوجه."
      ]
+    },
+    {
+     "id": "s7",
+     "name": "بازيلا ورز باللحم المفروم",
+     "emoji": "🫛",
+     "minutes": 45,
+     "summary": "يخنة بازلاء بالطماطم واللحم المفروم مع رز بالشعيرية.",
+     "main": [
+      "peas",
+      "beef_minced"
+     ],
+     "ingredients": [
+      {
+       "key": "peas",
+       "name": "بازلاء مجمدة",
+       "qty": 800,
+       "unit": "g",
+       "display": "كيسان"
+      },
+      {
+       "key": "beef_minced",
+       "name": "لحم بقري مفروم",
+       "qty": 500,
+       "unit": "g"
+      },
+      {
+       "key": "rice_basmati",
+       "name": "أرز بسمتي",
+       "qty": 500,
+       "unit": "g",
+       "display": "كوبان ونصف"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "tomato_paste",
+       "name": "معجون طماطم",
+       "qty": 90,
+       "unit": "g",
+       "display": "3 ملاعق كبيرة"
+      },
+      {
+       "key": "garlic",
+       "name": "ثوم",
+       "qty": 10,
+       "unit": "g",
+       "display": "فصّان"
+      },
+      {
+       "name": "بهارات مشكلة",
+       "qty": 1,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُحمَّر اللحم المفروم مع البصل حتى يجف ماؤه، ثم يُضاف الثوم والبهارات.",
+      "يُضاف معجون الطماطم وكوبان من الماء الساخن، ثم البازلاء المجمدة، وتُترك 20 دقيقة.",
+      "يُطهى الأرز جانباً، ويُقدَّم مع اليخنة."
+     ]
+    },
+    {
+     "id": "s8",
+     "name": "فتة دجاج",
+     "emoji": "🥣",
+     "minutes": 45,
+     "summary": "خبز محمّص وأرز ودجاج تحت صلصة الزبادي بالثوم.",
+     "main": [
+      "chicken_breast",
+      "yogurt"
+     ],
+     "ingredients": [
+      {
+       "key": "chicken_breast",
+       "name": "صدور دجاج",
+       "qty": 900,
+       "unit": "g"
+      },
+      {
+       "key": "yogurt",
+       "name": "زبادي",
+       "qty": 600,
+       "unit": "g",
+       "display": "4 علب"
+      },
+      {
+       "key": "rice_basmati",
+       "name": "أرز بسمتي",
+       "qty": 400,
+       "unit": "g",
+       "display": "كوبان"
+      },
+      {
+       "key": "bread_toast",
+       "name": "خبز توست",
+       "qty": 300,
+       "unit": "g",
+       "display": "نصف كيس"
+      },
+      {
+       "key": "garlic",
+       "name": "ثوم",
+       "qty": 15,
+       "unit": "g",
+       "display": "3 فصوص"
+      },
+      {
+       "key": "lemon",
+       "name": "ليمون",
+       "qty": 100,
+       "unit": "g",
+       "display": "حبة واحدة"
+      },
+      {
+       "name": "طحينة",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "صنوبر أو لوز",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُسلق الدجاج بالملح 25 دقيقة، ثم يُفتَّت ويُحتفظ بالمرق.",
+      "يُطهى الأرز بكوب من مرق الدجاج والماء.",
+      "يُقطَّع الخبز مكعبات ويُحمَّص في الفرن حتى يقرمش.",
+      "تُخلط الزبادي مع الثوم المهروس والطحينة وعصير الليمون والملح.",
+      "في طبق عميق: الخبز ثم قليل من المرق ثم الأرز ثم الدجاج، وتُسكب الزبادي فوقها."
+     ]
     }
-   ],
-   "essentials": {
-    "name": "أساسيات الفطور والعشاء",
-    "items": [
-     {
-      "name": "بيض",
-      "qty": 20,
-      "unit": "pcs",
-      "offer": "ot-01-08"
-     },
-     {
-      "name": "لبنة",
-      "qty": 500,
-      "unit": "g",
-      "offer": "ot-20-15"
-     },
-     {
-      "name": "خبز توست",
-      "qty": 2,
-      "unit": "pcs",
-      "offer": "ot-15-09"
-     },
-     {
-      "name": "شرائح جبن",
-      "qty": 300,
-      "unit": "g",
-      "offer": "ot-20-04"
-     }
-    ]
-   }
+   ]
   },
   {
    "id": "quick",
    "name": "سريعة",
    "tagline": "طبخات في نصف ساعة تقريباً لأيام الدوام.",
-   "base_persons": 4,
    "meals": [
     {
      "id": "q1",
@@ -947,38 +1295,41 @@
      "emoji": "🍝",
      "minutes": 30,
      "summary": "مكرونة فيتوتشيني بصلصة كريمة مع دجاج وفطر.",
+     "main": [
+      "pasta_long",
+      "chicken_breast"
+     ],
      "ingredients": [
       {
+       "key": "pasta_long",
        "name": "مكرونة فيتوتشيني",
        "qty": 400,
-       "unit": "g",
-       "offer": "ot-07-05"
+       "unit": "g"
       },
       {
+       "key": "chicken_breast",
        "name": "صدور دجاج",
        "qty": 450,
-       "unit": "g",
-       "offer": "ot-01-09"
+       "unit": "g"
       },
       {
+       "key": "cooking_cream",
        "name": "كريمة طبخ",
        "qty": 250,
        "unit": "ml",
-       "offer": "ot-37-13",
        "display": "كوب واحد"
       },
       {
-       "name": "فطر معلب",
-       "qty": 400,
-       "unit": "g",
-       "offer": "ot-38-01",
-       "display": "علبة واحدة"
+       "key": "mushrooms",
+       "name": "فطر",
+       "qty": 250,
+       "unit": "g"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 15,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "3 فصوص"
       },
       {
@@ -1003,7 +1354,7 @@
      "steps": [
       "تُسلق المكرونة وتُصفّى مع الاحتفاظ بنصف كوب من ماء السلق.",
       "يُقطَّع الدجاج شرائح ويُحمَّر في الزيت مع الملح والفلفل 6 دقائق.",
-      "يُضاف الثوم والفطر المصفّى دقيقتين، ثم الكريمة وماء السلق، وتُترك 3 دقائق.",
+      "يُضاف الثوم والفطر المقطّع 3 دقائق، ثم الكريمة وماء السلق، وتُترك 3 دقائق.",
       "تُضاف المكرونة وتُقلَّب حتى تتماسك الصلصة."
      ]
     },
@@ -1013,38 +1364,42 @@
      "emoji": "🍳",
      "minutes": 30,
      "summary": "أرز يُقلَّب مع دجاج وخضار مشكلة وبيض في مقلاة واحدة.",
+     "main": [
+      "rice_basmati",
+      "chicken_breast"
+     ],
      "ingredients": [
       {
+       "key": "rice_basmati",
        "name": "أرز بسمتي",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-33-05",
        "display": "كوبان"
       },
       {
+       "key": "chicken_breast",
        "name": "صدور دجاج",
        "qty": 450,
-       "unit": "g",
-       "offer": "ot-01-09"
+       "unit": "g"
       },
       {
+       "key": "mixed_veg",
        "name": "خضار مشكلة مجمدة",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-28-07",
        "display": "كيس واحد"
       },
       {
+       "key": "eggs",
        "name": "بيض",
        "qty": 3,
-       "unit": "pcs",
-       "offer": "ot-01-08"
+       "unit": "pcs"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 10,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "فصّان"
       },
       {
@@ -1073,46 +1428,50 @@
      "emoji": "🌮",
      "minutes": 25,
      "summary": "شرائح دجاج وفلفل ملوّن في خبز التورتيلا.",
+     "main": [
+      "chicken_breast",
+      "tortilla"
+     ],
      "ingredients": [
       {
+       "key": "chicken_breast",
        "name": "صدور دجاج",
        "qty": 600,
-       "unit": "g",
-       "offer": "ot-01-09"
+       "unit": "g"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أحمر وأصفر",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-12-10",
        "display": "حبتان"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أخضر",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-12-06",
        "display": "حبة واحدة"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 200,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة كبيرة"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
+       "key": "tortilla",
        "name": "خبز تورتيلا",
        "qty": 8,
-       "unit": "pcs",
-       "offer": "ot-15-10"
+       "unit": "pcs"
       },
       {
        "name": "بابريكا",
@@ -1152,46 +1511,49 @@
      "emoji": "🍅",
      "minutes": 20,
      "summary": "بيض مطهو في صلصة طماطم وفلفل، مع خبز توست محمّص.",
+     "main": [
+      "eggs"
+     ],
      "ingredients": [
       {
+       "key": "eggs",
        "name": "بيض",
        "qty": 8,
-       "unit": "pcs",
-       "offer": "ot-01-08"
+       "unit": "pcs"
       },
       {
+       "key": "tomatoes_canned",
        "name": "طماطم مقطعة معلبة",
        "qty": 400,
        "unit": "g",
-       "offer": "ot-37-07",
        "display": "علبة واحدة"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أخضر",
        "qty": 200,
        "unit": "g",
-       "offer": "ot-12-06",
        "display": "حبة كبيرة"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 10,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "فصّان"
       },
       {
+       "key": "bread_toast",
        "name": "خبز توست",
-       "qty": 1,
-       "unit": "pcs",
-       "offer": "ot-15-09",
+       "qty": 600,
+       "unit": "g",
        "display": "كيس واحد"
       },
       {
@@ -1232,39 +1594,43 @@
      "emoji": "🥗",
      "minutes": 20,
      "summary": "وجبة باردة سريعة من المكرونة والتونة والذرة.",
+     "main": [
+      "pasta_short",
+      "tuna"
+     ],
      "ingredients": [
       {
+       "key": "pasta_short",
        "name": "مكرونة",
        "qty": 300,
-       "unit": "g",
-       "offer": "ot-04-02"
+       "unit": "g"
       },
       {
+       "key": "tuna",
        "name": "تونة",
        "qty": 370,
        "unit": "g",
-       "offer": "ot-38-05",
        "display": "علبتان"
       },
       {
+       "key": "corn",
        "name": "ذرة حلوة معلبة",
        "qty": 340,
        "unit": "g",
-       "offer": "ot-07-10",
        "display": "علبة واحدة"
       },
       {
+       "key": "bell_pepper",
        "name": "فلفل أحمر وأصفر",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-12-10",
        "display": "حبة واحدة"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
@@ -1299,54 +1665,57 @@
      "emoji": "🥣",
      "minutes": 35,
      "summary": "شوربة عدس بالبطاطس والليمون، مع توست بالجبن.",
+     "main": [
+      "lentils"
+     ],
      "ingredients": [
       {
+       "key": "lentils",
        "name": "عدس",
        "qty": 300,
        "unit": "g",
-       "offer": "ot-14-12",
        "display": "كوب ونصف"
       },
       {
+       "key": "potato",
        "name": "بطاطس",
        "qty": 300,
        "unit": "g",
-       "offer": "ot-04-01",
        "display": "حبتان"
       },
       {
+       "key": "onion",
        "name": "بصل",
        "qty": 150,
        "unit": "g",
-       "offer": "ot-01-13",
        "display": "حبة متوسطة"
       },
       {
+       "key": "garlic",
        "name": "ثوم",
        "qty": 10,
        "unit": "g",
-       "offer": "ot-12-09",
        "display": "فصّان"
       },
       {
+       "key": "lemon",
        "name": "ليمون",
        "qty": 100,
        "unit": "g",
-       "offer": "ot-12-04",
        "display": "حبة واحدة"
       },
       {
+       "key": "bread_toast",
        "name": "خبز توست",
-       "qty": 1,
-       "unit": "pcs",
-       "offer": "ot-15-09",
+       "qty": 600,
+       "unit": "g",
        "display": "كيس واحد"
       },
       {
+       "key": "cheese_slices",
        "name": "شرائح جبن",
        "qty": 200,
-       "unit": "g",
-       "offer": "ot-20-04"
+       "unit": "g"
       },
       {
        "name": "كمون",
@@ -1373,37 +1742,152 @@
       "تُهرس الشوربة بالخلاط اليدوي ويُضبط الملح، ويُضاف عصير الليمون.",
       "تُحمَّص شرائح التوست مع الجبن في مقلاة وتُقدَّم مع الشوربة."
      ]
+    },
+    {
+     "id": "q7",
+     "name": "تورتيلا باللحم المفروم",
+     "emoji": "🌯",
+     "minutes": 25,
+     "summary": "لحم مفروم بالفلفل والتوابل ملفوف في خبز التورتيلا.",
+     "main": [
+      "beef_minced",
+      "tortilla"
+     ],
+     "ingredients": [
+      {
+       "key": "beef_minced",
+       "name": "لحم بقري مفروم",
+       "qty": 500,
+       "unit": "g"
+      },
+      {
+       "key": "tortilla",
+       "name": "خبز تورتيلا",
+       "qty": 8,
+       "unit": "pcs"
+      },
+      {
+       "key": "bell_pepper",
+       "name": "فلفل رومي",
+       "qty": 300,
+       "unit": "g",
+       "display": "حبتان"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "cheese_slices",
+       "name": "شرائح جبن",
+       "qty": 200,
+       "unit": "g"
+      },
+      {
+       "name": "بابريكا",
+       "qty": 1,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "كمون",
+       "qty": 0.5,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُحمَّر اللحم المفروم مع البصل حتى يجف ماؤه.",
+      "يُضاف الفلفل المقطّع شرائح والتوابل والملح، ويُقلَّب 5 دقائق.",
+      "يُوزَّع الخليط مع شريحة جبن على كل خبزة، وتُلف وتُحمَّص في مقلاة دقيقة من كل جهة."
+     ]
+    },
+    {
+     "id": "q8",
+     "name": "مكرونة بالتونة والطماطم",
+     "emoji": "🍝",
+     "minutes": 25,
+     "summary": "مكرونة بصلصة طماطم سريعة مع التونة.",
+     "main": [
+      "pasta_short",
+      "tuna"
+     ],
+     "ingredients": [
+      {
+       "key": "pasta_short",
+       "name": "مكرونة",
+       "qty": 400,
+       "unit": "g"
+      },
+      {
+       "key": "tuna",
+       "name": "تونة",
+       "qty": 370,
+       "unit": "g",
+       "display": "علبتان"
+      },
+      {
+       "key": "tomatoes_canned",
+       "name": "طماطم مقطعة معلبة",
+       "qty": 400,
+       "unit": "g",
+       "display": "علبة واحدة"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "garlic",
+       "name": "ثوم",
+       "qty": 10,
+       "unit": "g",
+       "display": "فصّان"
+      },
+      {
+       "name": "أوريغانو",
+       "qty": 1,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 2,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "تُسلق المكرونة وتُصفّى.",
+      "يُذبَّل البصل والثوم في الزيت، ثم تُضاف الطماطم والأوريغانو والملح وتُترك 8 دقائق.",
+      "تُضاف التونة المصفّاة ثم المكرونة، وتُقلَّب دقيقتين على النار."
+     ]
     }
-   ],
-   "essentials": {
-    "name": "أساسيات الفطور والعشاء",
-    "items": [
-     {
-      "name": "بيض",
-      "qty": 20,
-      "unit": "pcs",
-      "offer": "ot-01-08"
-     },
-     {
-      "name": "لبنة",
-      "qty": 500,
-      "unit": "g",
-      "offer": "ot-20-15"
-     },
-     {
-      "name": "خبز توست",
-      "qty": 2,
-      "unit": "pcs",
-      "offer": "ot-15-09"
-     },
-     {
-      "name": "شرائح جبن",
-      "qty": 300,
-      "unit": "g",
-      "offer": "ot-20-04"
-     }
-    ]
-   }
+   ]
   }
  ]
 }

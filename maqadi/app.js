@@ -130,10 +130,36 @@ function OfferPrice({ offer }) {
 
 const storeName = (data, id) => (data.offers.stores[id] ? data.offers.stores[id].name : id);
 
+const DAY_MS = 86400000;
+/* How old the prices the plans are built on are, and how to say it. A
+   flyer has an end date; an online store has the day its prices were read
+   and is refreshed weekly, so after eight days it is out of date. */
+function pricePeriod(data) {
+  const id = data.plans.store || Object.keys(data.offers.stores)[0];
+  const store = data.offers.stores[id] || {};
+  const today = riyadhToday();
+  if (store.checked) {
+    const age = Math.round((fromISO(today) - fromISO(store.checked)) / DAY_MS);
+    return {
+      badge: `${store.name} · أسعار ${shortDay(store.checked)}`,
+      text: `أسعار ${store.name} كما ظهرت يوم ${shortDay(store.checked)}`,
+      stale: age > 8,
+      staleText: `هذه أسعار ${store.name} كما ظهرت يوم ${longDay(store.checked)}، أي قبل ${age} يوماً، وقد تغيّرت منذ ذلك الحين. تتحدّث الخطة كل أسبوع.`
+    };
+  }
+  return {
+    badge: `${store.name || 'الرياض'} · حتى ${shortDay(store.valid_to)}`,
+    text: `عروض سارية حتى ${shortDay(store.valid_to)}`,
+    stale: today > store.valid_to,
+    staleText: `انتهت مدة هذه العروض يوم ${longDay(store.valid_to)}. الأسعار المعروضة قد لا تكون سارية.`
+  };
+}
+
 /* ---------------------------------------------------------------------
    Plan
    ------------------------------------------------------------------- */
 function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
+  const planStore = storeName(data, data.plans.store || Object.keys(data.offers.stores)[0]);
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   return html`
     <section class="hero" aria-label="ملخص الأسبوع">
@@ -141,7 +167,7 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
       <div class="hero__figures">
         <div class="figure">
           <p class="figure__value"><${Sum} value=${list.totals.cost} /><span class="figure__unit">ريال</span></p>
-          <p class="figure__caption">تكلفة أصناف العروض</p>
+          <p class="figure__caption">تكلفة المقاضي المسعّرة</p>
         </div>
         <div class="figure figure--save">
           <p class="figure__value"><${Sum} value=${list.totals.saved} /><span class="figure__unit">ريال</span></p>
@@ -198,7 +224,7 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
       <span>قائمة المقاضي · ${cooked} طبخات</span>
       <span class="cta__count">${list.totals.items} صنف</span>
     </a>
-    <p class="fineprint">الأسعار من مجلات العروض الرسمية المنشورة، وقد تختلف حسب الفرع وتوفّر الكمية. التوفير محسوب فقط للأصناف التي طُبع لها سعر قبل العرض.</p>`;
+    <p class="fineprint">الطبخات والأصناف تُختار تلقائياً كل أسبوع من أرخص ما يغطي حاجة الأسرة في ${planStore}. الأسعار من المتجر نفسه وقد تختلف حسب الفرع وتوفّر الكمية، والتوفير محسوب فقط للأصناف التي عليها خصم فعلي.</p>`;
 }
 
 /* ---------------------------------------------------------------------
@@ -224,7 +250,7 @@ function MealPage({ data, plan, meal, persons, offers }) {
             <li class="ingredient">
               <span class="ingredient__name">${ingredient.name}${ingredient.pantry ? html`<small> من مطبخك</small>` : null}</span>
               <span class="ingredient__qty">${ingredientAmount(ingredient, scale)}</span>
-              ${offer ? html`<span class="ingredient__offer">عرض ${storeName(data, offer.store)}: ${offer.name} ${offerSize(offer)} <${OfferPrice} offer=${offer} /></span>` : null}
+              ${offer ? html`<span class="ingredient__offer">${offer.was > offer.price ? 'عرض ' : ''}${storeName(data, offer.store)}: ${offer.name} ${offerSize(offer)} <${OfferPrice} offer=${offer} /></span>` : null}
             </li>`;
         })}
       </ul>
@@ -248,9 +274,9 @@ function lineDetail(line) {
   return `${line.units} × ${each} ${unit}`;
 }
 
-function shareText(data, list, validTo) {
+function shareText(data, list, period) {
   const rows = [];
-  rows.push(`🛒 مقاضي الأسبوع — عروض سارية حتى ${shortDay(validTo)}`);
+  rows.push(`🛒 مقاضي الأسبوع — ${period.text}`);
   AISLES.forEach(aisle => {
     const lines = list.lines.filter(line => aisleOf(line.offer.category) === aisle);
     if (!lines.length) return;
@@ -258,22 +284,22 @@ function shareText(data, list, validTo) {
     lines.forEach(line => rows.push(`▫️ ${line.offer.name}${offerSize(line.offer) ? ' ' + offerSize(line.offer) : ''} — ${lineDetail(line)} = ${money(line.cost)} (${storeName(data, line.offer.store)})`));
   });
   if (list.unpriced.length) {
-    rows.push('', 'بدون عرض هذا الأسبوع:');
+    rows.push('', 'بدون سعر هذا الأسبوع:');
     list.unpriced.forEach(item => rows.push(`▫️ ${item.name}${item.need ? ' — ' + amount(item.need) : ''}`));
   }
-  rows.push('', `الإجمالي من العروض: ${money(list.totals.cost)} ريال`);
-  if (list.totals.saved) rows.push(`التوفير عن السعر قبل العرض: ${money(list.totals.saved)} ريال`);
+  rows.push('', `إجمالي الأصناف المسعّرة: ${money(list.totals.cost)} ريال`);
+  if (list.totals.saved) rows.push(`التوفير من الخصومات: ${money(list.totals.saved)} ريال`);
   return rows.join('\n');
 }
 
-function ListTab({ data, list, week, set, validTo }) {
+function ListTab({ data, list, week, set, period }) {
   const done = key => week.checked.includes(key);
   const total = list.lines.length + list.unpriced.length;
   const ticked = list.lines.filter(line => done(line.key)).length + list.unpriced.filter(item => done('u:' + item.name)).length;
   const [copied, setCopied] = useState(false);
 
   const share = async () => {
-    const text = shareText(data, list, validTo);
+    const text = shareText(data, list, period);
     try {
       if (navigator.share) { await navigator.share({ text }); return; }
       await navigator.clipboard.writeText(text);
@@ -298,7 +324,7 @@ function ListTab({ data, list, week, set, validTo }) {
     <header class="list-head">
       <div>
         <h1 class="page-title">قائمة المقاضي</h1>
-        <p class="page-sub">تم ${ticked} من ${total} · عروض سارية حتى ${shortDay(validTo)}</p>
+        <p class="page-sub">تم ${ticked} من ${total} · ${period.text}</p>
       </div>
       <button type="button" class="btn btn--ghost" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? 'تم النسخ' : 'مشاركة'}</button>
     </header>
@@ -335,8 +361,8 @@ function ListTab({ data, list, week, set, validTo }) {
 
     ${list.unpriced.length ? html`
       <section class="aisle">
-        <h2 class="aisle__name">بدون عرض هذا الأسبوع</h2>
-        <p class="aisle__note">لم يرد لها عرض في المجلة، فهي خارج الإجمالي.</p>
+        <h2 class="aisle__name">بدون سعر هذا الأسبوع</h2>
+        <p class="aisle__note">لم نجدها في المتجر هذا الأسبوع، فهي خارج الإجمالي.</p>
         <ul class="lines">
           ${list.unpriced.map(item => html`
             <li class=${'line' + (done('u:' + item.name) ? ' is-done' : '')}>
@@ -359,7 +385,7 @@ function ListTab({ data, list, week, set, validTo }) {
 
     <div class="total-bar" role="status">
       <div>
-        <span class="total-bar__label">الإجمالي من العروض</span>
+        <span class="total-bar__label">إجمالي الأصناف المسعّرة</span>
         <span class="total-bar__value"><${Sum} value=${list.totals.cost} /> ريال</span>
       </div>
       ${list.totals.saved ? html`<span class="total-bar__saved">وفّرت <b dir="ltr">${money(list.totals.saved)}</b> ريال</span>` : null}
@@ -378,12 +404,13 @@ function DealsTab({ data, week, set }) {
 
   const categories = useMemo(() => {
     const counts = {};
-    data.offers.offers.forEach(offer => { counts[offer.category] = (counts[offer.category] || 0) + 1; });
+    data.offers.offers.forEach(offer => { if (offer.was > offer.price) counts[offer.category] = (counts[offer.category] || 0) + 1; });
     return Object.keys(CATEGORY_NAMES).filter(id => counts[id]);
   }, [data]);
 
+  // Regular prices cost the plans; only real discounts are shown as offers.
   const results = useMemo(() => data.offers.offers
-    .filter(offer => (store === 'all' || offer.store === store) && (category === 'all' || offer.category === category) && matches(offer, query))
+    .filter(offer => offer.was > offer.price && (store === 'all' || offer.store === store) && (category === 'all' || offer.category === category) && matches(offer, query))
     .sort((a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price),
   [data, query, category, store]);
 
@@ -562,8 +589,8 @@ function App() {
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
 
-  const validTo = Object.keys(data.offers.stores).map(id => data.offers.stores[id].valid_to).filter(Boolean).sort()[0];
-  const expired = riyadhToday() > validTo;
+  const period = pricePeriod(data);
+  const expired = period.stale;
   const meal = route.tab === 'meal' ? plan.meals.find(item => item.id === route.id && !locked.has(item.id)) : null;
   const tab = route.tab === 'meal' ? 'plan' : route.tab;
 
@@ -571,14 +598,14 @@ function App() {
     <div class="shell">
       <header class="topbar">
         <a class="wordmark" href="#/plan">${CONFIG.name}</a>
-        <span class=${'validity' + (expired ? ' is-expired' : '')}>${expired ? 'انتهت عروض هذا الأسبوع' : 'الرياض · حتى ' + shortDay(validTo)}</span>
+        <span class=${'validity' + (expired ? ' is-expired' : '')}>${expired ? 'الأسعار قديمة' : period.badge}</span>
       </header>
 
-      ${expired ? html`<p class="notice" role="alert">انتهت مدة هذه العروض يوم ${longDay(validTo)}. الأسعار المعروضة قد لا تكون سارية؛ الخطة الجديدة تُنشر مع مجلة الأسبوع القادم.</p>` : null}
+      ${expired ? html`<p class="notice" role="alert">${period.staleText}</p>` : null}
 
       <main class="main" id="main">
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} persons=${persons} offers=${offers} />`
-          : tab === 'list' ? html`<${ListTab} data=${data} list=${list} week=${week} set=${set} validTo=${validTo} />`
+          : tab === 'list' ? html`<${ListTab} data=${data} list=${list} week=${week} set=${set} period=${period} />`
           : tab === 'deals' ? html`<${DealsTab} data=${data} week=${week} set=${set} />`
           : tab === 'me' ? html`<${MeTab} data=${data} plan=${plan} persons=${persons} set=${set} plusOn=${plusOn} />`
           : html`<${PlanTab} data=${data} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} />`}

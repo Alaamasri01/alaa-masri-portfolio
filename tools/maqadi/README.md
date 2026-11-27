@@ -4,6 +4,21 @@ The app in `maqadi/` is static. Everything that changes from week to week lives
 in `maqadi/data/`, and is produced here once a week (Saudi supermarket offers
 usually run Wednesday to Tuesday).
 
+## Every week, automatically
+
+`node tools/maqadi/weekly.mjs` does the whole update: it creates the week's
+folder, reads Tamimi's listing, chooses each cuisine's six meals and the
+cheapest product for every ingredient (`recipes.json`, `ingredients.json`,
+`plan-week.mjs`), publishes `maqadi/data/`, and keeps only the last two weeks.
+`.github/workflows/maqadi-weekly.yml` runs it every Wednesday at 09:00 Riyadh,
+runs the tests and commits the result. Scheduled workflows only run from the
+default branch.
+
+To change what the plans can cook, edit `recipes.json` (meals never name a
+product, only ingredient keys) and `ingredients.json` (how each key is
+recognised in the store's product names). An ingredient the store does not
+sell that week stays on the shopping list without a price.
+
 ## Stores
 
 | Store | Source | How it is read | Effort each week |
@@ -38,7 +53,9 @@ node tools/maqadi/fetch-tamimi.mjs 2026-w48   # writes weeks/2026-w48/tamimi/onl
 3. **Describe the week** in `weeks/<week>/meta.json`: stores, validity dates,
    source links. `corrections` fixes single fields by offer id after a second
    look at the page; `drop` removes an offer by id.
-4. **Write the plans** in `weeks/<week>/plans.json`: meals whose main
+4. **Plans** are chosen automatically when the week's `meta.json` names a
+   `plan_store`. To write them by hand instead, add `weeks/<week>/plans.json`:
+   meals whose main
    ingredients are on offer this week. Every ingredient that points at an offer
    gives its amount in the unit that offer is sold by (g/kg, ml/l or pcs).
 5. **Build and test.**

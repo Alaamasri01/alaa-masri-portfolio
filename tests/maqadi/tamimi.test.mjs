@@ -9,6 +9,8 @@ test('sizes in the forms the store prints', () => {
   assert.deepEqual(parseSize('6 X 200 ML'), { qty: 200, unit: 'ml', count: 6 });
   assert.deepEqual(parseSize('1.5 L'), { qty: 1.5, unit: 'l', count: 1 });
   assert.deepEqual(parseSize('1 pc'), { qty: 1, unit: 'pcs', count: 1 });
+  assert.deepEqual(parseSize('6 pcs - 240g'), { qty: 6, unit: 'pcs', count: 1 });
+  assert.deepEqual(parseSize('16.3oz'), { qty: 462, unit: 'g', count: 1 });
   assert.equal(parseSize('Family pack'), null);
   assert.equal(parseSize(''), null);
 });
@@ -30,7 +32,7 @@ test('departments map to the app categories', () => {
   assert.equal(categoryOf(p('HEALTHY LIVING', 'GROCERY', 'ORGANIC FOOD', 'Organic Basmati Rice')), 'rice_grains');
 });
 
-test('only discounted, active variants become offers', () => {
+test('active variants become prices; only real discounts carry an old price', () => {
   const offers = toOffers([{
     nameEn: 'Fresh Milk', nameAr: 'حليب طازج', brandName: 'Almarai', departmentName: 'FRESH', subDepartmentName: 'DAIRY', parentCategoryName: 'MILK & LABAN',
     variants: [
@@ -40,11 +42,12 @@ test('only discounted, active variants become offers', () => {
       { variantId: 'D', variantEn: '200 ML', price: 1, oldPrice: 1.5, hasOffer: true, isActive: false }
     ]
   }]);
-  assert.equal(offers.length, 1);
-  assert.deepEqual(
-    { id: offers[0].source_id, qty: offers[0].size_qty, unit: offers[0].size_unit, price: offers[0].price, was: offers[0].was, category: offers[0].category },
-    { id: 'A', qty: 2, unit: 'l', price: 10.5, was: 12, category: 'dairy_milk' }
-  );
+  assert.deepEqual(offers.map(o => [o.source_id, o.size_qty, o.size_unit, o.pack_count, o.price, o.was]), [
+    ['A', 2, 'l', 1, 10.5, 12],
+    ['B', 1, 'l', 1, 6, null],
+    ['C', 1, 'l', 4, 20, null]
+  ]);
+  assert.equal(offers[0].category, 'dairy_milk');
 });
 
 test('pet supplies and toys are left out', () => {
@@ -55,6 +58,18 @@ test('pet supplies and toys are left out', () => {
   assert.equal(offers.length, 0);
 });
 
+
 test('a page without product data is reported, not guessed', () => {
   assert.equal(readPage('<html><body>maintenance</body></html>'), null);
+});
+
+test('weeks are numbered the ISO way, as the data folders are', async () => {
+  const { isoWeek } = await import('../../tools/maqadi/weekly.mjs');
+  assert.equal(isoWeek('2026-11-27').id, '2026-W48');
+  assert.equal(isoWeek('2026-11-23').id, '2026-W48');
+  assert.equal(isoWeek('2026-11-22').id, '2026-W47');
+  assert.equal(isoWeek('2026-12-02').id, '2026-W49');
+  assert.equal(isoWeek('2027-01-01').id, '2026-W53');
+  assert.equal(isoWeek('2027-01-04').id, '2027-W01');
+  assert.equal(isoWeek('2026-11-27').dir, '2026-w48');
 });

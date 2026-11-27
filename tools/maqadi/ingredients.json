@@ -1,0 +1,317 @@
+{
+ "_note": "Each key is matched against a store's product names (normalised Arabic + lower-case English). 'categories' limits the aisles searched; 'include' and 'exclude' are regular expressions. The cheapest product that covers the week's need wins.",
+ "ingredients": {
+  "chicken_whole": {
+   "name": "دجاج كامل",
+   "categories": [
+    "poultry",
+    "frozen_chicken"
+   ],
+   "include": "whole chicken|chicken whole|griller|broiler|دجاج كامل|دجاجه كامله|دجاج طازج",
+   "exclude": "leg|thigh|breast|wing|marinat|season|rosemary|smoked|roast|grilled|nugget|burger|stock|cube|soup|noodle|sausage|frank|متبل|افخاذ|صدور|اجنحه|مشوي"
+  },
+  "chicken_pieces": {
+   "name": "قطع دجاج",
+   "categories": [
+    "poultry"
+   ],
+   "include": "mixed parts|chicken parts|chicken cut|chicken pieces|whole chicken|thigh|leg|drumstick|قطع دجاج|دجاج مقطع|افخاذ",
+   "exclude": "breast|wing|marinat|season|rosemary|smoked|nugget|burger|strips|popcorn|liver|gizzard|heart|neck|feet|متبل|كبد|قوانص"
+  },
+  "chicken_legs": {
+   "name": "أفخاذ دجاج",
+   "categories": [
+    "poultry",
+    "frozen_chicken"
+   ],
+   "include": "leg|thigh|drumstick|افخاذ|فخذ|سيقان",
+   "exclude": "marinat|season|rosemary|smoked|nugget|burger|breaded|crispy|lamb|beef|veal|متبل"
+  },
+  "chicken_breast": {
+   "name": "صدور دجاج",
+   "categories": [
+    "poultry",
+    "frozen_chicken"
+   ],
+   "include": "chicken breast|breast fillet|breast boneless|صدور دجاج|صدر دجاج|فيليه دجاج|فيلية دجاج",
+   "exclude": "smoked|turkey|nugget|strip|burger|breaded|crispy|season|marinat|tikka|shawarma|kebab|sliced|cold cut|متبل"
+  },
+  "beef_minced": {
+   "name": "لحم بقري مفروم",
+   "categories": [
+    "meat",
+    "frozen_other"
+   ],
+   "include": "minced|mince|ground beef|مفروم",
+   "exclude": "chicken|turkey|lamb|mutton|camel|kofta|kebab|burger|sausage|meatball|samosa|kibbeh|دجاج|كفته|برجر|غنم|حاشي"
+  },
+  "fish_fillet": {
+   "name": "فيليه سمك",
+   "categories": [
+    "fish",
+    "frozen_other"
+   ],
+   "include": "fish fillet|white fish|basa|pangasius|tilapia|hamour|فيليه سمك|فيلية سمك|سمك فيليه|سمك ابيض",
+   "exclude": "tuna|salmon|breaded|finger|crumb|prawn|shrimp|crab|smoked|chicken|zing|spicy|mild|حار|زينج"
+  },
+  "rice_basmati": {
+   "name": "أرز بسمتي",
+   "categories": [
+    "rice_grains"
+   ],
+   "include": "basmati|بسمتي",
+   "exclude": "organic|brown|quinoa|cake|flour|noodle|ready|cooked|microwave|pouch|cup|mix|seasoned"
+  },
+  "pasta_short": {
+   "name": "مكرونة",
+   "categories": [
+    "pasta_noodles"
+   ],
+   "include": "macaroni|penne|fusilli|elbow|rigatoni|farfalle|shells|مكرونه|معكرونه|قواقع",
+   "exclude": "organic|gluten|lentil|chickpea|whole wheat|wholewheat|noodle|instant|sauce|cup|cheese|spaghetti|fettuccine|lasagna|vermicelli|شعيريه|سباجيتي|اسباجيتي|فيتوتشيني"
+  },
+  "pasta_long": {
+   "name": "مكرونة طويلة",
+   "categories": [
+    "pasta_noodles"
+   ],
+   "include": "fettuccine|fettucine|tagliatelle|linguine|spaghetti|فيتوتشيني|سباجيتي|اسباجيتي|سباغيتي",
+   "exclude": "organic|gluten|lentil|chickpea|whole wheat|sauce|instant|cup"
+  },
+  "eggs": {
+   "name": "بيض",
+   "categories": [
+    "eggs"
+   ],
+   "include": "\\beggs?\\b|بيض",
+   "exclude": "noodle|pasta|replacement|mayo|choco|quail|سمان"
+  },
+  "onion": {
+   "name": "بصل",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "onion|بصل",
+   "exclude": "ring|powder|granule|flake|chips|fried|crispy|spring|green|leek|pickle"
+  },
+  "garlic": {
+   "name": "ثوم",
+   "categories": [
+    "produce_veg",
+    "produce_fruit"
+   ],
+   "include": "garlic|ثوم",
+   "exclude": "powder|granule|paste|brine|chips|bread|sauce|oil|flake|salt|crushed|mayo|toum"
+  },
+  "lemon": {
+   "name": "ليمون",
+   "categories": [
+    "produce_veg",
+    "produce_fruit"
+   ],
+   "include": "lemon|ليمون",
+   "exclude": "pickle|juice|drink|soda|flavou|dried|black|salt|tea|squash|cordial|lime"
+  },
+  "bell_pepper": {
+   "name": "فلفل رومي",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "bell pepper|capsicum|sweet pepper|فلفل رومي|فلفل حلو|فلفل ملون|فلفل اخضر|فلفل احمر|فلفل اصفر",
+   "exclude": "chili|chilli|hot|jalapeno|paste|sauce|stuffed|pickle|powder|grilled|roasted"
+  },
+  "potato": {
+   "name": "بطاطس",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "potato|بطاطس|بطاطا",
+   "exclude": "chips|crisps|fries|wedges|sweet|mash|starch|flake|frozen|hash"
+  },
+  "tomatoes_canned": {
+   "name": "طماطم مقطعة معلبة",
+   "categories": [
+    "canned",
+    "sauces_condiments"
+   ],
+   "include": "chopped tomato|peeled tomato|diced tomato|crushed tomato|tomatoes chopped|tomatoes peeled|طماطم مقطع|طماطم مقشر|طماطم مفروم|طماطم مهروس",
+   "exclude": "paste|ketchup|juice|sun dried|dried|soup|pasta sauce|chili"
+  },
+  "tomato_paste": {
+   "name": "معجون طماطم",
+   "categories": [
+    "canned",
+    "sauces_condiments"
+   ],
+   "include": "tomato paste|معجون طماطم",
+   "exclude": "chili|pepper paste"
+  },
+  "eggplant": {
+   "name": "باذنجان",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "eggplant|aubergine|brinjal|باذنجان",
+   "exclude": "stuffed|makdos|borek|pickle|dip|mutabal|baba|grilled"
+  },
+  "okra": {
+   "name": "بامية",
+   "categories": [
+    "frozen_veg",
+    "produce_veg",
+    "canned"
+   ],
+   "include": "okra|باميه",
+   "exclude": "pickle"
+  },
+  "molokhia": {
+   "name": "ملوخية",
+   "categories": [
+    "frozen_veg",
+    "frozen_other",
+    "canned",
+    "produce_veg",
+    "other"
+   ],
+   "include": "molokhia|moloukhia|mulukhiyah|ملوخيه",
+   "exclude": "dried|ناشف|مجففه"
+  },
+  "mixed_veg": {
+   "name": "خضار مشكلة مجمدة",
+   "categories": [
+    "frozen_veg"
+   ],
+   "include": "mixed vegetable|mixed veg|vegetable mix|خضار مشكل|خضروات مشكل",
+   "exclude": "rice|soup|sauce"
+  },
+  "peas": {
+   "name": "بازلاء مجمدة",
+   "categories": [
+    "frozen_veg"
+   ],
+   "include": "\\bpeas\\b|green peas|garden peas|بازلاء|بازيلا",
+   "exclude": "chick|mixed|carrot|corn|snow"
+  },
+  "lentils": {
+   "name": "عدس",
+   "categories": [
+    "legumes_nuts",
+    "canned",
+    "rice_grains",
+    "other"
+   ],
+   "include": "lentil|عدس",
+   "exclude": "chips|pasta|soup|crisps|snack|penne|organic|puffs"
+  },
+  "yogurt": {
+   "name": "زبادي",
+   "categories": [
+    "dairy_yogurt_labneh"
+   ],
+   "include": "yoghurt|yogurt|زبادي",
+   "exclude": "drink|fruit|berr|mango|vanilla|honey|choco|cereal|frozen|kids|peach|apricot|pineapple|flavo|lassi|smoothie|lemon|mint|date|passion|chia|strawberry|shower|body|lotion|marinat|oat|شراب|توت|فراوله|مانجو|عسل"
+  },
+  "cooking_cream": {
+   "name": "كريمة طبخ",
+   "categories": [
+    "butter_cream",
+    "canned",
+    "dairy_milk"
+   ],
+   "include": "cooking cream|chef cream|كريمه طبخ|كريمه الطبخ|كريمه للطبخ",
+   "exclude": "\\bnone\\b"
+  },
+  "butter": {
+   "name": "زبدة",
+   "categories": [
+    "butter_cream",
+    "dairy_cheese"
+   ],
+   "include": "butter|زبده",
+   "exclude": "peanut|ghee|croissant|cookie|biscuit|popcorn|almond|cashew|body|cocoa|shea|lotion|garlic|herb|chicken|سمن"
+  },
+  "mozzarella": {
+   "name": "جبنة موزاريلا مبشورة",
+   "categories": [
+    "dairy_cheese"
+   ],
+   "include": "mozzarella|موزاريلا|موزريلا",
+   "exclude": "pizza|stick|bites|nugget|ball|slice"
+  },
+  "cheese_slices": {
+   "name": "شرائح جبن",
+   "categories": [
+    "dairy_cheese"
+   ],
+   "include": "slice|شرايح",
+   "exclude": "mozzarella|halloumi|smoked|turkey|vegan|حلوم"
+  },
+  "labneh": {
+   "name": "لبنة",
+   "categories": [
+    "dairy_yogurt_labneh",
+    "dairy_cheese"
+   ],
+   "include": "labneh|labnah|labaneh|لبنه",
+   "exclude": "ball|olive oil|zaatar|chilli|chili|baraka|dip|garlic|mint|كرات"
+  },
+  "bread_toast": {
+   "name": "خبز توست",
+   "categories": [
+    "bakery"
+   ],
+   "include": "toast|sliced bread|white bread|brown bread|توست",
+   "exclude": "melba|crisp|rusk|french toast|biscuit|crouton|bites|cake|شابوره"
+  },
+  "tortilla": {
+   "name": "خبز تورتيلا",
+   "categories": [
+    "bakery"
+   ],
+   "include": "tortilla|wrap|تورتيلا",
+   "exclude": "chips|crisps|nacho|mexita|box|chicken|beef|sandwich"
+  },
+  "tuna": {
+   "name": "تونة",
+   "categories": [
+    "canned",
+    "fish"
+   ],
+   "include": "tuna|تونه|تونا",
+   "exclude": "salad|pasta|sandwich|prawn|chips|steak|mayo|spread|sauce|fresh"
+  },
+  "corn": {
+   "name": "ذرة حلوة معلبة",
+   "categories": [
+    "canned"
+   ],
+   "include": "sweet corn|corn kernel|kernel corn|whole kernel|ذره",
+   "exclude": "flake|chips|oil|flour|starch|pop|cob|baby|cream style|soup|snack|nacho"
+  },
+  "mushrooms": {
+   "name": "فطر",
+   "categories": [
+    "canned",
+    "produce_veg"
+   ],
+   "include": "mushroom|فطر|مشروم",
+   "exclude": "soup|sauce|cream of|risotto|شوربه|صلصه"
+  },
+  "milk": {
+   "name": "حليب",
+   "categories": [
+    "dairy_milk"
+   ],
+   "include": "fresh milk|full fat milk|full cream milk|long life milk|milk full|\\bmilk\\b|حليب",
+   "exclude": "powder|evaporated|condensed|coconut|choco|strawberry|banana|flavou|almond|soy|oat|lactose|kids|growing|formula|laban|cream|tea|coffee|لبن|مجفف|بودره|مكثف|مبخر|شوكولات|فراوله|موز|كريمه|قهوه|flavo|candy|نكهه|mango|vanilla|caramel|saffron|date|مانجو|فانيلا|كراميل|زعفران|تمر"
+  },
+  "parsley": {
+   "name": "بقدونس",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "parsley|بقدونس",
+   "exclude": "flake|dried|chopped|frozen|مجفف"
+  }
+ }
+}
