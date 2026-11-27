@@ -28,7 +28,8 @@ const AISLES = [
   { id: 'frozen', name: 'مجمدات', categories: ['frozen_chicken', 'frozen_veg', 'frozen_other'] },
   { id: 'pantry', name: 'مؤونة', categories: ['rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'breakfast_spreads', 'dates_sweets', 'snacks'] },
   { id: 'drinks', name: 'مشروبات', categories: ['drinks_water', 'drinks_juice', 'tea_coffee'] },
-  { id: 'other', name: 'أخرى', categories: ['household', 'other'] }
+  { id: 'home', name: 'المنزل والعناية', categories: ['household', 'personal_care', 'baby'] },
+  { id: 'other', name: 'أخرى', categories: ['other'] }
 ];
 const aisleOf = category => AISLES.find(aisle => aisle.categories.includes(category)) || AISLES[AISLES.length - 1];
 
@@ -39,7 +40,7 @@ const CATEGORY_NAMES = {
   oil_ghee: 'زيوت وسمن', canned: 'معلبات', sauces_condiments: 'صلصات', spices: 'بهارات',
   legumes_nuts: 'بقوليات ومكسرات', frozen_chicken: 'دجاج مجمد', frozen_veg: 'خضار مجمدة', frozen_other: 'مجمدات',
   breakfast_spreads: 'فطور', drinks_water: 'مياه', drinks_juice: 'عصائر', tea_coffee: 'شاي وقهوة',
-  dates_sweets: 'تمور وحلويات', snacks: 'سناكات', household: 'منزلية', other: 'أخرى'
+  dates_sweets: 'تمور وحلويات', snacks: 'سناكات', household: 'منظفات ومنزلية', personal_care: 'عناية شخصية', baby: 'أطفال', other: 'أخرى'
 };
 
 const SOLD_BY = { each: 'للحبة', plate: 'للطبق', kg: 'للكيلو', pack: 'للعبوة', carton: 'للكرتون', bag: 'للكيس', bunch: 'للحزمة', box: 'للعلبة' };
@@ -371,7 +372,9 @@ function ListTab({ data, list, week, set, validTo }) {
 function DealsTab({ data, week, set }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+  const [store, setStore] = useState('all');
   const [shown, setShown] = useState(CONFIG.dealsPage);
+  const storeIds = Object.keys(data.offers.stores);
 
   const categories = useMemo(() => {
     const counts = {};
@@ -380,15 +383,20 @@ function DealsTab({ data, week, set }) {
   }, [data]);
 
   const results = useMemo(() => data.offers.offers
-    .filter(offer => (category === 'all' || offer.category === category) && matches(offer, query))
+    .filter(offer => (store === 'all' || offer.store === store) && (category === 'all' || offer.category === category) && matches(offer, query))
     .sort((a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price),
-  [data, query, category]);
+  [data, query, category, store]);
 
-  useEffect(() => setShown(CONFIG.dealsPage), [query, category]);
+  useEffect(() => setShown(CONFIG.dealsPage), [query, category, store]);
 
   return html`
     <h1 class="page-title">عروض الأسبوع</h1>
-    <p class="page-sub">${data.offers.offers.length} عرض · مرتّبة من الأعلى خصماً</p>
+    <p class="page-sub">${results.length} عرض · مرتّبة من الأعلى خصماً</p>
+    ${storeIds.length > 1 ? html`
+      <div class="segmented segmented--stores" role="group" aria-label="المتجر">
+        <button type="button" class="segmented__item" aria-pressed=${store === 'all'} onClick=${() => setStore('all')}>كل المتاجر</button>
+        ${storeIds.map(id => html`<button type="button" class="segmented__item" aria-pressed=${store === id} onClick=${() => setStore(id)}>${storeName(data, id)}</button>`)}
+      </div>` : null}
     <input class="search" type="search" inputmode="search" placeholder="بحث: دجاج، أرز، جبنة…" aria-label="بحث في العروض" value=${query} onInput=${event => setQuery(event.target.value)} />
     <div class="chips" role="group" aria-label="القسم">
       <button type="button" class="chip" aria-pressed=${category === 'all'} onClick=${() => setCategory('all')}>الكل</button>
@@ -459,10 +467,10 @@ function MeTab({ data, plan, persons, set, plusOn }) {
       <h2 class="card__title">مصدر الأسعار</h2>
       ${stores.map(store => html`
         <p class="source">
-          <b>${store.name}</b> — ${store.source}، سارية من ${longDay(store.valid_from)} إلى ${longDay(store.valid_to)}.
+          <b>${store.name}</b> — ${store.source}، ${store.checked ? 'كما ظهرت يوم ' + longDay(store.checked) : 'سارية من ' + longDay(store.valid_from) + ' إلى ' + longDay(store.valid_to)}.
           ${store.source_url ? html` <a href=${store.source_url} target="_blank" rel="noopener noreferrer">المصدر</a>` : null}
         </p>`)}
-      <p class="fineprint">الأسعار منقولة من مجلات العروض الرسمية المنشورة، وقد تختلف حسب الفرع وتوفّر الكمية، لذا يُنصح بمراجعة السعر على الرف قبل الشراء. التطبيق مستقل وغير تابع لأي متجر.</p>
+      <p class="fineprint">الأسعار منقولة من مجلات العروض الرسمية ومن المتاجر الإلكترونية للمتاجر نفسها، وقد تختلف حسب الفرع وتوفّر الكمية، لذا يُنصح بمراجعة السعر على الرف قبل الشراء. التطبيق مستقل وغير تابع لأي متجر.</p>
     </section>
 
     <section class="card">
@@ -554,7 +562,7 @@ function App() {
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
 
-  const validTo = Object.keys(data.offers.stores).map(id => data.offers.stores[id].valid_to).sort()[0];
+  const validTo = Object.keys(data.offers.stores).map(id => data.offers.stores[id].valid_to).filter(Boolean).sort()[0];
   const expired = riyadhToday() > validTo;
   const meal = route.tab === 'meal' ? plan.meals.find(item => item.id === route.id && !locked.has(item.id)) : null;
   const tab = route.tab === 'meal' ? 'plan' : route.tab;

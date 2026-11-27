@@ -152,6 +152,8 @@ s { text-decoration-thickness: 1px; }
   flex: 1; min-height: 40px; padding: 0 10px; border: 0; border-radius: 999px;
   background: none; color: var(--c-ink-2); font-size: 14px;
 }
+.segmented--stores { margin-top: 12px; }
+.segmented__item[aria-pressed="true"],
 .segmented__item[aria-selected="true"] { background: var(--c-card); color: var(--c-ink); font-weight: 600; box-shadow: 0 1px 3px rgba(23, 38, 30, .12); }
 .plan-tagline { margin: 10px 4px 0; color: var(--c-ink-2); font-size: 13.5px; }
 

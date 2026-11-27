@@ -32,8 +32,12 @@ test('every store names its source and a valid date range', () => {
   ids.forEach(id => {
     const store = offersFile.stores[id];
     assert.ok(store.name && store.source, id + ' needs a name and a source');
-    assert.ok(isDate(store.valid_from) && isDate(store.valid_to), id + ' needs dates');
-    assert.ok(store.valid_from <= store.valid_to, id + ' dates are reversed');
+    // A printed flyer has a validity period; an online listing has the date it was read.
+    if (store.checked) assert.ok(isDate(store.checked), id + ' needs the date it was checked');
+    else {
+      assert.ok(isDate(store.valid_from) && isDate(store.valid_to), id + ' needs dates');
+      assert.ok(store.valid_from <= store.valid_to, id + ' dates are reversed');
+    }
     assert.equal(store.offers, offers.filter(offer => offer.store === id).length);
   });
 });

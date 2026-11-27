@@ -4,7 +4,25 @@ The app in `maqadi/` is static. Everything that changes from week to week lives
 in `maqadi/data/`, and is produced here once a week (Saudi supermarket offers
 usually run Wednesday to Tuesday).
 
-## Steps
+## Stores
+
+| Store | Source | How it is read | Effort each week |
+|---|---|---|---|
+| العثيم (Othaim) | official weekly flyer PDF | transcribed from page images | high: every page is read by hand or by a vision model |
+| التميمي (Tamimi) | public "Weekly offers" listing on tamimimarkets.com | `fetch-tamimi.mjs`, no transcription | low: one command |
+
+Tamimi's listing is read page by page with a two-second pause, only from the
+public `/tag/` pages that the site's robots.txt allows (never `/api/`). Only
+items the store marks as discounted, with an old price above the new one, are
+kept. Its prices are a snapshot of the online store on the day they were read
+(`checked` in meta.json), not a printed validity period. Review each store's
+terms of use before any public launch.
+
+```sh
+node tools/maqadi/fetch-tamimi.mjs 2026-w48   # writes weeks/2026-w48/tamimi/online.json
+```
+
+## Steps for the flyer
 
 1. **Get the flyers.** Download each store's official weekly flyer.
    Othaim publishes its PDF at <https://www.othaimmarkets.com/ar/offers/weekly-promotions>
@@ -26,6 +44,7 @@ usually run Wednesday to Tuesday).
 5. **Build and test.**
 
    ```sh
+   node tools/maqadi/fetch-tamimi.mjs 2026-w48
    node tools/maqadi/build-data.mjs 2026-w48
    node --test tests/maqadi/*.test.mjs
    ```

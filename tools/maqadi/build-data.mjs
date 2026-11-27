@@ -18,13 +18,14 @@ import { fileURLToPath } from 'node:url';
 import { buildList, toBase, packContent, isLoose, money } from '../../maqadi/lib/plan.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const CATEGORIES = ['produce_fruit', 'produce_veg', 'meat', 'poultry', 'fish', 'eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream', 'bakery', 'rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'frozen_chicken', 'frozen_veg', 'frozen_other', 'breakfast_spreads', 'drinks_water', 'drinks_juice', 'tea_coffee', 'dates_sweets', 'snacks', 'household', 'other'];
+const CATEGORIES = ['produce_fruit', 'produce_veg', 'meat', 'poultry', 'fish', 'eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream', 'bakery', 'rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'frozen_chicken', 'frozen_veg', 'frozen_other', 'breakfast_spreads', 'drinks_water', 'drinks_juice', 'tea_coffee', 'dates_sweets', 'snacks', 'household', 'personal_care', 'baby', 'other'];
 const SIZE_UNITS = ['g', 'kg', 'ml', 'l', 'pcs'];
 const SOLD_BY = ['each', 'plate', 'kg', 'pack', 'carton', 'bag', 'bunch', 'box'];
 const KITCHEN_UNITS = ['tbsp', 'tsp', 'cup', 'pinch', 'bunch', 'clove', 'can', 'pack', 'taste'];
 
 const readJSON = path => JSON.parse(readFileSync(path, 'utf8'));
-const writeJSON = (path, value) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify(value, null, 1) + '\n'); };
+// Published files are read by phones, so they are written without indentation.
+const writeJSON = (path, value) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify(value) + '\n'); };
 const pad = n => String(n).padStart(2, '0');
 const clean = text => (typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : null);
 const isPrice = n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n < 5000;
@@ -58,7 +59,8 @@ export function buildOffers(week, log = console.log) {
         report.read += 1;
         const page = Number(raw.page);
         perPage[page] = (perPage[page] || 0) + 1;
-        const id = `${store.prefix}-${pad(page)}-${pad(perPage[page])}`;
+        // Online sources carry the store's own item id, which stays stable from week to week.
+        const id = raw.source_id ? `${store.prefix}-${raw.source_id}` : `${store.prefix}-${pad(page)}-${pad(perPage[page])}`;
         const item = Object.assign({}, raw, (meta.corrections || {})[id]);
 
         if ((meta.drop || []).includes(id)) { report.dropped.push([id, 'dropped by hand']); return; }
@@ -67,6 +69,7 @@ export function buildOffers(week, log = console.log) {
         if (!isPrice(item.price)) { report.dropped.push([id, 'no readable price: ' + name]); return; }
         if (item.confidence === 'low' && !(meta.corrections || {})[id]) { report.dropped.push([id, 'low confidence: ' + name]); return; }
         if (store.region && outsideRegion(item.note, store.region)) { report.dropped.push([id, 'offered in other regions only: ' + name]); return; }
+        if (item.in_stock === false) { report.dropped.push([id, 'out of stock online: ' + name]); return; }
 
         let was = isPrice(item.was) ? item.was : null;
         if (was !== null && was <= item.price) { report.fixed.push([id, `old price ${was} not above ${item.price}; removed`]); was = null; }
@@ -92,7 +95,7 @@ export function buildOffers(week, log = console.log) {
           note: restriction(item.note)
         };
         // The two halves of a page overlap; the same product read twice is one offer.
-        const key = [storeId, page, offer.name, offer.size_text, offer.price].join('|');
+        const key = raw.source_id ? storeId + '|' + raw.source_id : [storeId, page, offer.name, offer.size_text, offer.price].join('|');
         if (seen.has(key)) { report.duplicates += 1; perPage[page] -= 1; return; }
         seen.add(key);
         offers.push(offer);
@@ -101,7 +104,8 @@ export function buildOffers(week, log = console.log) {
   });
 
   log(`offers: read ${report.read}, published ${offers.length}, duplicates ${report.duplicates}, dropped ${report.dropped.length}, old prices removed ${report.fixed.length}`);
-  report.dropped.forEach(([id, why]) => log(`  dropped ${id}: ${why}`));
+  report.dropped.slice(0, 25).forEach(([id, why]) => log(`  dropped ${id}: ${why}`));
+  if (report.dropped.length > 25) log(`  … and ${report.dropped.length - 25} more dropped`);
   report.fixed.forEach(([id, why]) => log(`  fixed   ${id}: ${why}`));
   return { meta, offers, report };
 }
