@@ -19,6 +19,22 @@ product, only ingredient keys) and `ingredients.json` (how each key is
 recognised in the store's product names). An ingredient the store does not
 sell that week stays on the shopping list without a price.
 
+`core.json` is published next to `offers.json`: the products the plans buy and
+each store's best food discounts. The app opens with it and loads the whole
+catalogue afterwards.
+
+### Ramadan
+
+The `ramadan` cuisine in `recipes.json` has `"season": "ramadan"`: its own
+meals (harees, jareesh) plus meals borrowed from other cuisines (`include`,
+with `prefer` picked first), its own basics split into iftar and suhoor
+(`part`), the dishes of each day (`daily`) and the big shop bought once for
+the month (`stockup`). It is planned every week like the others; the app
+shows it only in the month, and the big shop from two weeks before. The
+expected dates are in `maqadi/lib/season.js`: check them against the
+announced sighting each year. `?ramadan=before` and `?ramadan=during` on the
+app's address preview both phases.
+
 ## Stores
 
 | Store | Source | How it is read | Effort each week |

@@ -112,3 +112,15 @@ test('every swap a family can make can be costed too', () => {
     });
   });
 });
+
+test('the app opens with core.json: every product a plan buys, copied from offers.json', () => {
+  assert.ok(current.core, 'current.json names the small file the app opens with');
+  const core = read(current.core);
+  assert.equal(core.week, current.week);
+  assert.deepEqual(core.stores, offersFile.stores);
+  const coreIds = new Set(core.offers.map(offer => offer.id));
+  core.offers.forEach(offer => assert.deepEqual(offer, byId.get(offer.id), offer.id + ' differs from offers.json'));
+  storeSets.forEach(set => set.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients)
+    .concat(plan.essentials ? plan.essentials.items : [])
+    .forEach(item => { if (item.offer) assert.ok(coreIds.has(item.offer), item.offer + ' (' + item.name + ') is missing from core.json'); })));
+});

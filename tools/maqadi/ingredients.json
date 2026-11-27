@@ -320,6 +320,92 @@
    ],
    "include": "cucumber|خيار",
    "exclude": "pickle|مخلل|lotion|deodorant|antiperspirant|mask"
+  },
+  "dates": {
+   "name": "تمر",
+   "categories": [
+    "dates_sweets",
+    "produce_fruit"
+   ],
+   "include": "\\bdates?\\b|(^|[\\s|])(تمر|تمور)([\\s|]|$)",
+   "exclude": "choco|شوكولات|biscuit|بسكويت|cake|كيك|\\bbars?\\b|maamoul|معمول|syrup|دبس|paste|عجينه|filled|محشي|stuffed|tamarind|هندي|almond|لوز|juice|عصير|spread|ice|roll|ball|كرات"
+  },
+  "laban": {
+   "name": "لبن",
+   "categories": [
+    "dairy_yogurt_labneh",
+    "dairy_milk"
+   ],
+   "include": "\\blaban\\b|(^|[\\s|])لبن([\\s|]|$)",
+   "exclude": "labneh|flavo|mango|strawberry|banana|vanilla|mint|نكهه|مانجو|فراوله|موز|نعناع|zabadi|yogh?urt|زبادي|kids|اطفال"
+  },
+  "sambousa_sheets": {
+   "name": "رقائق سمبوسة",
+   "categories": [
+    "frozen_other",
+    "bakery"
+   ],
+   "include": "sambosa dough|samosa (dough|sheets?|pastry)|(عجينه|رقائق) سمبوس",
+   "exclude": "chicken|cheese|beef|mutton|vegetable|دجاج|جبن|لحم|خضار"
+  },
+  "vimto": {
+   "name": "شراب فيمتو",
+   "categories": [
+    "drinks_juice",
+    "tea_coffee"
+   ],
+   "include": "vimto[^|]*cordial|فيمتو شراب مركز",
+   "exclude": "zero|زيرو|diet|rose|ورد|strawberry|فراوله"
+  },
+  "foul": {
+   "name": "فول مدمس",
+   "categories": [
+    "canned"
+   ],
+   "include": "foul|fava|ful medam|فول",
+   "exclude": "koshna|كشنه|salsa|صلصه|chil|حار|lebanese|لبنان|recipe|بالوصفه|خلطه|بالخلطه|green|اخضر|dry|ناشف|soup|شوربه"
+  },
+  "oats": {
+   "name": "شوفان",
+   "categories": [
+    "breakfast_spreads",
+    "rice_grains"
+   ],
+   "include": "\\boats\\b|rolled oat|oat flakes|شوفان",
+   "exclude": "\\bbars?\\b|لوح|granola|جرانولا|instant|فوري|fruit|cream|choco|honey|عسل|berr|توت|cookie|بسكويت|flavo|نكهه|drink|milk|حليب|فواكه|زبادي|yog"
+  },
+  "harees": {
+   "name": "هريس",
+   "categories": [
+    "sauces_condiments",
+    "rice_grains",
+    "flour_baking",
+    "legumes_nuts"
+   ],
+   "include": "harees|harries|(^|[\\s|])هريس([\\s|]|$)",
+   "exclude": "pepper|فلفل|tomato|طماطم|garlic|ثوم|harissa"
+  },
+  "jareesh": {
+   "name": "جريش",
+   "categories": [
+    "rice_grains",
+    "flour_baking",
+    "legumes_nuts"
+   ],
+   "include": "jareesh|jarish|gerish|جريش|crushed wheat",
+   "exclude": "\\bmix\\b|soup|شوربه"
+  },
+  "qamar_aldin": {
+   "name": "قمر الدين",
+   "categories": [
+    "dates_sweets",
+    "breakfast_spreads",
+    "legumes_nuts",
+    "other",
+    "drinks_juice"
+   ],
+   "include": "قمر ?الدين|qamar|apricot (paste|leather|sheet)",
+   "exclude": "juice|عصير|drink|مشروب|jam|مربى"
   }
  }
 }

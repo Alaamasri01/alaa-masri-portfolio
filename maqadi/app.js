@@ -8,12 +8,15 @@
 import { html, render, useState, useEffect, useMemo, useCallback, useRef } from './lib/htm-preact.js';
 import {
   buildList, mealHighlight, discountPercent, unitPrice, normalizeAr, money, amount,
-  ingredientAmount, offerSize, isLoose, halalas, setLang as setPlanLang
+  ingredientAmount, offerSize, isLoose, halalas, purchase, toBase, setLang as setPlanLang
 } from './lib/plan.js';
 import { scannedGtin } from './lib/barcode.js';
 import { lookupScan } from './lib/scan.js';
 import { fitBudget, budgetBreakdown } from './lib/budget.js';
 import { activePlan, portions, AVOID_FOODS, ALLERGIES } from './lib/prefs.js';
+import { receiptRows, receiptVerdict } from './lib/receipt.js';
+import { tripRecord, saveTrip, savingsSummary } from './lib/savings.js';
+import { ramadanOn, ramadanPreview } from './lib/season.js';
 
 /* ---------------------------------------------------------------------
    Language
@@ -70,7 +73,7 @@ const CATEGORIES = {
 };
 const categoryName = id => (CATEGORIES[id] ? L(CATEGORIES[id][0], CATEGORIES[id][1]) : id);
 const categoryEmoji = id => (CATEGORIES[id] ? CATEGORIES[id][2] : '🛒');
-const CUISINE_EMOJI = { khaliji: '🍛', shami: '🥙', quick: '🍳', healthy: '🥗', budget: '💰' };
+const CUISINE_EMOJI = { khaliji: '🍛', shami: '🥙', quick: '🍳', healthy: '🥗', budget: '💰', ramadan: '🌙' };
 const STORE_COLORS = { panda: '#e2231a', tamimi: '#f28c28', othaim: '#1f5fae' };
 const STORE_EN = { panda: 'Panda', tamimi: 'Tamimi', othaim: 'Othaim' };
 
@@ -122,17 +125,19 @@ async function getJSON(path) {
   if (!response.ok) throw new Error(path + ' → ' + response.status);
   return response.json();
 }
+/* The app opens with a small file (core.json: what the plans buy and the home
+   screen's deals); the whole catalogue (offers.json) follows in the background. */
 async function loadData() {
   const current = await getJSON('data/current.json');
-  const [offers, plans] = await Promise.all([getJSON('data/' + current.offers), getJSON('data/' + current.plans)]);
-  return { current, offers, plans };
+  const [offers, plans] = await Promise.all([getJSON('data/' + (current.core || current.offers)), getJSON('data/' + current.plans)]);
+  return { current, offers, plans, full: !current.core };
 }
 
 const TABS = ['home', 'shop', 'list', 'plan', 'me'];
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const first = parts[0] === 'deals' ? 'shop' : parts[0];
-  const tab = TABS.concat('meal', 'scan').includes(first) ? first : 'home';
+  const tab = TABS.concat('meal', 'scan', 'story', 'instore', 'savings', 'ramadan').includes(first) ? first : 'home';
   return { tab, id: parts[1] || null };
 }
 
@@ -572,13 +577,13 @@ function FitSheet({ fit, budget, onApply, onClose }) {
 }
 
 /* A meal borrowed from another cuisine says which ("شامية" is stored in Arabic). */
-const CUISINE_NAMES = { 'خليجية': 'Gulf', 'شامية': 'Levantine', 'سريعة': 'Quick', 'صحية': 'Healthy', 'اقتصادية': 'Budget' };
+const CUISINE_NAMES = { 'خليجية': 'Gulf', 'شامية': 'Levantine', 'سريعة': 'Quick', 'صحية': 'Healthy', 'اقتصادية': 'Budget', 'رمضانية': 'Ramadan' };
 const cuisineLabel = name => L(name, CUISINE_NAMES[name] || name);
 
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories, season }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -588,7 +593,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
   return html`
     <${Head} ...${head}>
       <p class="head__greet">
-        ${L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
+        ${season && season.phase === 'during' ? L('رمضان كريم · اليوم ' + season.day, 'Ramadan Kareem · day ' + season.day) : L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
         <button type="button" class="head__family" onClick=${openFamily} aria-label=${L('عدد أفراد الأسرة ' + persons + '. تغيير', 'Family of ' + persons + '. Change')}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${familyLabel(persons, kids)}</button>
       </p>
       <p class="head__total"><${Sum} value=${list.totals.cost} /><span>${L('ريال للأسبوع', 'SAR this week')}</span></p>
@@ -609,6 +614,9 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
         <b>${L('جديد: امسح وقارن', 'New: scan and compare')}</b>
         ${L('وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.', 'In the shop, scan any product’s barcode to see its price at the other stores.')}
       </button>` : null}
+    ${season && season.phase === 'during' && plan.daily ? html`<${RamadanToday} plan=${plan} season=${season} meals=${plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id))} />` : null}
+    ${season && season.phase === 'before' ? html`<${RamadanBanner} season=${season} />` : null}
+    ${stories.length ? html`<${StoryRings} items=${stories} seen=${week.seen} />` : null}
 
     <${BudgetCard} budget=${budgetInfo.budget} over=${budgetInfo.over} fit=${budgetInfo.fit} done=${week.budgetFit}
       onFit=${budgetInfo.openFit} onEdit=${budgetInfo.openBudget} onMeals=${openFamily} onDismiss=${set.hideFitNote} />
@@ -860,6 +868,165 @@ function MealPage({ data, plan, meal, index, persons, kids, servings, offers, ba
 }
 
 /* ---------------------------------------------------------------------
+   Stories: the week told one screen at a time, opened from the rings on
+   the home screen (never on their own). Each meal is a story with its offer;
+   the last is the basket.
+   ------------------------------------------------------------------- */
+const STORY_MS = 6500;
+
+function StoryRings({ items, seen }) {
+  return html`
+    <nav class="rings" aria-label=${L('قصص الأسبوع', 'This week’s stories')}>
+      ${items.map((item, at) => html`
+        <a class=${'ring' + (seen.includes(item.id) ? ' is-seen' : '') + (item.basket ? ' ring--basket' : '')} href=${'#/story/' + at}
+          aria-label=${(item.basket ? L('قصة السلة', 'Basket story') : L('قصة ', 'Story: ') + item.label) + (seen.includes(item.id) ? L('، شاهدتها', ', seen') : '')}>
+          <span class="ring__pic"><span class=${'ring__in' + (item.basket ? '' : ' tile-' + item.tile)}><${Emoji} char=${item.emoji} size=${36} /></span></span>
+          <span class="ring__name" aria-hidden="true">${item.label}</span>
+        </a>`)}
+    </nav>`;
+}
+
+function StoryMeal({ data, item, number, total, offers, onSwap, canSwap, onKeep }) {
+  const meal = item.meal;
+  const best = mealHighlight(meal, offers);
+  const shown = best || meal.ingredients.map(ingredient => (ingredient.offer ? offers.get(ingredient.offer) : null)).find(Boolean);
+  const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
+  const percent = best ? discountPercent(best) : 0;
+  return html`
+    <div class="story__hero"><${Emoji} char=${meal.emoji} size=${240} /></div>
+    <p class="story__count">${L(`الطبخة ${number} من ${total}`, `Meal ${number} of ${total}`)}</p>
+    <h2 class="story__name">${nm(meal)}</h2>
+    <p class="story__chips">
+      <span><${Icon} name="clock" size=${16} /> ${meal.minutes}${L(' دقيقة', ' min')}</span>
+      <span><${Icon} name="cart" size=${16} /> ${L(bought + ' مكونات من المتجر', pl(bought, 'item', 'items') + ' to buy')}</span>
+    </p>
+    ${shown ? html`
+      <div class="story__deal">
+        <${Photo} data=${data} offer=${shown} width=${256} cls="story__photo" />
+        <span class="story__dealtext">
+          <small><${StoreDot} id=${shown.store} />${best ? L('عرض ' + storeName(data, shown.store) + ' هذا الأسبوع', storeName(data, shown.store) + ' offer this week') : L('من ' + storeName(data, shown.store), 'From ' + storeName(data, shown.store))}</small>
+          <b>${nm(shown)}</b>
+          <span class="story__price"><strong dir="ltr">${money(halalas(shown.price))}</strong> ${riyal()}${best ? html` <s dir="ltr">${money(halalas(best.was))}</s>` : null}</span>
+        </span>
+        ${percent ? html`<span class="story__off" dir="ltr">−${percent}%</span>` : null}
+      </div>` : null}
+    <div class="story__actions">
+      ${canSwap ? html`<button type="button" class="story__glass" onClick=${onSwap}><${Icon} name="swap" size=${19} /> ${L('بدّلها', 'Swap')}</button>` : null}
+      <button type="button" class="story__solid" onClick=${onKeep}><${Icon} name="check" size=${19} stroke=${2.4} /> ${L('أبقِها', 'Keep it')}</button>
+    </div>
+    <a class="story__up" href=${'#/meal/' + meal.id}><${Icon} name="down" size=${18} stroke=${2.2} /> ${L('اسحب للأعلى للوصفة', 'Swipe up for the recipe')}</a>`;
+}
+
+function StoryBasket({ data, list, storeRows, verdict, cooked, essentials, onShare }) {
+  const photos = list.lines.filter(line => line.offer.img).sort((a, b) => b.cost - a.cost).slice(0, 5);
+  // The dearest in the middle of the fan.
+  const fan = [3, 1, 0, 2, 4].map(at => photos[at]).filter(Boolean);
+  const high = Math.max(...storeRows.map(row => row.cost));
+  const store = storeRows.find(row => row.current);
+  return html`
+    <div class="story__done">
+      <${Emoji} char="🎉" size=${84} />
+      <h2 class="story__title">${L('أسبوعك جاهز!', 'Your week is ready!')}</h2>
+      <p>${mealsWord(cooked)}${essentials ? L(' وأساسيات الفطور والعشاء', ' plus breakfast and dinner basics') : ''} · ${L(list.totals.items + ' صنف', pl(list.totals.items, 'item', 'items'))}</p>
+    </div>
+    <div class="story__fan" aria-hidden="true">${fan.map(line => html`<${Photo} data=${data} offer=${line.offer} width=${256} cls="story__fanpic" />`)}</div>
+    <p class="story__total"><${Sum} value=${list.totals.cost} /> <span>${riyal()}</span></p>
+    <p class="story__totalsub">
+      ${L('كل المقاضي من ' + store.name, 'Everything from ' + store.name)}${list.totals.saved ? html` · ${L('وفّرت', 'you save')} <b dir="ltr">${money(list.totals.saved)}</b> ${L('من العروض', 'on offers')}` : null}
+    </p>
+    ${storeRows.length > 1 ? html`
+      <div class="story__vs">
+        ${storeRows.map(row => html`
+          <p class=${'story__vsrow' + (verdict && verdict.id === row.id ? ' is-best' : '')}>
+            <span class="story__vsname"><${StoreDot} id=${row.id} />${row.name}</span>
+            <span class="story__vsbar" aria-hidden="true"><i style=${'width:' + Math.round(row.cost / high * 100) + '%'}></i></span>
+            <b dir="ltr">${money(row.cost)}</b>
+          </p>`)}
+        ${verdict ? html`<p class="story__lead"><${Emoji} char="💰" size=${22} /> ${L(storeName(data, verdict.id) + ' أرخص بـ', storeName(data, verdict.id) + ' is cheaper by')} <b dir="ltr">${money(verdict.by)}</b> ${riyal()}</p>` : null}
+      </div>` : null}
+    <div class="story__actions story__actions--stack">
+      <a class="story__solid" href="#/list">${L('افتح قائمة المقاضي', 'Open the shopping list')}</a>
+      <button type="button" class="story__glass" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك أسبوعك', 'Share your week')}</button>
+    </div>`;
+}
+
+function Stories({ data, items, start, offers, list, storeRows, verdict, cooked, essentials, swaps, seen, set, onClose, onShare }) {
+  const [at, setAt] = useState(() => clamp(Number(start) || 0, 0, items.length - 1));
+  const [held, setHeld] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [hidden, setHidden] = useState(document.hidden);
+  const touch = useRef(null);
+  const index = Math.min(at, items.length - 1);
+  const item = items[index];
+  const rtl = LANG !== 'en';
+  const next = () => { if (index < items.length - 1) setAt(index + 1); };
+  const prev = () => { if (index > 0) setAt(index - 1); };
+  const recipe = () => { if (item.meal) window.location.hash = '#/meal/' + item.meal.id; };
+
+  useEffect(() => { if (item && !seen.includes(item.id)) set.seen(item.id); }, [item && item.id]);
+  useEffect(() => {
+    document.body.classList.add('is-locked');
+    const onVisible = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { document.body.classList.remove('is-locked'); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
+  useEffect(() => {
+    const onKey = event => {
+      if (swapping || document.querySelector('.sheet')) return; // a sheet on top takes the keys
+      if (event.key === 'Escape') onClose();
+      else if (event.key === 'ArrowLeft') (rtl ? next : prev)();
+      else if (event.key === 'ArrowRight') (rtl ? prev : next)();
+      else if (event.key === 'ArrowUp') recipe();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
+
+  if (!item) return null;
+  const paused = held || swapping || hidden;
+  // Swipes inside the swap sheet scroll the sheet; they don't move the stories.
+  const onTouchStart = event => { touch.current = swapping ? null : { x: event.touches[0].clientX, y: event.touches[0].clientY }; };
+  const onTouchEnd = event => {
+    const from = touch.current;
+    touch.current = null;
+    if (!from) return;
+    const dx = event.changedTouches[0].clientX - from.x;
+    const dy = event.changedTouches[0].clientY - from.y;
+    if (Math.abs(dy) > 70 && Math.abs(dy) > Math.abs(dx)) { if (dy < 0) recipe(); else onClose(); }
+    else if (Math.abs(dx) > 60) { if (rtl ? dx > 0 : dx < 0) next(); else prev(); }
+  };
+  const meals = items.filter(entry => entry.meal);
+  return html`
+    <div class=${'story ' + (item.basket ? 'story--basket' : 'story--t' + item.tile)} role="dialog" aria-modal="true" aria-label=${L('قصص الأسبوع', 'This week’s stories')}
+      onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd}
+      onPointerDown=${() => setHeld(true)} onPointerUp=${() => setHeld(false)} onPointerCancel=${() => setHeld(false)} onPointerLeave=${() => setHeld(false)}>
+      <div class="story__bars" aria-hidden="true">
+        ${items.map((entry, i) => html`
+          <i class=${i < index ? 'is-done' : i === index ? 'is-now' : ''}>
+            ${i === index ? html`<u key=${entry.id + ':' + index} class=${entry.basket ? 'is-still' : ''}
+              style=${'animation-duration:' + STORY_MS + 'ms;animation-play-state:' + (paused ? 'paused' : 'running')}
+              onAnimationEnd=${next}></u>` : null}
+          </i>`)}
+      </div>
+      <div class="story__top">
+        <${Logo} size=${34} />
+        <span class="story__who"><b>${item.basket ? L('سلّة الأسبوع', 'The week’s basket') : L('طبخات الأسبوع', 'This week’s meals')}</b><small>${item.basket ? L('آخر قصة', 'Last story') : L(`${index + 1} من ${meals.length}`, `${index + 1} of ${meals.length}`)}</small></span>
+        <button type="button" class="story__close" onClick=${onClose} aria-label=${L('إغلاق القصص', 'Close the stories')}><${Icon} name="close" size=${24} stroke=${2.2} /></button>
+      </div>
+      <button type="button" class="story__tap story__tap--prev" onClick=${prev} aria-label=${L('القصة السابقة', 'Previous story')} disabled=${index === 0}></button>
+      <button type="button" class="story__tap story__tap--next" onClick=${next} aria-label=${L('القصة التالية', 'Next story')} disabled=${index === items.length - 1}></button>
+      <div class="story__body" key=${item.id} aria-live="polite">
+        ${item.basket
+          ? html`<${StoryBasket} data=${data} list=${list} storeRows=${storeRows} verdict=${verdict} cooked=${cooked} essentials=${essentials} onShare=${onShare} />`
+          : html`<${StoryMeal} data=${data} item=${item} number=${meals.indexOf(item) + 1} total=${meals.length} offers=${offers}
+              canSwap=${swaps.length > 0} onSwap=${() => setSwapping(true)} onKeep=${next} />`}
+      </div>
+      ${swapping && item.meal ? html`<${SwapSheet} meal=${item.meal} options=${swaps} offers=${offers}
+        onPick=${id => { set.swap(item.meal.id, id); setSwapping(false); }} onClose=${() => setSwapping(false)} />` : null}
+    </div>`;
+}
+
+/* ---------------------------------------------------------------------
    Shopping list
    ------------------------------------------------------------------- */
 function lineDetail(line) {
@@ -888,24 +1055,382 @@ function shareText(data, list, period) {
   return rows.join('\n');
 }
 
-function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
+/* Sends the list as text: the phone's share sheet, else the clipboard, else WhatsApp.
+   Resolves to 'copied' when it went to the clipboard. */
+async function sendListText(text) {
+  try {
+    if (navigator.share) { await navigator.share({ text }); return 'shared'; }
+    await navigator.clipboard.writeText(text);
+    return 'copied';
+  } catch (error) {
+    if (error && error.name === 'AbortError') return 'cancelled';
+    window.location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
+    return 'shared';
+  }
+}
+
+/* ---------------------------------------------------------------------
+   The week's receipt
+   ------------------------------------------------------------------- */
+const RECEIPT_ROWS = 6;
+// A receipt prints every price with its halalas: 4 → "4.00".
+const cents = h => (h / 100).toFixed(2);
+
+/* The stamp: the cheapest store and its lead when the comparison is fair,
+   otherwise what the offers saved; nothing when there is neither. */
+function stampOf(data, receipt) {
+  const current = receipt.columns[0];
+  if (receipt.verdict) return { top: L(storeName(data, receipt.verdict.id) + ' أرخص', storeName(data, receipt.verdict.id) + ' is cheaper'), value: receipt.verdict.by, bottom: L('ريال · مقاضي ✓', 'SAR · Maqadi ✓') };
+  if (current.list.totals.saved) return { top: L('وفّرت', 'You save'), value: current.list.totals.saved, bottom: L('ريال من العروض', 'SAR on offers') };
+  return null;
+}
+
+function Receipt({ data, receipt, plan, persons, kids, onShare, onStore }) {
+  const [open, setOpen] = useState(false);
+  const { columns, rows, verdict } = receipt;
+  const current = columns[0];
+  const shown = open ? rows : rows.slice(0, RECEIPT_ROWS);
+  const stamp = stampOf(data, receipt);
+  const checked = (data.offers.stores[current.id] || {}).checked;
+  const cheaper = verdict && verdict.id !== current.id ? columns.find(column => column.id === verdict.id) : null;
+  const cell = (row, cost, at) => {
+    if (cost === null) return html`<td class="is-none">—</td>`;
+    const best = at === row.cheapest;
+    return html`<td class=${best ? 'is-best' : row.cheapest >= 0 ? 'is-more' : ''}><span>${cents(cost)}</span>${best ? html`<span class="vh">${L(' (الأرخص)', ' (cheapest)')}</span>` : null}</td>`;
+  };
+  return html`
+    <section class="float receipt" aria-label=${L('إيصال الأسبوع', 'The week’s receipt')}>
+      <div class="receipt__slot" aria-hidden="true"></div>
+      <div class="receipt__wrap">
+        <div class=${'receipt__paper' + (stamp ? ' has-stamp' : '')}>
+          <div class="receipt__head">
+            <${Logo} size=${40} />
+            <b>${appName()}</b>
+            <small>${cuisineLabel(plan.name)} · ${familyLabel(persons, kids)}</small>
+          </div>
+          <hr class="receipt__cut" />
+          <table class="receipt__table">
+            <thead>
+              <tr><th scope="col">${L('الصنف', 'Item')}</th>${columns.map(column => html`<th scope="col"><${StoreDot} id=${column.id} />${column.name}</th>`)}</tr>
+            </thead>
+            <tbody>
+              ${shown.map(row => html`
+                <tr>
+                  <th scope="row">${row.line.extra ? nm(row.line.offer) : nm(row.line)}</th>
+                  ${row.costs.map((cost, at) => cell(row, cost, at))}
+                </tr>`)}
+            </tbody>
+          </table>
+          ${rows.length > RECEIPT_ROWS ? html`
+            <button type="button" class="receipt__more" aria-expanded=${open} onClick=${() => setOpen(!open)}>
+              ${open ? L('عرض أقل', 'Show less') : L(`+ ${rows.length - RECEIPT_ROWS} أصناف أخرى`, `+ ${rows.length - RECEIPT_ROWS} more items`)}
+            </button>` : null}
+          <hr class="receipt__cut" />
+          <table class="receipt__table receipt__totals">
+            <tbody>
+              <tr class="is-total">
+                <th scope="row">${L('المجموع', 'Total')}</th>
+                ${columns.map(column => html`<td class=${verdict ? (verdict.id === column.id ? 'is-best' : 'is-more') : ''}><span>${cents(column.list.totals.cost)}</span></td>`)}
+              </tr>
+              <tr class="is-saved">
+                <th scope="row">${L('وفّرت من العروض', 'Saved on offers')}</th>
+                ${columns.map(column => html`<td>${cents(column.list.totals.saved)}</td>`)}
+              </tr>
+            </tbody>
+          </table>
+          ${columns.filter(column => column.caveat).map(column => html`<p class="receipt__note">${column.name}: ${column.caveat}</p>`)}
+          ${checked ? html`<p class="receipt__date">${L('أسعار المتاجر كما ظهرت يوم ' + longDay(checked), 'Store prices as shown on ' + longDay(checked))}</p>` : null}
+        </div>
+      </div>
+      ${stamp ? html`
+        <p class="receipt__stamp">
+          <small>${stamp.top}</small>
+          <b dir="ltr">${money(stamp.value)}</b>
+          <span>${stamp.bottom}</span>
+        </p>` : null}
+      <div class="receipt__actions">
+        <button type="button" class="btn" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك الإيصال', 'Share the receipt')}</button>
+        ${cheaper ? html`
+          <button type="button" class="btn btn--ghost" onClick=${() => onStore(cheaper.id)}>
+            ${L('تسوّق من ' + cheaper.name, 'Shop at ' + cheaper.name)} <small dir="ltr">−${money(current.list.totals.cost - cheaper.list.totals.cost)}</small>
+          </button>` : null}
+      </div>
+    </section>`;
+}
+
+/* ---------------------------------------------------------------------
+   The picture people share: drawn on a canvas from the app's own fonts and
+   pictures, so nothing from other sites is needed.
+   ------------------------------------------------------------------- */
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/* A 1080×1920 picture on the app's green with its name at the top, and
+   helpers that write in the reader's direction. `pictures` are loaded too. */
+async function cardKit(pictures) {
+  const W = 1080;
+  const H = 1920;
+  const rtl = LANG !== 'en';
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const sample = 'مقاضي Maqadi 0123456789.';
+  await Promise.all([document.fonts.load('700 60px "Readex Pro"', sample), document.fonts.load('400 40px "Readex Pro"', sample)]).catch(() => null);
+  const [logo, ...images] = await Promise.all(['icons/icon-192.png'].concat(pictures).map(loadImage));
+
+  const start = rtl ? W - 80 : 80;
+  const sign = rtl ? -1 : 1; // moving along the reading direction
+  ctx.direction = rtl ? 'rtl' : 'ltr';
+  ctx.textBaseline = 'alphabetic';
+  const font = (weight, size) => `${weight} ${size}px "Readex Pro", "Segoe UI", Tahoma, sans-serif`;
+  const write = (text, x, y, size, { weight = 400, color = '#fff', align = 'start' } = {}) => {
+    ctx.font = font(weight, size);
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(text, x, y);
+    return ctx.measureText(text).width;
+  };
+  const fit = (text, size, weight, max) => {
+    ctx.font = font(weight, size);
+    if (ctx.measureText(text).width <= max) return text;
+    let cut = text;
+    while (cut.length > 1 && ctx.measureText(cut + '…').width > max) cut = cut.slice(0, -1);
+    return cut + '…';
+  };
+  const round = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  // A number written left to right, wherever the text runs.
+  const number = (text, x, y, size, options) => {
+    ctx.direction = 'ltr';
+    const width = write(text, x, y, size, options);
+    ctx.direction = rtl ? 'rtl' : 'ltr';
+    return width;
+  };
+
+  // The green page, as the app's header.
+  const bg = ctx.createRadialGradient(rtl ? 80 : W - 80, 0, 0, rtl ? 80 : W - 80, 0, 2100);
+  bg.addColorStop(0, '#25b873');
+  bg.addColorStop(0.5, '#0b6e45');
+  bg.addColorStop(1, '#053d26');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.05)';
+  ctx.lineWidth = 140;
+  ctx.beginPath();
+  ctx.arc(rtl ? W + 40 : -40, 80, 330, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // The name.
+  if (logo) {
+    ctx.save();
+    round(rtl ? start - 110 : start, 96, 110, 110, 28);
+    ctx.clip();
+    ctx.drawImage(logo, rtl ? start - 110 : start, 96, 110, 110);
+    ctx.restore();
+  }
+  write(appName(), start + sign * 140, 172, 64, { weight: 700 });
+
+  // The invitation.
+  write(L('جرّب مقاضي', 'Try Maqadi'), start, H - 150, 50, { weight: 700 });
+  write(fit(L('خطة طبخات الأسبوع وقائمة مقاضيها بأرخص سعر', 'The week’s meals and groceries at the lowest price'), 36, 400, W - 160), start, H - 90, 36, { color: 'rgba(255,255,255,.85)' });
+
+  const done = () => new Promise((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('no picture'))), 'image/png'));
+  return { ctx, W, H, rtl, start, sign, font, write, fit, round, number, images, done };
+}
+
+async function drawShareCard({ data, receipt, meals, persons, kids }) {
+  const kit = await cardKit([emojiFile('🎉'), emojiFile('💰')].concat(meals.slice(0, 7).map(meal => emojiFile(meal.emoji))));
+  const { ctx, W, rtl, start, sign, font, write, fit, round } = kit;
+  const [party, coin, ...dishes] = kit.images;
+
+  // What the week saved, or what it costs when nothing was on offer.
+  const current = receipt.columns[0];
+  const saved = current.list.totals.saved;
+  if (party) {
+    ctx.save();
+    ctx.translate(rtl ? 200 : W - 200, 420);
+    ctx.rotate(0.2);
+    ctx.drawImage(party, -100, -100, 200, 200);
+    ctx.restore();
+  }
+  write(saved ? L('هذا الأسبوع وفّرت', 'This week I saved') : L('مقاضي أسبوعي', 'My week’s groceries'), start, 380, 60, { color: 'rgba(255,255,255,.92)' });
+  const amount = money(saved || current.list.totals.cost);
+  ctx.direction = 'ltr';
+  const amountWidth = write(amount, rtl ? start : start, 590, 210, { weight: 700, align: rtl ? 'right' : 'left' });
+  ctx.direction = rtl ? 'rtl' : 'ltr';
+  write(riyal(), start + sign * (amountWidth + 26), 590, 64, { weight: 600 });
+  write(fit(L(`${saved ? 'على ' : ''}مقاضي ${mealsWord(meals.length)} لـ ${familyLabel(persons, kids)}`, `${saved ? 'on ' : ''}groceries for ${mealsWord(meals.length)}, ${familyLabel(persons, kids)}`), 44, 400, W - 160),
+    start, 680, 44, { color: 'rgba(255,255,255,.9)' });
+
+  // A torn-off piece of the receipt: the biggest differences and the totals.
+  const columns = receipt.columns;
+  const rows = receipt.rows.filter(row => row.cheapest >= 0).slice(0, 3);
+  const top = 750;
+  const height = 120 + rows.length * 66 + 110;
+  ctx.fillStyle = '#fffef9';
+  ctx.beginPath();
+  ctx.moveTo(80, top + 28);
+  ctx.arcTo(80, top, 108, top, 28);
+  ctx.lineTo(W - 108, top);
+  ctx.arcTo(W - 80, top, W - 80, top + 28, 28);
+  ctx.lineTo(W - 80, top + height);
+  for (let x = W - 80; x > 80; x -= 32) { ctx.lineTo(x - 16, top + height + 16); ctx.lineTo(Math.max(80, x - 32), top + height); }
+  ctx.closePath();
+  ctx.fill();
+  const colW = columns.length > 2 ? 170 : 210;
+  const colX = at => (rtl ? 130 + (columns.length - 1 - at) * colW + colW / 2 : W - 130 - (columns.length - at) * colW + colW / 2);
+  const nameStart = rtl ? W - 130 : 130;
+  const nameMax = W - 260 - columns.length * colW - 20;
+  let y = top + 80;
+  write(L('الصنف', 'Item'), nameStart, y, 34, { weight: 600, color: '#6b726d' });
+  columns.forEach((column, at) => write(column.name, colX(at), y, 34, { weight: 600, color: '#6b726d', align: 'center' }));
+  const price = (value, x, yy, best, more, size = 40) => {
+    const text = cents(value);
+    ctx.font = font(700, size);
+    if (best) {
+      const w = ctx.measureText(text).width + 36;
+      ctx.fillStyle = '#e7f5ec';
+      round(x - w / 2, yy - size + 2, w, size + 18, 14);
+      ctx.fill();
+    }
+    ctx.direction = 'ltr';
+    write(text, x, yy, size, { weight: best ? 700 : 500, color: best ? '#0b6e45' : more ? '#9aa19c' : '#1b1f1c', align: 'center' });
+    ctx.direction = rtl ? 'rtl' : 'ltr';
+  };
+  rows.forEach(row => {
+    y += 66;
+    write(fit(row.line.extra ? nm(row.line.offer) : nm(row.line), 40, 400, nameMax), nameStart, y, 40, { color: '#1b1f1c' });
+    row.costs.forEach((cost, at) => (cost === null ? write('—', colX(at), y, 40, { color: '#9aa19c', align: 'center' }) : price(cost, colX(at), y, at === row.cheapest, row.cheapest >= 0)));
+  });
+  ctx.strokeStyle = '#c9ccc6';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([12, 10]);
+  ctx.beginPath();
+  ctx.moveTo(130, y + 34);
+  ctx.lineTo(W - 130, y + 34);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  y += 100;
+  write(L('المجموع', 'Total'), nameStart, y, 44, { weight: 700, color: '#1b1f1c' });
+  columns.forEach((column, at) => price(column.list.totals.cost, colX(at), y, receipt.verdict && receipt.verdict.id === column.id, Boolean(receipt.verdict), 46));
+
+  // The week's dishes.
+  y = top + height + 70;
+  const shown = dishes.filter(Boolean);
+  if (shown.length) {
+    ctx.fillStyle = 'rgba(255,255,255,.1)';
+    round(80, y, W - 160, 150, 36);
+    ctx.fill();
+    const gap = (W - 160) / shown.length;
+    shown.forEach((img, i) => ctx.drawImage(img, (rtl ? W - 80 - gap * (i + 1) : 80 + gap * i) + gap / 2 - 50, y + 25, 100, 100));
+    y += 200;
+  }
+
+  // Where it costs least.
+  if (receipt.verdict) {
+    ctx.fillStyle = '#ffb020';
+    round(80, y, W - 160, 120, 32);
+    ctx.fill();
+    if (coin) ctx.drawImage(coin, rtl ? W - 80 - 100 : 100, y + 26, 68, 68);
+    write(L(`${storeName(data, receipt.verdict.id)} أرخص بـ ${money(receipt.verdict.by)} ريال`, `${storeName(data, receipt.verdict.id)} is cheaper by ${money(receipt.verdict.by)} SAR`),
+      start + sign * 100, y + 76, 46, { weight: 700, color: '#3b2a00' });
+  }
+
+  return kit.done();
+}
+
+/* The month's saving as a picture: the total, each shop, and a year at this pace. */
+async function drawSavingsCard(summary) {
+  const kit = await cardKit([emojiFile('🏆'), emojiFile('💰')]);
+  const { ctx, W, rtl, start, sign, write, round, number } = kit;
+  const [trophy, coin] = kit.images;
+  if (trophy) {
+    ctx.save();
+    ctx.translate(rtl ? 200 : W - 200, 430);
+    ctx.rotate(0.18);
+    ctx.drawImage(trophy, -110, -110, 220, 220);
+    ctx.restore();
+  }
+  write(L('هذا الشهر وفّرت', 'This month I saved'), start, 400, 60, { color: 'rgba(255,255,255,.92)' });
+  const whole = String(Math.round(summary.total / 100));
+  const width = number(whole, start, 640, 250, { weight: 700, align: rtl ? 'right' : 'left' });
+  write(riyal(), start + sign * (width + 26), 640, 70, { weight: 600 });
+  write(L(`على مقاضي البيت، في ${summary.trips.length} ${summary.trips.length === 1 ? 'مرة تسوّق' : 'مرات تسوّق'}`, `on the family's groceries, over ${pl(summary.trips.length, 'shop', 'shops')}`), start, 730, 44, { color: 'rgba(255,255,255,.9)' });
+
+  // One bar per shop, the latest in gold.
+  const trips = summary.trips.slice(-6);
+  const top = 820;
+  ctx.fillStyle = 'rgba(255,255,255,.1)';
+  round(80, top, W - 160, 420, 40);
+  ctx.fill();
+  const high = Math.max(1, ...trips.map(trip => trip.saving));
+  const slot = (W - 240) / trips.length;
+  trips.forEach((trip, at) => {
+    const x = rtl ? W - 120 - slot * (at + 1) : 120 + slot * at;
+    const h = Math.max(16, Math.round(trip.saving / high * 230));
+    ctx.fillStyle = at === trips.length - 1 ? '#ffb020' : 'rgba(255,255,255,.35)';
+    round(x + slot * 0.18, top + 330 - h, slot * 0.64, h, 18);
+    ctx.fill();
+    number(String(Math.round(trip.saving / 100)), x + slot / 2, top + 310 - h, 40, { weight: 700, align: 'center' });
+    write(shortDay(trip.date), x + slot / 2, top + 385, 30, { color: 'rgba(255,255,255,.8)', align: 'center' });
+  });
+
+  // A year at this pace.
+  const year = Math.floor(summary.total * 12 / 10000) * 100;
+  if (year >= 100) {
+    const y = top + 480;
+    ctx.fillStyle = '#ffb020';
+    round(80, y, W - 160, 120, 32);
+    ctx.fill();
+    if (coin) ctx.drawImage(coin, rtl ? W - 80 - 100 : 100, y + 26, 68, 68);
+    write(L(`يعني أكثر من ${count(year)} ريال في السنة`, `That's over ${count(year)} SAR a year`), start + sign * 100, y + 76, 46, { weight: 700, color: '#3b2a00' });
+  }
+  return kit.done();
+}
+
+function ShareSheet({ makeCard, caption, listText, title, onClose }) {
+  const [card, setCard] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let url = null;
+    makeCard().then(blob => {
+      if (!alive) return;
+      url = URL.createObjectURL(blob);
+      setCard({ url, file: new File([blob], 'maqadi.png', { type: 'image/png' }) });
+    }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; if (url) URL.revokeObjectURL(url); };
+  }, []);
+  const canShare = Boolean(card && navigator.canShare && navigator.canShare({ files: [card.file] }));
+  const shareImage = () => navigator.share({ files: [card.file], text: caption }).catch(() => { /* closed */ });
+  const sendText = async () => {
+    if (await sendListText(listText) === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2500); }
+  };
+  return html`
+    <${Sheet} title=${title || L('شارك إيصالك', 'Share your receipt')} onClose=${onClose}>
+      <div class="share__preview">
+        ${card ? html`<img src=${card.url} alt=${title || L('صورة إيصال الأسبوع', 'A picture of the week’s receipt')} />`
+          : html`<span class="share__wait">${failed ? L('تعذّر تجهيز الصورة.', 'The picture couldn’t be made.') : L('جاري تجهيز الصورة…', 'Making the picture…')}</span>`}
+      </div>
+      <div class="share__actions">
+        ${canShare ? html`<button type="button" class="btn btn--wide" onClick=${shareImage}><${Icon} name="share" size=${19} /> ${L('شارك الصورة', 'Share the picture')}</button>` : null}
+        ${card ? html`<a class=${'btn btn--wide' + (canShare ? ' btn--ghost' : '')} href=${card.url} download="maqadi.png"><${Icon} name="down" size=${19} /> ${L('حفظ الصورة', 'Save the picture')}</a>` : null}
+        ${listText ? html`<button type="button" class="btn btn--wide btn--ghost" onClick=${sendText}>${copied ? L('تم نسخ القائمة', 'List copied') : L('أرسل القائمة نصاً', 'Send the list as text')}</button>` : null}
+      </div>
+    <//>`;
+}
+
+function ListTab({ data, head, list, week, set, period, receipt, plan, persons, kids, budgetInfo, onShare }) {
   const done = key => week.checked.includes(key);
   const total = list.lines.length + list.unpriced.length;
   const ticked = list.lines.filter(line => done(line.key)).length + list.unpriced.filter(item => done('u:' + item.name)).length;
-  const [copied, setCopied] = useState(false);
-
-  const share = async () => {
-    const text = shareText(data, list, period);
-    try {
-      if (navigator.share) { await navigator.share({ text }); return; }
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (error) {
-      if (error && error.name === 'AbortError') return;
-      window.location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
-    }
-  };
 
   const title = html`
     <div class="head__titlerow">
@@ -913,7 +1438,7 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
         <h1 class="head__title">${L('قائمة المقاضي', 'Shopping list')}</h1>
         <p class="head__sub">${period.text}</p>
       </div>
-      ${total ? html`<button type="button" class="head__action" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? L('تم النسخ', 'Copied') : L('مشاركة', 'Share')}</button>` : null}
+      ${list.lines.length ? html`<a class="head__action head__action--solid" href="#/instore"><${Icon} name="cart" size=${19} stroke=${2.1} /> ${L('أنا في المحل', 'I’m in the shop')}</a>` : null}
     </div>`;
 
   if (!total) {
@@ -929,21 +1454,8 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
 
   return html`
     <${Head} ...${head} small>${title}<//>
-    <section class="float panel summary" aria-label=${L('ملخص القائمة', 'List summary')}>
-      <div class="summary__top">
-        <div>
-          <span class="summary__label">${L('إجمالي الأصناف المسعّرة', 'Total of priced items')}</span>
-          <span class="summary__value"><${Sum} value=${list.totals.cost} /> <small>${riyal()}</small></span>
-        </div>
-        ${list.totals.saved ? html`<span class="hchip hchip--gold">${L('وفّرت', 'Saved')} <b dir="ltr">${money(list.totals.saved)}</b></span>` : null}
-      </div>
-      ${compare.map(other => {
-        const diff = other.fair ? other.totals.cost - list.totals.cost : null;
-        const missing = other.unmatched
-          ? (other.unmatched === 1 ? L('صنف أضفته غير موجود هناك', 'an item you added is not sold there') : L(other.unmatched + ' أصناف أضفتها غير موجودة هناك', other.unmatched + ' items you added are not sold there'))
-          : '';
-        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />${L('نفس القائمة في ', 'The same list at ')}${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ${riyal()}${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? L('أغلى', 'more') : L('أرخص', 'less')} ${L('بـ', 'by')} <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ' · ' + L(other.unpriced + ' بدون سعر هناك', other.unpriced + ' without a price there') : ''}</p>`;
-      })}
+    ${list.lines.length ? html`<${Receipt} data=${data} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} onShare=${onShare} onStore=${set.store} />` : null}
+    <section class=${'panel summary' + (list.lines.length ? '' : ' float')} aria-label=${L('ملخص القائمة', 'List summary')}>
       ${budgetInfo.budget ? html`
         <p class=${'summary__budget' + (budgetInfo.over ? ' is-over' : '')}>
           ${L('ميزانيتك', 'Budget')} <b dir="ltr">${budgetInfo.budget}</b> ${riyal()} ·
@@ -1018,6 +1530,354 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
 /* ---------------------------------------------------------------------
    Shop
    ------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   In the shop: the list as a checklist for one hand, aisle by aisle, with
+   the screen kept awake. Ticks are the list's own ticks.
+   ------------------------------------------------------------------- */
+function useWakeLock() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return undefined;
+    let lock = null;
+    let alive = true;
+    const ask = () => navigator.wakeLock.request('screen').then(got => {
+      if (!alive) { got.release().catch(() => {}); return; }
+      lock = got;
+      setOn(true);
+      got.addEventListener('release', () => setOn(false));
+    }).catch(() => setOn(false));
+    // The lock ends when the phone leaves the page; it is asked for again on return.
+    const onVisible = () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) ask(); };
+    ask();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVisible); if (lock) lock.release().catch(() => {}); };
+  }, []);
+  return on;
+}
+
+function StoreRow({ data, row, done, onTick }) {
+  const line = row.line;
+  return html`
+    <li>
+      <button type="button" class=${'srow' + (done ? ' is-done' : '')} aria-pressed=${done} onClick=${onTick}>
+        ${line ? html`<${Photo} data=${data} offer=${line.offer} width=${128} cls="srow__photo" />` : html`<span class="srow__photo photo--none"><${Emoji} char="🏷️" size=${26} /></span>`}
+        <span class="srow__body">
+          <b>${line ? nm(line.offer) : nm(row.item)}</b>
+          <small>${line ? html`${lineDetail(line)} · <em dir="ltr">${money(line.cost)}</em>` : row.item.need ? L('يلزمك ', 'You need ') + amount(row.item.need) : L('بدون سعر هذا الأسبوع', 'No price this week')}</small>
+        </span>
+        <span class="srow__tick" aria-hidden="true"><${Icon} name="check" size=${22} stroke=${3} /></span>
+      </button>
+    </li>`;
+}
+
+function StoreMode({ data, store, list, week, set, onDone, onClose }) {
+  const awake = useWakeLock();
+  const [toast, setToast] = useState(null);
+  const done = key => week.checked.includes(key);
+  const rows = list.lines.map(line => ({ key: line.key, line, aisle: aisleOf(line.offer.category) }))
+    .concat(list.unpriced.map(item => ({ key: 'u:' + item.name, item, aisle: null })));
+  const got = rows.filter(row => done(row.key));
+  const left = rows.length - got.length;
+  const leftCost = list.lines.filter(line => !done(line.key)).reduce((total, line) => total + line.cost, 0);
+  const tick = row => {
+    const adding = !done(row.key);
+    set.toggleChecked(row.key);
+    setToast(adding ? row : null);
+  };
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  useEffect(() => {
+    document.body.classList.add('is-locked');
+    return () => document.body.classList.remove('is-locked');
+  }, []);
+  const name = row => (row.line ? nm(row.line.offer) : nm(row.item));
+  const groups = AISLES.map(aisle => ({ aisle, rows: rows.filter(row => row.aisle === aisle && !done(row.key)) })).filter(group => group.rows.length);
+  const unpriced = rows.filter(row => !row.aisle && !done(row.key));
+  return html`
+    <div class="instore" role="dialog" aria-modal="true" aria-label=${L('وضع المحل', 'In the shop')}>
+      <header class="instore__top">
+        <div class="instore__bar">
+          <h2 class="instore__title"><${StoreDot} id=${store} />${storeName(data, store)} · ${L('وضع المحل', 'In the shop')}</h2>
+          <button type="button" class="instore__done" onClick=${got.length ? onDone : onClose}>${got.length ? L('خلصت', 'Done') : L('خروج', 'Leave')}</button>
+        </div>
+        <p class="instore__left" aria-live="polite">
+          ${left ? html`<b>${left}</b> ${L(`${left === 1 ? 'صنف باقٍ' : 'أصناف باقية'} من ${rows.length}`, `left of ${rows.length}`)}` : html`<b>${L('كل شي بالسلة!', 'All in the basket!')}</b>`}
+        </p>
+        <div class="instore__progress" role="progressbar" aria-valuemin="0" aria-valuemax=${rows.length} aria-valuenow=${got.length} aria-label=${L('ما تم شراؤه', 'Bought so far')}><i style=${'width:' + (rows.length ? got.length / rows.length * 100 : 0) + '%'}></i></div>
+        <p class="instore__meta">
+          <span>${leftCost ? html`${L('باقي تقريباً', 'About')} <b dir="ltr">${money(leftCost)}</b> ${riyal()}${L('', ' to go')}` : ''}</span>
+          ${awake ? html`<span class="instore__awake">☀ ${L('الشاشة تبقى مضاءة', 'Screen stays on')}</span>` : null}
+        </p>
+      </header>
+
+      ${groups.map(group => html`
+        <section class="instore__aisle">
+          <h3><${Emoji} char=${group.aisle.emoji} size=${22} /> ${aisleName(group.aisle)} <small>${L(group.rows.length + ' باقية', group.rows.length + ' left')}</small></h3>
+          <ul class="srows">${group.rows.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+        </section>`)}
+      ${unpriced.length ? html`
+        <section class="instore__aisle">
+          <h3><${Emoji} char="🏷️" size=${22} /> ${L('بدون سعر هذا الأسبوع', 'No price this week')} <small>${unpriced.length}</small></h3>
+          <ul class="srows">${unpriced.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+        </section>` : null}
+
+      ${got.length ? html`
+        <details class="instore__basket" open=${!left}>
+          <summary><${Icon} name="cart" size=${20} /> ${L('في السلة', 'In the basket')} (${got.length})</summary>
+          <ul class="srows">${got.map(row => html`<${StoreRow} data=${data} row=${row} done=${true} onTick=${() => tick(row)} />`)}</ul>
+        </details>` : null}
+      ${!left ? html`<button type="button" class="btn btn--wide instore__finish" onClick=${onDone}>${L('خلصت المقاضي', 'Finish shopping')}</button>` : null}
+
+      ${toast ? html`
+        <div class="instore__toast" role="status">
+          <span><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('في السلة: ', 'In the basket: ')}${name(toast)}</span>
+          <button type="button" onClick=${() => { set.toggleChecked(toast.key); setToast(null); }}>${L('تراجع', 'Undo')}</button>
+        </div>` : null}
+    </div>`;
+}
+
+/* The end of a shop: what was bought and saved, and what was paid if the
+   shopper wants the counter to know. The shop is counted when this opens. */
+function StoreDone({ data, store, record, month, set, onClose }) {
+  const [paid, setPaid] = useState('');
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { set.recordTrip(null); }, []);
+  const save = event => {
+    event.preventDefault();
+    const value = Math.round(parseFloat(String(paid).replace(',', '.')) * 100);
+    if (!(value > 0)) return;
+    set.recordTrip(value);
+    setSaved(true);
+  };
+  return html`
+    <div class="instore instore--done" role="dialog" aria-modal="true" aria-label=${L('خلصت المقاضي', 'Shopping done')}>
+      <${Emoji} char="🎉" size=${96} />
+      <h2 class="instore__big">${L('خلصت المقاضي!', 'Shopping done!')}</h2>
+      <p>${L(`${record.items} ${record.items === 1 ? 'صنف' : 'أصناف'} من ${storeName(data, store)}`, `${pl(record.items, 'item', 'items')} from ${storeName(data, store)}`)}</p>
+      <div class="instore__stats">
+        <div><b dir="ltr">${money(record.expected)}</b><small>${L('المجموع المتوقّع', 'Expected total')}</small></div>
+        <div class="is-gold"><b dir="ltr">${money(record.offers)}</b><small>${L('وفّرت من العروض', 'Saved on offers')}</small></div>
+      </div>
+      ${record.store_saving ? html`<p class="instore__extra">${L(`ووفّرت ${money(record.store_saving)} ريال لأنك اشتريت من ${storeName(data, store)}`, `and ${money(record.store_saving)} SAR by shopping at ${storeName(data, store)}`)}</p>` : null}
+      ${saved
+        ? html`<p class="instore__thanks"><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('سُجّل. عدّاد التوفير يحسب الآن ما دفعته فعلاً.', 'Saved. The counter now knows what you paid.')}</p>`
+        : html`
+          <form class="instore__ask" onSubmit=${save}>
+            <label for="paid"><b>${L('كم دفعت عند الصندوق؟', 'What did you pay at the till?')}</b><span>${L('اختياري، ليحسب عدّاد التوفير بدقة.', 'Optional, so the savings counter is exact.')}</span></label>
+            <div class="instore__in">
+              <input id="paid" type="text" inputmode="decimal" autocomplete="off" placeholder=${L('مثلاً ', 'e.g. ') + money(record.expected)} value=${paid} onInput=${event => setPaid(event.target.value)} dir="ltr" />
+              <button type="submit" class="btn">${L('سجّل', 'Save')}</button>
+            </div>
+          </form>`}
+      <a class="instore__month" href="#/savings">${L('عدّاد التوفير هذا الشهر: ', 'Saved this month: ')}<b dir="ltr">${money(month.total)}</b> ${riyal()}</a>
+      <button type="button" class="btn btn--light btn--wide" onClick=${onClose}>${L('تم', 'Done')}</button>
+    </div>`;
+}
+
+/* ---------------------------------------------------------------------
+   The savings counter
+   ------------------------------------------------------------------- */
+const monthName = month => dateFormat('month', { month: 'long', year: 'numeric' }).format(fromISO(month + '-01'));
+
+/* The card at the top of the account tab. */
+function SavingsCard({ summary }) {
+  return html`
+    <a class="float savings-card" href="#/savings">
+      <span class="savings-card__pic"><${Emoji} char="💰" size=${34} /></span>
+      <span class="savings-card__body">
+        <span class="savings-card__label">${L('وفّرت مع مقاضي', 'Saved with Maqadi')}</span>
+        ${summary.all.trips
+          ? html`<span class="savings-card__value"><b dir="ltr">${money(summary.total)}</b> ${riyal()} <small>${L('هذا الشهر', 'this month')}</small></span>`
+          : html`<span class="savings-card__hint">${L('يبدأ العدّ مع أول تسوّق بوضع المحل', 'It starts counting with your first shop in shop mode')}</span>`}
+      </span>
+      <${Icon} name="chevron" size=${18} />
+    </a>`;
+}
+
+function SavingsPage({ data, head, summary, onShare }) {
+  const high = Math.max(1, ...summary.trips.map(trip => trip.saving));
+  const better = summary.previous > 0 && summary.total > summary.previous;
+  return html`
+    <${Head} ...${head} small>
+      <h1 class="head__title">${L('وفّرت مع مقاضي', 'Saved with Maqadi')}</h1>
+      <p class="head__sub">${monthName(summary.month)}${summary.trips.length ? ' · ' + L(summary.trips.length + ' مرات تسوّق', pl(summary.trips.length, 'shop', 'shops')) : ''}</p>
+    <//>
+    <section class="float panel saved">
+      <p class="saved__top"><span>${L('هذا الشهر', 'This month')}</span>${better ? html`<span class="badge badge--save">${L('أكثر من الشهر الماضي', 'More than last month')}</span>` : null}</p>
+      <p class="saved__value"><b dir="ltr">${money(summary.total)}</b> ${riyal()}</p>
+      ${summary.trips.length ? html`
+        <div class="saved__bars" role="img" aria-label=${summary.trips.map(trip => shortDay(trip.date) + ': ' + money(trip.saving)).join(L('، ', ', '))}>
+          ${summary.trips.map((trip, at) => html`
+            <div class=${at === summary.trips.length - 1 ? 'is-now' : ''}>
+              <b dir="ltr">${money(trip.saving)}</b>
+              <i style=${'height:' + Math.max(6, Math.round(trip.saving / high * 90)) + 'px'}></i>
+              <small>${shortDay(trip.date)}</small>
+            </div>`)}
+        </div>`
+        : html`<p class="saved__empty">${L('لا يوجد تسوّق مسجّل هذا الشهر. عندما تنهي التسوّق بوضع المحل يُحسب توفيرك هنا.', 'No shops recorded this month. Finish a shop in shop mode and your saving is counted here.')}</p>`}
+    </section>
+    ${summary.all.trips ? html`
+      <div class="saved__split">
+        <div><small><${Emoji} char="🏷️" size=${20} /> ${L('من العروض', 'From offers')}</small><b dir="ltr">${money(summary.offers)}</b></div>
+        <div><small><${Emoji} char="🛒" size=${20} /> ${L('من المتجر الأرخص', 'From the cheaper store')}</small><b dir="ltr">${money(summary.store)}</b></div>
+      </div>
+      <div class="saved__row"><${Emoji} char="💰" size=${28} /><span>${L('منذ أول تسوّق', 'Since your first shop')}<small>${shortDay(summary.all.since)} · ${L(summary.all.trips + ' مرات تسوّق', pl(summary.all.trips, 'shop', 'shops'))}</small></span><b dir="ltr">${money(summary.all.total)}</b></div>
+      ${summary.paid ? html`<div class="saved__row"><${Emoji} char="🧾" size=${28} /><span>${L('دفعت فعلاً هذا الشهر', 'Paid this month')}<small>${L('المتوقّع كان ', 'Expected ')}<span dir="ltr">${money(summary.paid.expected)}</span></small></span><b dir="ltr">${money(summary.paid.paid)}</b></div>` : null}
+      ${summary.total ? html`<button type="button" class="btn btn--wide saved__share" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك توفيرك', 'Share your saving')}</button>` : null}`
+      : html`<a class="btn btn--wide saved__share" href="#/list">${L('افتح قائمة المقاضي', 'Open the shopping list')}</a>`}
+    <p class="fineprint">${L(
+      'يُحسب فقط ما علّمت أنك اشتريته في وضع المحل: ما خصمته العروض منه، وكم كانت نفس الأصناف ستكلّف أكثر في المتجر التالي الأرخص. كل هذا محفوظ على جهازك فقط.',
+      'Only what you ticked as bought in shop mode counts: what the offers took off it, and how much more the same items would have cost at the next-cheapest store. All of it stays on your phone.')}</p>`;
+}
+
+/* ---------------------------------------------------------------------
+   Ramadan: the night dress, today's iftar and suhoor, and the big shop
+   before the month. The dates are in lib/season.js.
+   ------------------------------------------------------------------- */
+// A dish that changes from day to day (lentil soup, then oat soup) names each in turn.
+const dishName = (dish, day) => {
+  const names = L(dish.name, dish.name_en || dish.name);
+  return Array.isArray(names) ? names[(day - 1) % names.length] : names;
+};
+
+function RamadanToday({ plan, season, meals }) {
+  const [part, setPart] = useState('iftar');
+  const main = meals.length ? meals[(season.day - 1) % meals.length] : null;
+  const dishes = (plan.daily && plan.daily[part]) || [];
+  const tab = (id, emoji, label) => html`
+    <button type="button" role="tab" aria-selected=${part === id} class=${part === id ? 'is-on' : ''} onClick=${() => setPart(id)}><${Emoji} char=${emoji} size=${20} /> ${label}</button>`;
+  return html`
+    <section class="ramadan-today" aria-label=${L('فطور اليوم وسحوره', 'Today’s iftar and suhoor')}>
+      <div class="ramadan-today__tabs" role="tablist">
+        ${tab('iftar', '🌙', L('الفطور', 'Iftar'))}
+        ${tab('suhoor', '🌅', L('السحور', 'Suhoor'))}
+      </div>
+      <p class="ramadan-today__title">
+        ${part === 'iftar' ? L('فطور اليوم', 'Today’s iftar') : L('سحور اليوم', 'Today’s suhoor')}
+        <small>${part === 'iftar' ? L('على أذان المغرب', 'At the sunset call to prayer') : L('قبل الفجر', 'Before dawn')}</small>
+      </p>
+      <div class="plates" role="tabpanel">
+        ${dishes.map((dish, at) => html`
+          <div class="plate-card">
+            <span class=${'plate-card__pic tile-' + (at % 6)}><${Emoji} char=${dish.emoji} size=${34} /></span>
+            <b>${dishName(dish, season.day)}</b>
+          </div>`)}
+        ${part === 'iftar' && main ? html`
+          <a class="plate-card plate-card--main" href=${'#/meal/' + main.id}>
+            <span class="plate-card__pic tile-4"><${Emoji} char=${main.emoji} size=${34} /></span>
+            <span><b>${nm(main)}</b><small>${L('الطبق الرئيسي · ', 'Main dish · ')}${main.minutes}${L(' دقيقة', ' min')}</small></span>
+          </a>` : null}
+      </div>
+      <a class="ramadan-today__shop" href="#/ramadan"><${Emoji} char="🛒" size=${22} /> ${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')} <${Icon} name="chevron" size=${16} /></a>
+    </section>`;
+}
+
+const RamadanBanner = ({ season }) => html`
+  <a class="ramadan-banner" href="#/ramadan">
+    <span class="ramadan-banner__moon"><${Emoji} char="🌙" size=${44} /></span>
+    <span class="ramadan-banner__body">
+      <b>${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</b>
+      <small>${L(`باقي ${season.daysLeft} ${season.daysLeft <= 10 ? 'أيام' : 'يوماً'} على رمضان · تُشترى مرة وتكفي الشهر`, `${pl(season.daysLeft, 'day', 'days')} to Ramadan · buy once for the month`)}</small>
+    </span>
+    <${Icon} name="chevron" size=${18} />
+  </a>`;
+
+/* The big shop at one store: each item bought for its own amount. */
+function stockupLines(plan, offers) {
+  if (!plan || !plan.stockup) return [];
+  return plan.stockup.items.map(item => {
+    const offer = item.offer ? offers.get(item.offer) : null;
+    const base = toBase(item.qty, item.unit);
+    return { item, offer, bought: offer && base ? purchase(offer, base) : null };
+  });
+}
+const linesTotal = lines => lines.reduce((sum, line) => sum + (line.bought ? line.bought.cost : 0), 0);
+
+function StockupPage({ data, head, store, plan, others, offers, season, week, set }) {
+  const [added, setAdded] = useState(false);
+  const lines = stockupLines(plan, offers);
+  if (!lines.length) {
+    return html`
+      <div class="night-page">
+        <${Head} ...${head} small><h1 class="head__title">${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</h1><//>
+        <div class="float empty"><${Emoji} char="🌙" size=${64} /><p class="empty__title">${L('ستظهر قريباً', 'Coming soon')}</p><p>${L('تظهر هنا قبل رمضان بأسبوعين، بأسعار ذلك الأسبوع.', 'It shows here two weeks before Ramadan, at that week’s prices.')}</p></div>
+      </div>`;
+  }
+  const priced = lines.filter(line => line.bought);
+  const total = linesTotal(lines);
+  const saved = priced.reduce((sum, line) => sum + line.bought.saved, 0);
+  const addAll = () => {
+    priced.forEach(line => set.extra(line.offer.id, Math.max(week.extras[line.offer.id] || 0, line.bought.units)));
+    setAdded(true);
+  };
+  return html`
+    <div class="night-page">
+      <${Head} ...${head} small>
+        <h1 class="head__title">${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</h1>
+        <p class="head__sub">${L('أغراض تُشترى مرة واحدة وتكفي الشهر، لأسرة من 4 أفراد', 'Bought once, they last the month, for a family of 4')}</p>
+        <div class="night-counts">
+          ${season && season.phase === 'before' ? html`<div><b dir="ltr">${season.daysLeft}</b><small>${L('يوماً لرمضان', 'days to Ramadan')}</small></div>` : season && season.phase === 'during' ? html`<div><b dir="ltr">${season.day}</b><small>${L('من رمضان', 'of Ramadan')}</small></div>` : null}
+          <div><b dir="ltr">${priced.length}</b><small>${L('صنفاً', 'items')}</small></div>
+          ${saved ? html`<div><b dir="ltr">${money(saved)}</b><small>${L('ريال من العروض', 'SAR off')}</small></div>` : null}
+        </div>
+      <//>
+      <ul class="float lines stockup">
+        ${lines.map(line => html`
+          <li class="line">
+            ${line.offer ? html`<${Photo} data=${data} offer=${line.offer} width=${128} cls="line__photo" />` : html`<span class="line__photo photo--none"><${Emoji} char=${line.item.emoji} size=${26} /></span>`}
+            <span class="line__body">
+              <span class="line__name">${nm(line.item)} <small>${LANG === 'en' || !line.item.display ? amount(toBase(line.item.qty, line.item.unit)) : line.item.display}</small></span>
+              <span class="line__sub">${line.offer ? html`<${StoreDot} id=${line.offer.store} />${nm(line.offer)} · ${lineDetail(Object.assign({ offer: line.offer }, line.bought))}` : L('غير متوفر في ' + storeName(data, store) + ' هذا الأسبوع', 'Not at ' + storeName(data, store) + ' this week')}</span>
+              ${line.bought && line.bought.saved ? html`<span class="line__tags"><span class="badge badge--save">${L('وفّرت', 'Saved')} <b dir="ltr">${money(line.bought.saved)}</b></span></span>` : null}
+            </span>
+            <span class="line__side">${line.bought ? html`<span class="line__cost" dir="ltr">${money(line.bought.cost)}</span>` : null}</span>
+          </li>`)}
+      </ul>
+      ${others.map(other => {
+        const theirs = stockupLines(other.plan, offers);
+        const missing = theirs.filter(line => !line.bought).length;
+        return theirs.length ? html`<p class="stockup__compare"><${StoreDot} id=${other.id} />${L('نفس المقاضي في ' + other.name + ': ', 'The same shop at ' + other.name + ': ')}<b dir="ltr">${money(linesTotal(theirs))}</b> ${riyal()}${missing ? L(` (${missing} غير متوفرة هناك)`, ` (${missing} not sold there)`) : ''}</p>` : null;
+      })}
+      <p class="fineprint">${L(
+        `يبدأ رمضان مع رؤية الهلال؛ التاريخ المتوقّع ${season ? longDay(season.start) : ''}. الأسعار أسعار هذا الأسبوع وقد تتغيّر.`,
+        `Ramadan begins with the sighting of the crescent; it is expected on ${season ? longDay(season.start) : ''}. Prices are this week’s and may change.`)}</p>
+      <div class="stockup-space" aria-hidden="true"></div>
+      <div class="stockup-bar">
+        <span><small>${L('المجموع', 'Total')}</small><b dir="ltr">${money(total)}</b> ${riyal()}</span>
+        ${added
+          ? html`<a class="stockup-bar__go" href="#/list"><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('في قائمتك · افتحها', 'In your list · open it')}</a>`
+          : html`<button type="button" class="stockup-bar__go" onClick=${addAll}>${L('أضفها لقائمتي', 'Add to my list')}</button>`}
+      </div>
+    </div>`;
+}
+
+/* Shop and the scanner before the whole catalogue has arrived. */
+function CatalogueWait({ head, failed, onRetry }) {
+  return html`
+    <${Head} ...${head} small><h1 class="head__title">${L('تسوّق', 'Shop')}</h1><//>
+    <div class="float empty" role="status">
+      <${Emoji} char="🛒" size=${64} />
+      <p class="empty__title">${failed ? L('تعذّر تحميل كل المنتجات', 'The products couldn’t load') : L('جاري تحميل كل المنتجات…', 'Loading every product…')}</p>
+      ${failed ? html`<button type="button" class="btn" onClick=${onRetry}>${L('إعادة المحاولة', 'Try again')}</button>` : html`<p>${L('لحظات، ثم يمكنك البحث في كل منتجات المتاجر.', 'A moment, then you can search every product.')}</p>`}
+    </div>`;
+}
+
+const ScanWait = ({ failed, onRetry, onClose }) => html`
+  <div class="scan" role="dialog" aria-modal="true" aria-label=${L('امسح الباركود', 'Scan a barcode')}>
+    <div class="scan__top">
+      <button type="button" class="scan__round" aria-label=${L('إغلاق', 'Close')} onClick=${onClose}><${Icon} name="close" size=${22} stroke=${2.2} /></button>
+      <span class="scan__title">${L('امسح الباركود', 'Scan a barcode')}</span>
+      <span class="scan__round scan__round--empty"></span>
+    </div>
+    <div class="scan__blocked" role="status">
+      <p class="scan__blocked-title">${failed ? L('تعذّر تحميل المنتجات', 'The products couldn’t load') : L('جاري تجهيز الماسح…', 'Getting the scanner ready…')}</p>
+      ${failed ? html`<button type="button" class="btn btn--light" onClick=${onRetry}>${L('إعادة المحاولة', 'Try again')}</button>` : null}
+    </div>
+  </div>`;
+
 function ShopTab({ data, head, week, set, twin, focus }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -1331,7 +2191,7 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
 /* ---------------------------------------------------------------------
    Account and settings
    ------------------------------------------------------------------- */
-function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerWeek, maxMeals, set, plusOn, openStore, openPrefs, budgetInfo, lang }) {
+function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerWeek, maxMeals, set, plusOn, openStore, openPrefs, budgetInfo, lang, savings }) {
   const storeIds = Object.keys(data.offers.stores);
   return html`
     <${Head} ...${head} small>
@@ -1344,7 +2204,8 @@ function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerW
       </div>
     <//>
 
-    <section class="float panel">
+    <${SavingsCard} summary=${savings} />
+    <section class="panel me-panel">
       <div class="row"><span>${L('عدد أفراد الأسرة', 'People in the family')}</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} /></div>
       <button type="button" class="row row--button" onClick=${openPrefs}>
         <span>${L('تفضيلات العائلة', 'Family preferences')}</span>
@@ -1512,6 +2373,7 @@ function App() {
   const [prefs, setPrefs] = useState(readPrefs);
   const [route, setRoute] = useState(parseRoute);
   const [sheet, setSheet] = useState(null);
+  const [shopDone, setShopDone] = useState(false);
   const lastTab = useRef('home');
 
   const lang = prefs.lang === 'en' || prefs.lang === 'ar' ? prefs.lang : phoneLanguage();
@@ -1522,10 +2384,26 @@ function App() {
     loadData().then(setData).catch(() => setFailed(true));
   }, []);
   useEffect(load, [load]);
+
+  // The whole catalogue, after the first screen. Shop, search and the scanner wait for it.
+  const [fullFailed, setFullFailed] = useState(false);
+  const [fullTry, setFullTry] = useState(0);
+  const fullPath = data && !data.full ? data.current.offers : null;
+  useEffect(() => {
+    if (!fullPath) return undefined;
+    let alive = true;
+    setFullFailed(false);
+    getJSON('data/' + fullPath)
+      .then(full => { if (alive) setData(previous => (previous && !previous.full ? Object.assign({}, previous, { offers: full, full: true }) : previous)); })
+      .catch(() => { if (alive) setFullFailed(true); });
+    return () => { alive = false; };
+  }, [fullPath, fullTry]);
+  const retryFull = () => setFullTry(n => n + 1);
   useEffect(() => {
     const onHash = () => {
-      setRoute(previous => { if (previous.tab !== 'meal' && previous.tab !== 'scan') lastTab.current = previous.tab; return parseRoute(); });
+      setRoute(previous => { if (!['meal', 'scan', 'story', 'instore', 'savings', 'ramadan'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
       setSheet(null);
+      setShopDone(false);
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', onHash);
@@ -1572,16 +2450,38 @@ function App() {
     extras: stored.extras || {},
     essentials: stored.essentials !== false,
     fresh: stored.fresh || [],
-    budgetFit: stored.budgetFit || null
+    budgetFit: stored.budgetFit || null,
+    seen: stored.seen || []
   };
   const avoid = Array.isArray(prefs.avoid) ? prefs.avoid.filter(tag => TAG_INFO[tag]) : [];
+
+  // Products added by hand may only be in the whole catalogue; the totals wait for it rather than show a wrong sum.
+  if (!data.full && Object.keys(week.extras).some(id => !offers.has(id))) {
+    return html`
+      <div class="boot" role="status">
+        <${Logo} size=${88} glass />
+        <span class="boot__text">${fullFailed ? L('تعذّر تحميل المنتجات. يُرجى التحقق من الاتصال ثم إعادة المحاولة.', 'We couldn’t load the products. Check your connection and try again.') : L('جاري تحميل أسعار الأسبوع…', 'Loading this week’s prices…')}</span>
+        ${fullFailed ? html`<button type="button" class="btn btn--light" onClick=${retryFull}>${L('إعادة المحاولة', 'Try again')}</button>` : null}
+      </div>`;
+  }
 
   // Plans are published per store, for the same meals; the family picks where they shop.
   const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
   const setsBy = data.plans.by_store || { [planStores[0]]: data.plans };
   const store = planStores.includes(prefs.store) ? prefs.store : planStores[0];
-  const plans = setsBy[store].plans;
-  const basePlan = plans.find(option => option.id === prefs.plan) || plans[0];
+  // Ramadan: the night dress and the Ramadan cuisine during the month; its big shop from two weeks before.
+  const today = riyadhToday();
+  const season = ramadanPreview(new URLSearchParams(window.location.search).get('ramadan'), today) || ramadanOn(today);
+  const during = Boolean(season && season.phase === 'during');
+  const allPlans = setsBy[store].plans;
+  const seasonal = allPlans.find(option => option.season === 'ramadan') || null;
+  const plans = allPlans.filter(option => !option.season || (during && option.season === 'ramadan'))
+    .sort((a, b) => Boolean(b.season) - Boolean(a.season)); // in Ramadan its cuisine comes first
+  // A cuisine picked during Ramadan is kept apart, so the family's usual one comes back after Eid.
+  const basePlan = (during && (plans.find(option => option.id === prefs.ramadanPlan) || seasonal)) || plans.find(option => option.id === prefs.plan) || plans[0];
+  document.documentElement.classList.toggle('is-ramadan', during);
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.setAttribute('content', during ? '#24235e' : '#0b6e45');
   const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
   const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek, avoid);
   const maxMeals = Math.max(CONFIG.minMeals, Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length));
@@ -1615,7 +2515,7 @@ function App() {
     const other = buildList({ plan: otherPlan, offers, persons: servings, skipped, essentials: week.essentials, extras });
     // Only a like-for-like basket gives a fair difference: same items priced, every added product found.
     const fair = other.unpriced.length === list.unpriced.length && unmatched === 0;
-    return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
+    return { id, name: storeName(data, id), list: other, totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
   }).filter(Boolean);
 
   // One row per store for the cards and the store picker.
@@ -1632,6 +2532,23 @@ function App() {
       : row.unpriced ? L(row.unpriced + ' بدون سعر', row.unpriced + ' without a price') : '';
   });
 
+  // The receipt: the list at each store, item by item.
+  const receiptColumns = [{ id: store, name: storeName(data, store), list, fair: true }]
+    .concat(compare.map(other => ({
+      id: other.id, name: other.name, list: other.list, fair: other.fair,
+      caveat: other.unmatched
+        ? (other.unmatched === 1 ? L('لا يبيع صنفاً أضفته', 'doesn’t sell an item you added') : L(`لا يبيع ${other.unmatched} أصناف أضفتها`, `doesn’t sell ${other.unmatched} items you added`))
+        : other.unpriced ? L(`${other.unpriced} أصناف بدون سعر`, pl(other.unpriced, 'item', 'items') + ' without a price') : ''
+    })));
+  const receipt = { columns: receiptColumns, rows: receiptRows(receiptColumns), verdict: receiptVerdict(receiptColumns) };
+
+  // The stories: one per meal the family cooks, then the basket.
+  const cookedMeals = plan.meals.map((meal, index) => ({ meal, index })).filter(({ meal }) => !week.skipped.includes(meal.id) && !locked.has(meal.id));
+  const stories = cookedMeals.map(({ meal, index }) => ({ id: meal.id, meal, emoji: meal.emoji, tile: index % 6, label: nm(meal) }))
+    .concat(list.totals.items ? [{ id: 'basket', basket: true, emoji: '🛒', label: L('سلّتك', 'Your basket') }] : []);
+  const pickedIds = new Set(plan.meals.map(meal => meal.id));
+  const swapOptions = plan.choices.filter(meal => !pickedIds.has(meal.id));
+
   const setWeek = change => patch(previous => {
     const base = previous.week && previous.week.id === weekId ? previous.week : { id: weekId };
     return { week: Object.assign({}, base, change(Object.assign({ skipped: [], checked: [], extras: {} }, base))) };
@@ -1643,7 +2560,7 @@ function App() {
     prefs: (chosen, children) => patch({ avoid: chosen, kids: children }),
     toggleAvoid: tag => patch(previous => ({ avoid: toggleIn(Array.isArray(previous.avoid) ? previous.avoid : [], tag) })),
     lang: value => patch({ lang: value }),
-    plan: id => patch({ plan: id }),
+    plan: id => patch(during ? { ramadanPlan: id } : { plan: id }),
     store: id => patch({ store: id }),
     essentials: on => setWeek(() => ({ essentials: on })),
     toggleMeal: id => setWeek(current => ({ skipped: toggleIn(current.skipped, id) })),
@@ -1668,6 +2585,13 @@ function App() {
       return { picks, fresh, budgetFit: { count: fit.swaps.length, saved: fit.before - fit.after } };
     }),
     hideFitNote: () => setWeek(() => ({ budgetFit: null })),
+    seen: id => setWeek(current => ({ seen: (current.seen || []).includes(id) ? current.seen : (current.seen || []).concat(id) })),
+    // A finished shop; typing nothing keeps an amount typed before for the same shop.
+    recordTrip: paid => patch(previous => {
+      const before = (previous.history || []).find(record => record.week === weekId && record.store === store);
+      const record = tripRecord({ week: weekId, store, date: riyadhToday(), list, checked: week.checked, receipt, paid: paid === null && before ? before.paid : paid });
+      return { history: saveTrip(previous.history, record) };
+    }),
     scanTipSeen: () => { if (!prefs.scanTipSeen) patch({ scanTipSeen: true }); },
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
@@ -1679,17 +2603,25 @@ function App() {
   const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
-  const tab = route.tab === 'meal' || route.tab === 'scan' ? lastTab.current : route.tab;
+  const tab = route.tab === 'savings' ? 'me' : route.tab === 'ramadan' ? 'home' : ['meal', 'scan', 'story', 'instore'].includes(route.tab) ? lastTab.current : route.tab;
+  const history = Array.isArray(prefs.history) ? prefs.history : [];
+  const savings = savingsSummary(history, riyadhToday().slice(0, 7));
+  const openShare = () => setSheet('share');
+  const shareCaption = L(`${list.totals.saved ? 'وفّرت ' + money(list.totals.saved) + ' ريال على مقاضي الأسبوع' : 'مقاضي أسبوعي'} مع تطبيق مقاضي`, `${list.totals.saved ? 'I saved ' + money(list.totals.saved) + ' SAR on this week’s groceries' : 'My week’s groceries'} with Maqadi`)
+    + ' ' + window.location.origin + window.location.pathname;
 
   return html`
     <div class="shell">
       <main class="main" id="main">
-        ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
-          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} compare=${compare} budgetInfo=${budgetInfo} />`
-          : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
+        ${route.tab === 'savings' ? html`<${SavingsPage} data=${data} head=${head} summary=${savings} onShare=${() => setSheet('savings')} />`
+          : route.tab === 'ramadan' ? html`<${StockupPage} data=${data} head=${head} store=${store} plan=${seasonal} offers=${offers} season=${season} week=${week} set=${set}
+              others=${planStores.filter(id => id !== store).map(id => ({ id, name: storeName(data, id), plan: setsBy[id].plans.find(option => option.season === 'ramadan') })).filter(other => other.plan)} />`
+          : meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
+          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
+          : tab === 'shop' ? (data.full ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />` : html`<${CatalogueWait} head=${head} failed=${fullFailed} onRetry=${retryFull} />`)
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} />`}
+          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} savings=${savings} />`
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} season=${season} />`}
       </main>
 
       <nav class="tabbar" aria-label=${L('الأقسام', 'Sections')}>
@@ -1706,12 +2638,24 @@ function App() {
             </a>`)}
       </nav>
 
-      ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
+      ${route.tab === 'instore' && !shopDone && (list.lines.length || list.unpriced.length) ? html`<${StoreMode} data=${data} store=${store} list=${list} week=${week} set=${set}
+          onDone=${() => setShopDone(true)} onClose=${() => { window.location.hash = '#/list'; }} />` : null}
+      ${route.tab === 'instore' && shopDone ? html`<${StoreDone} data=${data} store=${store} set=${set} month=${savings}
+          record=${tripRecord({ week: weekId, store, date: riyadhToday(), list, checked: week.checked, receipt })} onClose=${() => { window.location.hash = '#/list'; }} />` : null}
+      ${route.tab === 'story' && stories.length ? html`<${Stories} data=${data} items=${stories} start=${route.id} offers=${offers} list=${list} storeRows=${storeRows} verdict=${receipt.verdict}
+          cooked=${cookedMeals.length} essentials=${week.essentials && Boolean(plan.essentials)} swaps=${swapOptions} seen=${week.seen} set=${set}
+          onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onShare=${openShare} />` : null}
+      ${route.tab === 'scan' && !data.full ? html`<${ScanWait} failed=${fullFailed} onRetry=${retryFull} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} />` : null}
+      ${route.tab === 'scan' && data.full ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} openPrefs=${openPrefs} />` : null}
       ${sheet === 'prefs' ? html`<${PrefsSheet} avoid=${avoid} kids=${kids} persons=${persons} set=${set} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'budget' ? html`<${BudgetSheet} budget=${budget} total=${list.totals.cost} set=${set} onClose=${() => setSheet(null)}
           breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(nm).join(L('، ', ', ')) : '' })} />` : null}
+      ${sheet === 'share' && list.lines.length ? html`<${ShareSheet} caption=${shareCaption} listText=${shareText(data, list, period)} onClose=${() => setSheet(null)}
+          makeCard=${() => drawShareCard({ data, receipt, meals: cookedMeals.map(({ meal }) => meal), persons, kids })} />` : null}
+      ${sheet === 'savings' && savings.total ? html`<${ShareSheet} title=${L('شارك توفيرك', 'Share your saving')} caption=${L(`وفّرت ${money(savings.total)} ريال هذا الشهر على مقاضي البيت مع تطبيق مقاضي`, `I saved ${money(savings.total)} SAR on groceries this month with Maqadi`) + ' ' + window.location.origin + window.location.pathname}
+          onClose=${() => setSheet(null)} makeCard=${() => drawSavingsCard(savings)} />` : null}
       ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
       ${prefs.welcomed ? null : html`<${Welcome} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
     </div>`;

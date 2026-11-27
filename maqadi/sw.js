@@ -5,8 +5,10 @@
  * the last saved copy when it does not. Nothing is ever served stale while
  * the network is healthy, so a new week's data shows up on the next open.
  */
-const CACHE = 'maqadi-v2';
-const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'lib/plan.js', 'lib/htm-preact.js', 'fonts/readex-pro-arabic.woff2', 'fonts/readex-pro-latin.woff2', 'icons/logo.svg', 'data/current.json'];
+const CACHE = 'maqadi-v3';
+// Every module app.js imports, so the app also starts offline on its first visit after an update.
+const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'lib/plan.js', 'lib/htm-preact.js', 'lib/barcode.js', 'lib/scan.js', 'lib/budget.js', 'lib/prefs.js', 'lib/receipt.js', 'lib/savings.js', 'lib/season.js',
+  'fonts/readex-pro-arabic.woff2', 'fonts/readex-pro-latin.woff2', 'icons/logo.svg', 'icons/icon-192.png', 'data/current.json'];
 const PATIENCE_MS = 4000;
 
 self.addEventListener('install', event => {

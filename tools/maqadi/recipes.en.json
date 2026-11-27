@@ -5,13 +5,73 @@
     "shami": { "name": "Levantine", "tagline": "Maqluba, molokhia and mujaddara, the Levantine way." },
     "quick": { "name": "Quick", "tagline": "Meals in about half an hour, for working days." },
     "healthy": { "name": "Healthy", "tagline": "Light meals with protein and vegetables, mostly oven-baked or pan-cooked without frying." },
-    "budget": { "name": "Budget", "tagline": "The week's cheapest meals from every cuisine, priced on this week's offers." }
+    "budget": { "name": "Budget", "tagline": "The week's cheapest meals from every cuisine, priced on this week's offers." },
+    "ramadan": {
+      "name": "Ramadan",
+      "tagline": "Iftar and suhoor every day, built on Ramadan's offers.",
+      "essentials": {
+        "name": "Iftar and suhoor basics",
+        "items": { "dates": "Dates", "laban": "Laban (buttermilk)", "lentils": "Lentils for lentil soup", "oats": "Oats for oat soup", "sambousa_sheets": "Sambousa pastry sheets", "mozzarella": "Cheese for the sambousa filling", "vimto": "Vimto cordial", "foul": "Foul medames", "eggs": "Eggs", "labneh": "Labneh", "bread_toast": "Toast bread" }
+      },
+      "daily": {
+        "iftar": ["Dates and laban", ["Lentil soup", "Oat soup"], "Cheese sambousa"],
+        "suhoor": ["Foul medames", "Eggs", "Labneh", "Toast bread"]
+      },
+      "stockup": {
+        "name": "The big Ramadan shop",
+        "items": { "dates": "Dates", "vimto": "Vimto cordial", "rice_basmati": "Basmati rice", "jareesh": "Jareesh (crushed wheat)", "harees": "Harees (whole wheat)", "lentils": "Lentils", "oats": "Oats", "foul": "Foul medames", "sambousa_sheets": "Sambousa pastry sheets", "qamar_aldin": "Qamar al-din (apricot paste)" }
+      }
+    }
   },
   "essentials": {
     "name": "Breakfast and dinner basics",
     "items": { "eggs": "Eggs", "labneh": "Labneh", "bread_toast": "Toast bread", "cheese_slices": "Cheese slices" }
   },
   "meals": {
+    "r1": {
+      "name": "Harees with Chicken",
+      "summary": "Whole wheat cooked with chicken until smooth, the first dish of Ramadan.",
+      "ingredients": [
+        { "name": "Harees (whole wheat)", "display": "2½ cups" },
+        { "name": "Chicken pieces" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Butter", "display": "2 tablespoons" },
+        { "name": "Ground cardamom" },
+        { "name": "Cinnamon" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Wash the harees and soak it in water for at least 4 hours, or overnight.",
+        "Boil the chicken with the onion, cardamom, cinnamon and salt in 8 cups of water for 30 minutes, then lift it out and take the meat off the bone.",
+        "Drain the harees, add it to the stock and leave it on low heat for an hour and a half, stirring every quarter of an hour, until it is cooked and falls apart.",
+        "Return the chicken and beat the mixture with a wooden masher or a hand blender until smooth and thick.",
+        "Serve hot with the melted butter on top and a pinch of cinnamon."
+      ],
+      "tip": "Soak the harees overnight and it cooks an hour faster."
+    },
+    "r2": {
+      "name": "Jareesh with Chicken",
+      "summary": "Crushed wheat cooked in chicken stock and stirred with laban, topped with fried onion.",
+      "ingredients": [
+        { "name": "Jareesh (crushed wheat)", "display": "2½ cups" },
+        { "name": "Chicken pieces" },
+        { "name": "Laban (buttermilk)", "display": "2 cups" },
+        { "name": "Onion", "display": "2 onions" },
+        { "name": "Butter", "display": "1 tablespoon" },
+        { "name": "Cumin" },
+        { "name": "Black pepper" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Wash the jareesh and soak it for an hour.",
+        "Boil the chicken with half the onion, the salt and black pepper in 7 cups of water for 30 minutes, then lift it out, take the meat off the bone and cut it up.",
+        "Add the drained jareesh to the stock and cook on low heat for 45 minutes, stirring, until it has soaked up the stock.",
+        "Return the chicken with the laban, cumin and butter and stir for 5 minutes on low heat without letting the laban boil.",
+        "Fry the rest of the onion in slices in the oil until golden and spread it over the jareesh."
+      ],
+      "tip": "Add the laban last, on low heat, so it does not curdle."
+    },
     "k1": {
       "name": "Chicken Kabsa",
       "summary": "A whole chicken with spiced basmati rice, the home favourite.",

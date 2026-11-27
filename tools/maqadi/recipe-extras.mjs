@@ -12,8 +12,9 @@ export const KEY_TAGS = {
   beef_minced: ['red_meat'],
   chicken_whole: ['chicken'], chicken_pieces: ['chicken'], chicken_legs: ['chicken'], chicken_breast: ['chicken'],
   eggs: ['egg'],
-  milk: ['dairy'], butter: ['dairy'], cooking_cream: ['dairy'], mozzarella: ['dairy'], cheese_slices: ['dairy'], labneh: ['dairy'], yogurt: ['dairy'],
-  pasta_short: ['gluten'], pasta_long: ['gluten'], bread_toast: ['gluten'], tortilla: ['gluten']
+  milk: ['dairy'], butter: ['dairy'], cooking_cream: ['dairy'], mozzarella: ['dairy'], cheese_slices: ['dairy'], labneh: ['dairy'], yogurt: ['dairy'], laban: ['dairy'],
+  pasta_short: ['gluten'], pasta_long: ['gluten'], bread_toast: ['gluten'], tortilla: ['gluten'],
+  harees: ['gluten'], jareesh: ['gluten'], sambousa_sheets: ['gluten']
 };
 // Matched on the whole name: "طحين" (flour) is not "طحينة" (tahini).
 export const STAPLE_TAGS = [
@@ -60,10 +61,23 @@ export function withExtras(recipes, english) {
       name_en: en.essentials && en.essentials.name,
       items: recipes.essentials.items.map(raw => item(raw, { name: ((en.essentials || {}).items || {})[raw.key] }))
     }),
-    cuisines: recipes.cuisines.map(cuisine => Object.assign({}, cuisine, {
-      name_en: (en.cuisines[cuisine.id] || {}).name,
-      tagline_en: (en.cuisines[cuisine.id] || {}).tagline,
-      meals: (cuisine.meals || []).map(meal)
-    }))
+    cuisines: recipes.cuisines.map(cuisine => {
+      const tr = en.cuisines[cuisine.id] || {};
+      const out = Object.assign({}, cuisine, { name_en: tr.name, tagline_en: tr.tagline, meals: (cuisine.meals || []).map(meal) });
+      // A season's own basics and big shop, and the dishes of each day (Ramadan's iftar and suhoor).
+      const group = (raw, names) => Object.assign({}, raw, {
+        name_en: names && names.name,
+        items: raw.items.map(entry => item(entry, { name: ((names || {}).items || {})[entry.key] }))
+      });
+      if (cuisine.essentials) out.essentials = group(cuisine.essentials, tr.essentials);
+      if (cuisine.stockup) out.stockup = group(cuisine.stockup, tr.stockup);
+      if (cuisine.daily) {
+        out.daily = {};
+        Object.keys(cuisine.daily).forEach(part => {
+          out.daily[part] = cuisine.daily[part].map((dish, i) => Object.assign({}, dish, { name_en: ((tr.daily || {})[part] || [])[i] }));
+        });
+      }
+      return out;
+    })
   });
 }

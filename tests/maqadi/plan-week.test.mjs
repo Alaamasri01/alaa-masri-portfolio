@@ -50,3 +50,15 @@ test('plans pick available meals, keep the rest as swaps, and flag missing mains
   assert.equal(plan.alternatives[0].ingredients[0].offer, undefined);
   assert.equal(plan.alternatives[0].ingredients[1].offer, 'rc');
 });
+
+test('core.json keeps what the plans buy and each store\'s best food discounts', async () => {
+  const { coreOffers } = await import('../../tools/maqadi/build-data.mjs');
+  const o = (id, store, price, was, category = 'meat', img = 'x.jpg') => ({ id, store, price, was, category, img });
+  const published = [
+    o('a1', 'a', 10, 20), o('a2', 'a', 10, 12), o('a3', 'a', 5, 10, 'household'), o('a4', 'a', 9, 18, 'meat', null),
+    o('a5', 'a', 3, 4), o('b1', 'b', 1, 2), o('b2', 'b', 7)
+  ];
+  const core = coreOffers(published, new Set(['b2']), 2);
+  // Store a: a1 (50% off) and a5 (25%) beat a2 (17%); cleaning products and products without a photo never count.
+  assert.deepEqual(core.map(offer => offer.id), ['a1', 'a5', 'b1', 'b2']);
+});
