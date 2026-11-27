@@ -101,7 +101,7 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
 
   const take = (ingredient, source) => {
     if (ingredient.pantry) {
-      const entry = pantry.get(ingredient.name) || { name: ingredient.name, sources: [] };
+      const entry = pantry.get(ingredient.name) || { name: ingredient.name, name_en: ingredient.name_en, sources: [] };
       if (!entry.sources.includes(source)) entry.sources.push(source);
       pantry.set(ingredient.name, entry);
       return;
@@ -109,7 +109,7 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
     const base = toBase(ingredient.qty * scale, ingredient.unit);
     const offer = ingredient.offer ? offers.get(ingredient.offer) : null;
     if (offer) {
-      const entry = byOffer.get(offer.id) || { offer, name: ingredient.name, need: null, sources: [] };
+      const entry = byOffer.get(offer.id) || { offer, name: ingredient.name, name_en: ingredient.name_en, need: null, sources: [] };
       if (base && !entry.need) entry.need = { qty: base.qty, family: base.family };
       else if (base && entry.need.family === base.family) entry.need.qty += base.qty;
       if (!entry.sources.includes(source)) entry.sources.push(source);
@@ -117,7 +117,7 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
       return;
     }
     const key = ingredient.name + '|' + (base ? base.family : ingredient.unit);
-    const entry = unpriced.get(key) || { name: ingredient.name, need: null, unit: ingredient.unit, qty: 0, sources: [] };
+    const entry = unpriced.get(key) || { name: ingredient.name, name_en: ingredient.name_en, need: null, unit: ingredient.unit, qty: 0, sources: [] };
     if (base) entry.need = { qty: (entry.need ? entry.need.qty : 0) + base.qty, family: base.family };
     else entry.qty += ingredient.qty * scale;
     if (!entry.sources.includes(source)) entry.sources.push(source);
@@ -134,7 +134,7 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
   byOffer.forEach(entry => {
     const bought = purchase(entry.offer, entry.need);
     lines.push({
-      key: 'o:' + entry.offer.id, offer: entry.offer, name: entry.name, need: entry.need, sources: entry.sources,
+      key: 'o:' + entry.offer.id, offer: entry.offer, name: entry.name, name_en: entry.name_en, need: entry.need, sources: entry.sources,
       units: bought.units, loose: bought.loose, bought: bought.bought, cost: bought.cost, saved: bought.saved, approx: bought.approx,
       // More than three times what the week needs, of something that keeps: the rest stays in the cupboard.
       keeps: !PERISHABLE.has(entry.offer.category) && Boolean(bought.bought && entry.need && bought.bought.family === entry.need.family && bought.bought.qty >= entry.need.qty * 3),

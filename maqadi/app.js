@@ -14,6 +14,7 @@ import { scannedGtin } from './lib/barcode.js';
 import { lookupScan } from './lib/scan.js';
 import { fitBudget, budgetBreakdown } from './lib/budget.js';
 import { activePlan, portions, AVOID_FOODS, ALLERGIES } from './lib/prefs.js';
+import { receiptRows, receiptVerdict } from './lib/receipt.js';
 
 /* ---------------------------------------------------------------------
    Language
@@ -132,7 +133,7 @@ const TABS = ['home', 'shop', 'list', 'plan', 'me'];
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const first = parts[0] === 'deals' ? 'shop' : parts[0];
-  const tab = TABS.concat('meal', 'scan').includes(first) ? first : 'home';
+  const tab = TABS.concat('meal', 'scan', 'story').includes(first) ? first : 'home';
   return { tab, id: parts[1] || null };
 }
 
@@ -578,7 +579,7 @@ const cuisineLabel = name => L(name, CUISINE_NAMES[name] || name);
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -609,6 +610,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
         <b>${L('جديد: امسح وقارن', 'New: scan and compare')}</b>
         ${L('وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.', 'In the shop, scan any product’s barcode to see its price at the other stores.')}
       </button>` : null}
+    ${stories.length ? html`<${StoryRings} items=${stories} seen=${week.seen} />` : null}
 
     <${BudgetCard} budget=${budgetInfo.budget} over=${budgetInfo.over} fit=${budgetInfo.fit} done=${week.budgetFit}
       onFit=${budgetInfo.openFit} onEdit=${budgetInfo.openBudget} onMeals=${openFamily} onDismiss=${set.hideFitNote} />
@@ -860,6 +862,165 @@ function MealPage({ data, plan, meal, index, persons, kids, servings, offers, ba
 }
 
 /* ---------------------------------------------------------------------
+   Stories: the week told one screen at a time, opened from the rings on
+   the home screen (never on their own). Each meal is a story with its offer;
+   the last is the basket.
+   ------------------------------------------------------------------- */
+const STORY_MS = 6500;
+
+function StoryRings({ items, seen }) {
+  return html`
+    <nav class="rings" aria-label=${L('قصص الأسبوع', 'This week’s stories')}>
+      ${items.map((item, at) => html`
+        <a class=${'ring' + (seen.includes(item.id) ? ' is-seen' : '') + (item.basket ? ' ring--basket' : '')} href=${'#/story/' + at}
+          aria-label=${(item.basket ? L('قصة السلة', 'Basket story') : L('قصة ', 'Story: ') + item.label) + (seen.includes(item.id) ? L('، شاهدتها', ', seen') : '')}>
+          <span class="ring__pic"><span class=${'ring__in' + (item.basket ? '' : ' tile-' + item.tile)}><${Emoji} char=${item.emoji} size=${36} /></span></span>
+          <span class="ring__name" aria-hidden="true">${item.label}</span>
+        </a>`)}
+    </nav>`;
+}
+
+function StoryMeal({ data, item, number, total, offers, onSwap, canSwap, onKeep }) {
+  const meal = item.meal;
+  const best = mealHighlight(meal, offers);
+  const shown = best || meal.ingredients.map(ingredient => (ingredient.offer ? offers.get(ingredient.offer) : null)).find(Boolean);
+  const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
+  const percent = best ? discountPercent(best) : 0;
+  return html`
+    <div class="story__hero"><${Emoji} char=${meal.emoji} size=${240} /></div>
+    <p class="story__count">${L(`الطبخة ${number} من ${total}`, `Meal ${number} of ${total}`)}</p>
+    <h2 class="story__name">${nm(meal)}</h2>
+    <p class="story__chips">
+      <span><${Icon} name="clock" size=${16} /> ${meal.minutes}${L(' دقيقة', ' min')}</span>
+      <span><${Icon} name="cart" size=${16} /> ${L(bought + ' مكونات من المتجر', pl(bought, 'item', 'items') + ' to buy')}</span>
+    </p>
+    ${shown ? html`
+      <div class="story__deal">
+        <${Photo} data=${data} offer=${shown} width=${256} cls="story__photo" />
+        <span class="story__dealtext">
+          <small><${StoreDot} id=${shown.store} />${best ? L('عرض ' + storeName(data, shown.store) + ' هذا الأسبوع', storeName(data, shown.store) + ' offer this week') : L('من ' + storeName(data, shown.store), 'From ' + storeName(data, shown.store))}</small>
+          <b>${nm(shown)}</b>
+          <span class="story__price"><strong dir="ltr">${money(halalas(shown.price))}</strong> ${riyal()}${best ? html` <s dir="ltr">${money(halalas(best.was))}</s>` : null}</span>
+        </span>
+        ${percent ? html`<span class="story__off" dir="ltr">−${percent}%</span>` : null}
+      </div>` : null}
+    <div class="story__actions">
+      ${canSwap ? html`<button type="button" class="story__glass" onClick=${onSwap}><${Icon} name="swap" size=${19} /> ${L('بدّلها', 'Swap')}</button>` : null}
+      <button type="button" class="story__solid" onClick=${onKeep}><${Icon} name="check" size=${19} stroke=${2.4} /> ${L('أبقِها', 'Keep it')}</button>
+    </div>
+    <a class="story__up" href=${'#/meal/' + meal.id}><${Icon} name="down" size=${18} stroke=${2.2} /> ${L('اسحب للأعلى للوصفة', 'Swipe up for the recipe')}</a>`;
+}
+
+function StoryBasket({ data, list, storeRows, verdict, cooked, essentials, onShare }) {
+  const photos = list.lines.filter(line => line.offer.img).sort((a, b) => b.cost - a.cost).slice(0, 5);
+  // The dearest in the middle of the fan.
+  const fan = [3, 1, 0, 2, 4].map(at => photos[at]).filter(Boolean);
+  const high = Math.max(...storeRows.map(row => row.cost));
+  const store = storeRows.find(row => row.current);
+  return html`
+    <div class="story__done">
+      <${Emoji} char="🎉" size=${84} />
+      <h2 class="story__title">${L('أسبوعك جاهز!', 'Your week is ready!')}</h2>
+      <p>${mealsWord(cooked)}${essentials ? L(' وأساسيات الفطور والعشاء', ' plus breakfast and dinner basics') : ''} · ${L(list.totals.items + ' صنف', pl(list.totals.items, 'item', 'items'))}</p>
+    </div>
+    <div class="story__fan" aria-hidden="true">${fan.map(line => html`<${Photo} data=${data} offer=${line.offer} width=${256} cls="story__fanpic" />`)}</div>
+    <p class="story__total"><${Sum} value=${list.totals.cost} /> <span>${riyal()}</span></p>
+    <p class="story__totalsub">
+      ${L('كل المقاضي من ' + store.name, 'Everything from ' + store.name)}${list.totals.saved ? html` · ${L('وفّرت', 'you save')} <b dir="ltr">${money(list.totals.saved)}</b> ${L('من العروض', 'on offers')}` : null}
+    </p>
+    ${storeRows.length > 1 ? html`
+      <div class="story__vs">
+        ${storeRows.map(row => html`
+          <p class=${'story__vsrow' + (verdict && verdict.id === row.id ? ' is-best' : '')}>
+            <span class="story__vsname"><${StoreDot} id=${row.id} />${row.name}</span>
+            <span class="story__vsbar" aria-hidden="true"><i style=${'width:' + Math.round(row.cost / high * 100) + '%'}></i></span>
+            <b dir="ltr">${money(row.cost)}</b>
+          </p>`)}
+        ${verdict ? html`<p class="story__lead"><${Emoji} char="💰" size=${22} /> ${L(storeName(data, verdict.id) + ' أرخص بـ', storeName(data, verdict.id) + ' is cheaper by')} <b dir="ltr">${money(verdict.by)}</b> ${riyal()}</p>` : null}
+      </div>` : null}
+    <div class="story__actions story__actions--stack">
+      <a class="story__solid" href="#/list">${L('افتح قائمة المقاضي', 'Open the shopping list')}</a>
+      <button type="button" class="story__glass" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك أسبوعك', 'Share your week')}</button>
+    </div>`;
+}
+
+function Stories({ data, items, start, offers, list, storeRows, verdict, cooked, essentials, swaps, seen, set, onClose, onShare }) {
+  const [at, setAt] = useState(() => clamp(Number(start) || 0, 0, items.length - 1));
+  const [held, setHeld] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [hidden, setHidden] = useState(document.hidden);
+  const touch = useRef(null);
+  const index = Math.min(at, items.length - 1);
+  const item = items[index];
+  const rtl = LANG !== 'en';
+  const next = () => { if (index < items.length - 1) setAt(index + 1); };
+  const prev = () => { if (index > 0) setAt(index - 1); };
+  const recipe = () => { if (item.meal) window.location.hash = '#/meal/' + item.meal.id; };
+
+  useEffect(() => { if (item && !seen.includes(item.id)) set.seen(item.id); }, [item && item.id]);
+  useEffect(() => {
+    document.body.classList.add('is-locked');
+    const onVisible = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { document.body.classList.remove('is-locked'); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
+  useEffect(() => {
+    const onKey = event => {
+      if (swapping || document.querySelector('.sheet')) return; // a sheet on top takes the keys
+      if (event.key === 'Escape') onClose();
+      else if (event.key === 'ArrowLeft') (rtl ? next : prev)();
+      else if (event.key === 'ArrowRight') (rtl ? prev : next)();
+      else if (event.key === 'ArrowUp') recipe();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
+
+  if (!item) return null;
+  const paused = held || swapping || hidden;
+  // Swipes inside the swap sheet scroll the sheet; they don't move the stories.
+  const onTouchStart = event => { touch.current = swapping ? null : { x: event.touches[0].clientX, y: event.touches[0].clientY }; };
+  const onTouchEnd = event => {
+    const from = touch.current;
+    touch.current = null;
+    if (!from) return;
+    const dx = event.changedTouches[0].clientX - from.x;
+    const dy = event.changedTouches[0].clientY - from.y;
+    if (Math.abs(dy) > 70 && Math.abs(dy) > Math.abs(dx)) { if (dy < 0) recipe(); else onClose(); }
+    else if (Math.abs(dx) > 60) { if (rtl ? dx > 0 : dx < 0) next(); else prev(); }
+  };
+  const meals = items.filter(entry => entry.meal);
+  return html`
+    <div class=${'story ' + (item.basket ? 'story--basket' : 'story--t' + item.tile)} role="dialog" aria-modal="true" aria-label=${L('قصص الأسبوع', 'This week’s stories')}
+      onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd}
+      onPointerDown=${() => setHeld(true)} onPointerUp=${() => setHeld(false)} onPointerCancel=${() => setHeld(false)} onPointerLeave=${() => setHeld(false)}>
+      <div class="story__bars" aria-hidden="true">
+        ${items.map((entry, i) => html`
+          <i class=${i < index ? 'is-done' : i === index ? 'is-now' : ''}>
+            ${i === index ? html`<u key=${entry.id + ':' + index} class=${entry.basket ? 'is-still' : ''}
+              style=${'animation-duration:' + STORY_MS + 'ms;animation-play-state:' + (paused ? 'paused' : 'running')}
+              onAnimationEnd=${next}></u>` : null}
+          </i>`)}
+      </div>
+      <div class="story__top">
+        <${Logo} size=${34} />
+        <span class="story__who"><b>${item.basket ? L('سلّة الأسبوع', 'The week’s basket') : L('طبخات الأسبوع', 'This week’s meals')}</b><small>${item.basket ? L('آخر قصة', 'Last story') : L(`${index + 1} من ${meals.length}`, `${index + 1} of ${meals.length}`)}</small></span>
+        <button type="button" class="story__close" onClick=${onClose} aria-label=${L('إغلاق القصص', 'Close the stories')}><${Icon} name="close" size=${24} stroke=${2.2} /></button>
+      </div>
+      <button type="button" class="story__tap story__tap--prev" onClick=${prev} aria-label=${L('القصة السابقة', 'Previous story')} disabled=${index === 0}></button>
+      <button type="button" class="story__tap story__tap--next" onClick=${next} aria-label=${L('القصة التالية', 'Next story')} disabled=${index === items.length - 1}></button>
+      <div class="story__body" key=${item.id} aria-live="polite">
+        ${item.basket
+          ? html`<${StoryBasket} data=${data} list=${list} storeRows=${storeRows} verdict=${verdict} cooked=${cooked} essentials=${essentials} onShare=${onShare} />`
+          : html`<${StoryMeal} data=${data} item=${item} number=${meals.indexOf(item) + 1} total=${meals.length} offers=${offers}
+              canSwap=${swaps.length > 0} onSwap=${() => setSwapping(true)} onKeep=${next} />`}
+      </div>
+      ${swapping && item.meal ? html`<${SwapSheet} meal=${item.meal} options=${swaps} offers=${offers}
+        onPick=${id => { set.swap(item.meal.id, id); setSwapping(false); }} onClose=${() => setSwapping(false)} />` : null}
+    </div>`;
+}
+
+/* ---------------------------------------------------------------------
    Shopping list
    ------------------------------------------------------------------- */
 function lineDetail(line) {
@@ -888,24 +1049,316 @@ function shareText(data, list, period) {
   return rows.join('\n');
 }
 
-function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
+/* Sends the list as text: the phone's share sheet, else the clipboard, else WhatsApp.
+   Resolves to 'copied' when it went to the clipboard. */
+async function sendListText(text) {
+  try {
+    if (navigator.share) { await navigator.share({ text }); return 'shared'; }
+    await navigator.clipboard.writeText(text);
+    return 'copied';
+  } catch (error) {
+    if (error && error.name === 'AbortError') return 'cancelled';
+    window.location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
+    return 'shared';
+  }
+}
+
+/* ---------------------------------------------------------------------
+   The week's receipt
+   ------------------------------------------------------------------- */
+const RECEIPT_ROWS = 6;
+// A receipt prints every price with its halalas: 4 → "4.00".
+const cents = h => (h / 100).toFixed(2);
+
+/* The stamp: the cheapest store and its lead when the comparison is fair,
+   otherwise what the offers saved; nothing when there is neither. */
+function stampOf(data, receipt) {
+  const current = receipt.columns[0];
+  if (receipt.verdict) return { top: L(storeName(data, receipt.verdict.id) + ' أرخص', storeName(data, receipt.verdict.id) + ' is cheaper'), value: receipt.verdict.by, bottom: L('ريال · مقاضي ✓', 'SAR · Maqadi ✓') };
+  if (current.list.totals.saved) return { top: L('وفّرت', 'You save'), value: current.list.totals.saved, bottom: L('ريال من العروض', 'SAR on offers') };
+  return null;
+}
+
+function Receipt({ data, receipt, plan, persons, kids, onShare, onStore }) {
+  const [open, setOpen] = useState(false);
+  const { columns, rows, verdict } = receipt;
+  const current = columns[0];
+  const shown = open ? rows : rows.slice(0, RECEIPT_ROWS);
+  const stamp = stampOf(data, receipt);
+  const checked = (data.offers.stores[current.id] || {}).checked;
+  const cheaper = verdict && verdict.id !== current.id ? columns.find(column => column.id === verdict.id) : null;
+  const cell = (row, cost, at) => {
+    if (cost === null) return html`<td class="is-none">—</td>`;
+    const best = at === row.cheapest;
+    return html`<td class=${best ? 'is-best' : row.cheapest >= 0 ? 'is-more' : ''}><span>${cents(cost)}</span>${best ? html`<span class="vh">${L(' (الأرخص)', ' (cheapest)')}</span>` : null}</td>`;
+  };
+  return html`
+    <section class="float receipt" aria-label=${L('إيصال الأسبوع', 'The week’s receipt')}>
+      <div class="receipt__slot" aria-hidden="true"></div>
+      <div class="receipt__wrap">
+        <div class=${'receipt__paper' + (stamp ? ' has-stamp' : '')}>
+          <div class="receipt__head">
+            <${Logo} size=${40} />
+            <b>${appName()}</b>
+            <small>${cuisineLabel(plan.name)} · ${familyLabel(persons, kids)}</small>
+          </div>
+          <hr class="receipt__cut" />
+          <table class="receipt__table">
+            <thead>
+              <tr><th scope="col">${L('الصنف', 'Item')}</th>${columns.map(column => html`<th scope="col"><${StoreDot} id=${column.id} />${column.name}</th>`)}</tr>
+            </thead>
+            <tbody>
+              ${shown.map(row => html`
+                <tr>
+                  <th scope="row">${row.line.extra ? nm(row.line.offer) : nm(row.line)}</th>
+                  ${row.costs.map((cost, at) => cell(row, cost, at))}
+                </tr>`)}
+            </tbody>
+          </table>
+          ${rows.length > RECEIPT_ROWS ? html`
+            <button type="button" class="receipt__more" aria-expanded=${open} onClick=${() => setOpen(!open)}>
+              ${open ? L('عرض أقل', 'Show less') : L(`+ ${rows.length - RECEIPT_ROWS} أصناف أخرى`, `+ ${rows.length - RECEIPT_ROWS} more items`)}
+            </button>` : null}
+          <hr class="receipt__cut" />
+          <table class="receipt__table receipt__totals">
+            <tbody>
+              <tr class="is-total">
+                <th scope="row">${L('المجموع', 'Total')}</th>
+                ${columns.map(column => html`<td class=${verdict ? (verdict.id === column.id ? 'is-best' : 'is-more') : ''}><span>${cents(column.list.totals.cost)}</span></td>`)}
+              </tr>
+              <tr class="is-saved">
+                <th scope="row">${L('وفّرت من العروض', 'Saved on offers')}</th>
+                ${columns.map(column => html`<td>${cents(column.list.totals.saved)}</td>`)}
+              </tr>
+            </tbody>
+          </table>
+          ${columns.filter(column => column.caveat).map(column => html`<p class="receipt__note">${column.name}: ${column.caveat}</p>`)}
+          ${checked ? html`<p class="receipt__date">${L('أسعار المتاجر كما ظهرت يوم ' + longDay(checked), 'Store prices as shown on ' + longDay(checked))}</p>` : null}
+        </div>
+      </div>
+      ${stamp ? html`
+        <p class="receipt__stamp">
+          <small>${stamp.top}</small>
+          <b dir="ltr">${money(stamp.value)}</b>
+          <span>${stamp.bottom}</span>
+        </p>` : null}
+      <div class="receipt__actions">
+        <button type="button" class="btn" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك الإيصال', 'Share the receipt')}</button>
+        ${cheaper ? html`
+          <button type="button" class="btn btn--ghost" onClick=${() => onStore(cheaper.id)}>
+            ${L('تسوّق من ' + cheaper.name, 'Shop at ' + cheaper.name)} <small dir="ltr">−${money(current.list.totals.cost - cheaper.list.totals.cost)}</small>
+          </button>` : null}
+      </div>
+    </section>`;
+}
+
+/* ---------------------------------------------------------------------
+   The picture people share: drawn on a canvas from the app's own fonts and
+   pictures, so nothing from other sites is needed.
+   ------------------------------------------------------------------- */
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function drawShareCard({ data, receipt, meals, persons, kids }) {
+  const W = 1080;
+  const H = 1920;
+  const rtl = LANG !== 'en';
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const sample = 'مقاضي Maqadi 0123456789.';
+  await Promise.all([document.fonts.load('700 60px "Readex Pro"', sample), document.fonts.load('400 40px "Readex Pro"', sample)]).catch(() => null);
+  const [logo, party, coin, ...dishes] = await Promise.all(
+    ['icons/icon-192.png', emojiFile('🎉'), emojiFile('💰')].concat(meals.slice(0, 7).map(meal => emojiFile(meal.emoji))).map(loadImage));
+
+  const start = rtl ? W - 80 : 80;
+  const sign = rtl ? -1 : 1; // moving along the reading direction
+  ctx.direction = rtl ? 'rtl' : 'ltr';
+  ctx.textBaseline = 'alphabetic';
+  const font = (weight, size) => `${weight} ${size}px "Readex Pro", "Segoe UI", Tahoma, sans-serif`;
+  const write = (text, x, y, size, { weight = 400, color = '#fff', align = 'start' } = {}) => {
+    ctx.font = font(weight, size);
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(text, x, y);
+    return ctx.measureText(text).width;
+  };
+  const fit = (text, size, weight, max) => {
+    ctx.font = font(weight, size);
+    if (ctx.measureText(text).width <= max) return text;
+    let cut = text;
+    while (cut.length > 1 && ctx.measureText(cut + '…').width > max) cut = cut.slice(0, -1);
+    return cut + '…';
+  };
+  const round = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+
+  // The green page, as the app's header.
+  const bg = ctx.createRadialGradient(rtl ? 80 : W - 80, 0, 0, rtl ? 80 : W - 80, 0, 2100);
+  bg.addColorStop(0, '#25b873');
+  bg.addColorStop(0.5, '#0b6e45');
+  bg.addColorStop(1, '#053d26');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.05)';
+  ctx.lineWidth = 140;
+  ctx.beginPath();
+  ctx.arc(rtl ? W + 40 : -40, 80, 330, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // The name.
+  if (logo) {
+    ctx.save();
+    round(rtl ? start - 110 : start, 96, 110, 110, 28);
+    ctx.clip();
+    ctx.drawImage(logo, rtl ? start - 110 : start, 96, 110, 110);
+    ctx.restore();
+  }
+  write(appName(), start + sign * 140, 172, 64, { weight: 700 });
+
+  // What the week saved, or what it costs when nothing was on offer.
+  const current = receipt.columns[0];
+  const saved = current.list.totals.saved;
+  if (party) {
+    ctx.save();
+    ctx.translate(rtl ? 200 : W - 200, 420);
+    ctx.rotate(0.2);
+    ctx.drawImage(party, -100, -100, 200, 200);
+    ctx.restore();
+  }
+  write(saved ? L('هذا الأسبوع وفّرت', 'This week I saved') : L('مقاضي أسبوعي', 'My week’s groceries'), start, 380, 60, { color: 'rgba(255,255,255,.92)' });
+  const amount = money(saved || current.list.totals.cost);
+  ctx.direction = 'ltr';
+  const amountWidth = write(amount, rtl ? start : start, 590, 210, { weight: 700, align: rtl ? 'right' : 'left' });
+  ctx.direction = rtl ? 'rtl' : 'ltr';
+  write(riyal(), start + sign * (amountWidth + 26), 590, 64, { weight: 600 });
+  write(fit(L(`${saved ? 'على ' : ''}مقاضي ${mealsWord(meals.length)} لـ ${familyLabel(persons, kids)}`, `${saved ? 'on ' : ''}groceries for ${mealsWord(meals.length)}, ${familyLabel(persons, kids)}`), 44, 400, W - 160),
+    start, 680, 44, { color: 'rgba(255,255,255,.9)' });
+
+  // A torn-off piece of the receipt: the biggest differences and the totals.
+  const columns = receipt.columns;
+  const rows = receipt.rows.filter(row => row.cheapest >= 0).slice(0, 3);
+  const top = 750;
+  const height = 120 + rows.length * 66 + 110;
+  ctx.fillStyle = '#fffef9';
+  ctx.beginPath();
+  ctx.moveTo(80, top + 28);
+  ctx.arcTo(80, top, 108, top, 28);
+  ctx.lineTo(W - 108, top);
+  ctx.arcTo(W - 80, top, W - 80, top + 28, 28);
+  ctx.lineTo(W - 80, top + height);
+  for (let x = W - 80; x > 80; x -= 32) { ctx.lineTo(x - 16, top + height + 16); ctx.lineTo(Math.max(80, x - 32), top + height); }
+  ctx.closePath();
+  ctx.fill();
+  const colW = columns.length > 2 ? 170 : 210;
+  const colX = at => (rtl ? 130 + (columns.length - 1 - at) * colW + colW / 2 : W - 130 - (columns.length - at) * colW + colW / 2);
+  const nameStart = rtl ? W - 130 : 130;
+  const nameMax = W - 260 - columns.length * colW - 20;
+  let y = top + 80;
+  write(L('الصنف', 'Item'), nameStart, y, 34, { weight: 600, color: '#6b726d' });
+  columns.forEach((column, at) => write(column.name, colX(at), y, 34, { weight: 600, color: '#6b726d', align: 'center' }));
+  const price = (value, x, yy, best, more, size = 40) => {
+    const text = cents(value);
+    ctx.font = font(700, size);
+    if (best) {
+      const w = ctx.measureText(text).width + 36;
+      ctx.fillStyle = '#e7f5ec';
+      round(x - w / 2, yy - size + 2, w, size + 18, 14);
+      ctx.fill();
+    }
+    ctx.direction = 'ltr';
+    write(text, x, yy, size, { weight: best ? 700 : 500, color: best ? '#0b6e45' : more ? '#9aa19c' : '#1b1f1c', align: 'center' });
+    ctx.direction = rtl ? 'rtl' : 'ltr';
+  };
+  rows.forEach(row => {
+    y += 66;
+    write(fit(row.line.extra ? nm(row.line.offer) : nm(row.line), 40, 400, nameMax), nameStart, y, 40, { color: '#1b1f1c' });
+    row.costs.forEach((cost, at) => (cost === null ? write('—', colX(at), y, 40, { color: '#9aa19c', align: 'center' }) : price(cost, colX(at), y, at === row.cheapest, row.cheapest >= 0)));
+  });
+  ctx.strokeStyle = '#c9ccc6';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([12, 10]);
+  ctx.beginPath();
+  ctx.moveTo(130, y + 34);
+  ctx.lineTo(W - 130, y + 34);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  y += 100;
+  write(L('المجموع', 'Total'), nameStart, y, 44, { weight: 700, color: '#1b1f1c' });
+  columns.forEach((column, at) => price(column.list.totals.cost, colX(at), y, receipt.verdict && receipt.verdict.id === column.id, Boolean(receipt.verdict), 46));
+
+  // The week's dishes.
+  y = top + height + 70;
+  const shown = dishes.filter(Boolean);
+  if (shown.length) {
+    ctx.fillStyle = 'rgba(255,255,255,.1)';
+    round(80, y, W - 160, 150, 36);
+    ctx.fill();
+    const gap = (W - 160) / shown.length;
+    shown.forEach((img, i) => ctx.drawImage(img, (rtl ? W - 80 - gap * (i + 1) : 80 + gap * i) + gap / 2 - 50, y + 25, 100, 100));
+    y += 200;
+  }
+
+  // Where it costs least.
+  if (receipt.verdict) {
+    ctx.fillStyle = '#ffb020';
+    round(80, y, W - 160, 120, 32);
+    ctx.fill();
+    if (coin) ctx.drawImage(coin, rtl ? W - 80 - 100 : 100, y + 26, 68, 68);
+    write(L(`${storeName(data, receipt.verdict.id)} أرخص بـ ${money(receipt.verdict.by)} ريال`, `${storeName(data, receipt.verdict.id)} is cheaper by ${money(receipt.verdict.by)} SAR`),
+      start + sign * 100, y + 76, 46, { weight: 700, color: '#3b2a00' });
+  }
+
+  // The invitation.
+  write(L('جرّب مقاضي', 'Try Maqadi'), start, H - 150, 50, { weight: 700 });
+  write(fit(L('خطة طبخات الأسبوع وقائمة مقاضيها بأرخص سعر', 'The week’s meals and groceries at the lowest price'), 36, 400, W - 160), start, H - 90, 36, { color: 'rgba(255,255,255,.85)' });
+
+  return new Promise((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('no picture'))), 'image/png'));
+}
+
+function ShareSheet({ makeCard, caption, listText, onClose }) {
+  const [card, setCard] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let url = null;
+    makeCard().then(blob => {
+      if (!alive) return;
+      url = URL.createObjectURL(blob);
+      setCard({ url, file: new File([blob], 'maqadi.png', { type: 'image/png' }) });
+    }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; if (url) URL.revokeObjectURL(url); };
+  }, []);
+  const canShare = Boolean(card && navigator.canShare && navigator.canShare({ files: [card.file] }));
+  const shareImage = () => navigator.share({ files: [card.file], text: caption }).catch(() => { /* closed */ });
+  const sendText = async () => {
+    if (await sendListText(listText) === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2500); }
+  };
+  return html`
+    <${Sheet} title=${L('شارك إيصالك', 'Share your receipt')} onClose=${onClose}>
+      <div class="share__preview">
+        ${card ? html`<img src=${card.url} alt=${L('صورة إيصال الأسبوع', 'A picture of the week’s receipt')} />`
+          : html`<span class="share__wait">${failed ? L('تعذّر تجهيز الصورة.', 'The picture couldn’t be made.') : L('جاري تجهيز الصورة…', 'Making the picture…')}</span>`}
+      </div>
+      <div class="share__actions">
+        ${canShare ? html`<button type="button" class="btn btn--wide" onClick=${shareImage}><${Icon} name="share" size=${19} /> ${L('شارك الصورة', 'Share the picture')}</button>` : null}
+        ${card ? html`<a class=${'btn btn--wide' + (canShare ? ' btn--ghost' : '')} href=${card.url} download="maqadi.png"><${Icon} name="down" size=${19} /> ${L('حفظ الصورة', 'Save the picture')}</a>` : null}
+        <button type="button" class="btn btn--wide btn--ghost" onClick=${sendText}>${copied ? L('تم نسخ القائمة', 'List copied') : L('أرسل القائمة نصاً', 'Send the list as text')}</button>
+      </div>
+    <//>`;
+}
+
+function ListTab({ data, head, list, week, set, period, receipt, plan, persons, kids, budgetInfo, onShare }) {
   const done = key => week.checked.includes(key);
   const total = list.lines.length + list.unpriced.length;
   const ticked = list.lines.filter(line => done(line.key)).length + list.unpriced.filter(item => done('u:' + item.name)).length;
-  const [copied, setCopied] = useState(false);
-
-  const share = async () => {
-    const text = shareText(data, list, period);
-    try {
-      if (navigator.share) { await navigator.share({ text }); return; }
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (error) {
-      if (error && error.name === 'AbortError') return;
-      window.location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
-    }
-  };
 
   const title = html`
     <div class="head__titlerow">
@@ -913,7 +1366,7 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
         <h1 class="head__title">${L('قائمة المقاضي', 'Shopping list')}</h1>
         <p class="head__sub">${period.text}</p>
       </div>
-      ${total ? html`<button type="button" class="head__action" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? L('تم النسخ', 'Copied') : L('مشاركة', 'Share')}</button>` : null}
+      ${list.lines.length ? html`<button type="button" class="head__action" onClick=${onShare}><${Icon} name="share" size=${18} /> ${L('مشاركة', 'Share')}</button>` : null}
     </div>`;
 
   if (!total) {
@@ -929,21 +1382,8 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
 
   return html`
     <${Head} ...${head} small>${title}<//>
-    <section class="float panel summary" aria-label=${L('ملخص القائمة', 'List summary')}>
-      <div class="summary__top">
-        <div>
-          <span class="summary__label">${L('إجمالي الأصناف المسعّرة', 'Total of priced items')}</span>
-          <span class="summary__value"><${Sum} value=${list.totals.cost} /> <small>${riyal()}</small></span>
-        </div>
-        ${list.totals.saved ? html`<span class="hchip hchip--gold">${L('وفّرت', 'Saved')} <b dir="ltr">${money(list.totals.saved)}</b></span>` : null}
-      </div>
-      ${compare.map(other => {
-        const diff = other.fair ? other.totals.cost - list.totals.cost : null;
-        const missing = other.unmatched
-          ? (other.unmatched === 1 ? L('صنف أضفته غير موجود هناك', 'an item you added is not sold there') : L(other.unmatched + ' أصناف أضفتها غير موجودة هناك', other.unmatched + ' items you added are not sold there'))
-          : '';
-        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />${L('نفس القائمة في ', 'The same list at ')}${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ${riyal()}${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? L('أغلى', 'more') : L('أرخص', 'less')} ${L('بـ', 'by')} <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ' · ' + L(other.unpriced + ' بدون سعر هناك', other.unpriced + ' without a price there') : ''}</p>`;
-      })}
+    ${list.lines.length ? html`<${Receipt} data=${data} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} onShare=${onShare} onStore=${set.store} />` : null}
+    <section class=${'panel summary' + (list.lines.length ? '' : ' float')} aria-label=${L('ملخص القائمة', 'List summary')}>
       ${budgetInfo.budget ? html`
         <p class=${'summary__budget' + (budgetInfo.over ? ' is-over' : '')}>
           ${L('ميزانيتك', 'Budget')} <b dir="ltr">${budgetInfo.budget}</b> ${riyal()} ·
@@ -1524,7 +1964,7 @@ function App() {
   useEffect(load, [load]);
   useEffect(() => {
     const onHash = () => {
-      setRoute(previous => { if (previous.tab !== 'meal' && previous.tab !== 'scan') lastTab.current = previous.tab; return parseRoute(); });
+      setRoute(previous => { if (!['meal', 'scan', 'story'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
       setSheet(null);
       window.scrollTo(0, 0);
     };
@@ -1572,7 +2012,8 @@ function App() {
     extras: stored.extras || {},
     essentials: stored.essentials !== false,
     fresh: stored.fresh || [],
-    budgetFit: stored.budgetFit || null
+    budgetFit: stored.budgetFit || null,
+    seen: stored.seen || []
   };
   const avoid = Array.isArray(prefs.avoid) ? prefs.avoid.filter(tag => TAG_INFO[tag]) : [];
 
@@ -1615,7 +2056,7 @@ function App() {
     const other = buildList({ plan: otherPlan, offers, persons: servings, skipped, essentials: week.essentials, extras });
     // Only a like-for-like basket gives a fair difference: same items priced, every added product found.
     const fair = other.unpriced.length === list.unpriced.length && unmatched === 0;
-    return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
+    return { id, name: storeName(data, id), list: other, totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
   }).filter(Boolean);
 
   // One row per store for the cards and the store picker.
@@ -1631,6 +2072,23 @@ function App() {
       ? (row.unmatched === 1 ? L('صنف أضفته غير موجود هنا', 'an item you added is not sold here') : L(row.unmatched + ' أصناف أضفتها غير موجودة هنا', row.unmatched + ' items you added are not sold here'))
       : row.unpriced ? L(row.unpriced + ' بدون سعر', row.unpriced + ' without a price') : '';
   });
+
+  // The receipt: the list at each store, item by item.
+  const receiptColumns = [{ id: store, name: storeName(data, store), list, fair: true }]
+    .concat(compare.map(other => ({
+      id: other.id, name: other.name, list: other.list, fair: other.fair,
+      caveat: other.unmatched
+        ? (other.unmatched === 1 ? L('لا يبيع صنفاً أضفته', 'doesn’t sell an item you added') : L(`لا يبيع ${other.unmatched} أصناف أضفتها`, `doesn’t sell ${other.unmatched} items you added`))
+        : other.unpriced ? L(`${other.unpriced} أصناف بدون سعر`, pl(other.unpriced, 'item', 'items') + ' without a price') : ''
+    })));
+  const receipt = { columns: receiptColumns, rows: receiptRows(receiptColumns), verdict: receiptVerdict(receiptColumns) };
+
+  // The stories: one per meal the family cooks, then the basket.
+  const cookedMeals = plan.meals.map((meal, index) => ({ meal, index })).filter(({ meal }) => !week.skipped.includes(meal.id) && !locked.has(meal.id));
+  const stories = cookedMeals.map(({ meal, index }) => ({ id: meal.id, meal, emoji: meal.emoji, tile: index % 6, label: nm(meal) }))
+    .concat(list.totals.items ? [{ id: 'basket', basket: true, emoji: '🛒', label: L('سلّتك', 'Your basket') }] : []);
+  const pickedIds = new Set(plan.meals.map(meal => meal.id));
+  const swapOptions = plan.choices.filter(meal => !pickedIds.has(meal.id));
 
   const setWeek = change => patch(previous => {
     const base = previous.week && previous.week.id === weekId ? previous.week : { id: weekId };
@@ -1668,6 +2126,7 @@ function App() {
       return { picks, fresh, budgetFit: { count: fit.swaps.length, saved: fit.before - fit.after } };
     }),
     hideFitNote: () => setWeek(() => ({ budgetFit: null })),
+    seen: id => setWeek(current => ({ seen: (current.seen || []).includes(id) ? current.seen : (current.seen || []).concat(id) })),
     scanTipSeen: () => { if (!prefs.scanTipSeen) patch({ scanTipSeen: true }); },
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
@@ -1679,17 +2138,20 @@ function App() {
   const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
-  const tab = route.tab === 'meal' || route.tab === 'scan' ? lastTab.current : route.tab;
+  const tab = ['meal', 'scan', 'story'].includes(route.tab) ? lastTab.current : route.tab;
+  const openShare = () => setSheet('share');
+  const shareCaption = L(`${list.totals.saved ? 'وفّرت ' + money(list.totals.saved) + ' ريال على مقاضي الأسبوع' : 'مقاضي أسبوعي'} مع تطبيق مقاضي`, `${list.totals.saved ? 'I saved ' + money(list.totals.saved) + ' SAR on this week’s groceries' : 'My week’s groceries'} with Maqadi`)
+    + ' ' + window.location.origin + window.location.pathname;
 
   return html`
     <div class="shell">
       <main class="main" id="main">
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
-          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} compare=${compare} budgetInfo=${budgetInfo} />`
+          : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
           : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
           : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} />`}
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} />`}
       </main>
 
       <nav class="tabbar" aria-label=${L('الأقسام', 'Sections')}>
@@ -1706,12 +2168,17 @@ function App() {
             </a>`)}
       </nav>
 
+      ${route.tab === 'story' && stories.length ? html`<${Stories} data=${data} items=${stories} start=${route.id} offers=${offers} list=${list} storeRows=${storeRows} verdict=${receipt.verdict}
+          cooked=${cookedMeals.length} essentials=${week.essentials && Boolean(plan.essentials)} swaps=${swapOptions} seen=${week.seen} set=${set}
+          onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onShare=${openShare} />` : null}
       ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} openPrefs=${openPrefs} />` : null}
       ${sheet === 'prefs' ? html`<${PrefsSheet} avoid=${avoid} kids=${kids} persons=${persons} set=${set} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'budget' ? html`<${BudgetSheet} budget=${budget} total=${list.totals.cost} set=${set} onClose=${() => setSheet(null)}
           breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(nm).join(L('، ', ', ')) : '' })} />` : null}
+      ${sheet === 'share' && list.lines.length ? html`<${ShareSheet} caption=${shareCaption} listText=${shareText(data, list, period)} onClose=${() => setSheet(null)}
+          makeCard=${() => drawShareCard({ data, receipt, meals: cookedMeals.map(({ meal }) => meal), persons, kids })} />` : null}
       ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
       ${prefs.welcomed ? null : html`<${Welcome} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
     </div>`;
