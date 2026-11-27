@@ -403,7 +403,7 @@ function StoreCards({ data, rows, onPick }) {
           <span class="scard__value"><b dir="ltr">${money(row.cost)}</b> <small>ريال</small></span>
           <span class=${'scard__note' + (row.current ? ' is-good' : row.diff > 0 ? ' is-bad' : row.diff < 0 ? ' is-good' : '')}>
             ${row.current ? 'متجرك الحالي'
-              : row.diff === null ? `${row.unpriced} بدون سعر`
+              : row.diff === null ? row.caveat
               : row.diff > 0 ? html`أغلى بـ <span dir="ltr">${money(row.diff)}</span>`
               : row.diff < 0 ? html`أرخص بـ <span dir="ltr">${money(-row.diff)}</span>`
               : 'نفس التكلفة'}
@@ -421,7 +421,7 @@ function StoreSheet({ data, rows, onPick, onClose }) {
           <li>
             <button type="button" class=${'store-option' + (row.current ? ' is-current' : '')} onClick=${() => { onPick(row.id); onClose(); }}>
               <span class="store-option__name"><${StoreDot} id=${row.id} />${row.name}${row.cheapest ? html`<span class="badge badge--gold">الأرخص</span>` : null}</span>
-              <span class="store-option__sub">${pricePeriod(data, row.id).text}${row.unpriced ? ` · ${row.unpriced} بدون سعر` : ''}</span>
+              <span class="store-option__sub">${pricePeriod(data, row.id).text}${row.caveat ? ' · ' + row.caveat : ''}</span>
               <span class="store-option__value"><b dir="ltr">${money(row.cost)}</b> ريال</span>
               ${row.current ? html`<span class="store-option__check"><${Icon} name="check" size=${16} stroke=${2.6} /></span>` : null}
             </button>
@@ -660,8 +660,9 @@ function ListTab({ data, head, list, week, set, period, compare }) {
         ${list.totals.saved ? html`<span class="hchip hchip--gold">وفّرت <b dir="ltr">${money(list.totals.saved)}</b></span>` : null}
       </div>
       ${compare.map(other => {
-        const diff = other.unpriced === list.unpriced.length ? other.totals.cost - list.totals.cost : null;
-        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />نفس القائمة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? 'أغلى' : 'أرخص'} بـ <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${other.unpriced ? ` · ${other.unpriced} بدون سعر هناك` : ''}</p>`;
+        const diff = other.fair ? other.totals.cost - list.totals.cost : null;
+        const missing = other.unmatched ? (other.unmatched === 1 ? 'صنف أضفته غير موجود هناك' : other.unmatched + ' أصناف أضفتها غير موجودة هناك') : '';
+        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />نفس القائمة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? 'أغلى' : 'أرخص'} بـ <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ` · ${other.unpriced} بدون سعر هناك` : ''}</p>`;
       })}
       <div class="summary__progress">
         <span>تم ${ticked} من ${total}</span>
@@ -1013,23 +1014,27 @@ function App() {
     if (!otherBase) return null;
     const otherPlan = activePlan(otherBase, plan.meals.map(meal => meal.id), mealsPerWeek);
     const extras = {};
+    let unmatched = 0;
     Object.keys(week.extras).forEach(extraId => {
       const match = twin(offers.get(extraId), id);
-      if (match) extras[match.id] = week.extras[extraId];
+      if (match) extras[match.id] = week.extras[extraId]; else unmatched += 1;
     });
     const other = buildList({ plan: otherPlan, offers, persons, skipped, essentials: week.essentials, extras });
-    return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length };
+    // Only a like-for-like basket gives a fair difference: same items priced, every added product found.
+    const fair = other.unpriced.length === list.unpriced.length && unmatched === 0;
+    return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
   }).filter(Boolean);
 
   // One row per store for the cards and the store picker.
-  const fair = compare.every(other => other.unpriced === list.unpriced.length);
-  const storeRows = [{ id: store, name: storeName(data, store), cost: list.totals.cost, unpriced: list.unpriced.length, current: true }]
-    .concat(compare.map(other => ({ id: other.id, name: other.name, cost: other.totals.cost, unpriced: other.unpriced, current: false })))
+  const fair = compare.every(other => other.fair);
+  const storeRows = [{ id: store, name: storeName(data, store), cost: list.totals.cost, unpriced: list.unpriced.length, unmatched: 0, current: true, fair: true }]
+    .concat(compare.map(other => ({ id: other.id, name: other.name, cost: other.totals.cost, unpriced: other.unpriced, unmatched: other.unmatched, current: false, fair: other.fair })))
     .sort((a, b) => planStores.indexOf(a.id) - planStores.indexOf(b.id));
   const lowest = Math.min(...storeRows.map(row => row.cost));
   storeRows.forEach(row => {
     row.cheapest = fair && storeRows.length > 1 && row.cost === lowest;
-    row.diff = row.current ? 0 : row.unpriced === list.unpriced.length ? row.cost - list.totals.cost : null;
+    row.diff = row.current ? 0 : row.fair ? row.cost - list.totals.cost : null;
+    row.caveat = row.unmatched ? `${row.unmatched === 1 ? 'صنف أضفته غير موجود' : row.unmatched + ' أصناف أضفتها غير موجودة'} هنا` : row.unpriced ? `${row.unpriced} بدون سعر` : '';
   });
 
   const setWeek = change => patch(previous => {
