@@ -480,14 +480,30 @@ function ProductCard({ data, offer, units, onSet, twins }) {
 }
 
 /* The cuisines, as round picture buttons. */
-function Cuisines({ plans, current, onPick }) {
+/* The cuisines as photo cards: each shows the first dish of its week and
+   what the week costs this family at the current store; the cheapest is marked. */
+function Cuisines({ plans, current, onPick, cards = [] }) {
+  const byId = new Map(cards.map(card => [card.id, card]));
+  const low = cards.length > 1 ? Math.min(...cards.map(card => card.cost)) : null;
   return html`
-    <div class="circles" role="group" aria-label=${L('نوع السفرة', 'Cuisine')}>
-      ${plans.map(option => html`
-        <button type="button" class="circle" aria-pressed=${option.id === current} onClick=${() => onPick(option.id)}>
-          <span class="circle__pic"><${Emoji} char=${CUISINE_EMOJI[option.id] || option.meals[0].emoji} size=${40} /></span>
-          <span class="circle__name">${nm(option)}</span>
-        </button>`)}
+    <div class="ccards" role="group" aria-label=${L('نوع السفرة', 'Cuisine')}>
+      ${plans.map(option => {
+        const card = byId.get(option.id) || {};
+        const on = option.id === current;
+        const meal = card.meal || option.meals[0];
+        return html`
+          <button type="button" class=${'ccard' + (on ? ' is-on' : '')} aria-pressed=${on} onClick=${() => onPick(option.id)}
+            aria-label=${nm(option) + (card.cost ? L(`، ${money(card.cost)} ريال للأسبوع`, `, ${money(card.cost)} SAR a week`) : '')}>
+            <span class="ccard__pic">${meal ? html`<${MealArt} meal=${meal} size=${64} fill />` : html`<${Emoji} char=${CUISINE_EMOJI[option.id]} size=${56} />`}</span>
+            <span class="ccard__shade" aria-hidden="true"></span>
+            ${on ? html`<span class="ccard__check" aria-hidden="true"><${Icon} name="check" size=${15} stroke=${3} /></span>` : null}
+            ${low !== null && card.cost === low ? html`<span class="ccard__tag">${L('الأرخص', 'Cheapest')}</span>` : null}
+            <span class="ccard__txt" aria-hidden="true">
+              <b>${nm(option)}</b>
+              ${card.cost ? html`<small><span dir="ltr">${Math.round(card.cost / 100)}</span> ${L('ريال للأسبوع', 'SAR a week')}</small>` : null}
+            </span>
+          </button>`;
+      })}
     </div>`;
 }
 
@@ -694,7 +710,7 @@ const cuisineLabel = name => L(name, CUISINE_NAMES[name] || name);
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories, season }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories, season, cuisineCards }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -735,7 +751,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
     ${storeRows.length > 1 ? html`<${StoreCards} data=${data} rows=${storeRows} onPick=${set.store} />` : null}
 
     <${SectionTitle} title=${L('نوع السفرة', 'Cuisine')} />
-    <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} />
+    <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} cards=${cuisineCards} />
 
     <${SectionTitle} title=${L('طبخات الأسبوع', 'This week’s meals')} href="#/plan" />
     <div class="carousel">
@@ -831,7 +847,7 @@ function FamilySheet({ persons, mealsPerWeek, maxMeals, set, onClose, openPrefs 
 /* ---------------------------------------------------------------------
    Plan
    ------------------------------------------------------------------- */
-function PlanTab({ data, head, plans, plan, persons, kids, avoid, mealsPerWeek, maxMeals, week, offers, locked, set, openPrefs }) {
+function PlanTab({ data, head, plans, plan, persons, kids, avoid, mealsPerWeek, maxMeals, week, offers, locked, set, openPrefs, cuisineCards }) {
   const [swapFor, setSwapFor] = useState(null);
   const picked = new Set(plan.meals.map(meal => meal.id));
   const swaps = plan.choices.filter(meal => !picked.has(meal.id));
@@ -853,7 +869,7 @@ function PlanTab({ data, head, plans, plan, persons, kids, avoid, mealsPerWeek, 
     <${PrefsCard} plan=${plan} avoid=${avoid} mealsPerWeek=${mealsPerWeek} onEdit=${openPrefs} />
 
     <${SectionTitle} title=${L('نوع السفرة', 'Cuisine')} />
-    <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} />
+    <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} cards=${cuisineCards} />
     <p class="tagline">${L(plan.tagline, plan.tagline_en || plan.tagline)}</p>
 
     <ol class="meals">
@@ -2635,6 +2651,12 @@ function App() {
   const locked = new Set(plusOn ? plan.meals.slice(CONFIG.plus.freeMeals).map(meal => meal.id) : []);
   const skipped = new Set(week.skipped.concat(Array.from(locked)));
   const list = buildList({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras });
+  // Each cuisine's week for this family at this store, for the cuisine cards.
+  const cuisineCards = plans.map(option => {
+    const active = option.id === plan.id ? plan : activePlan(option, (stored.picks || {})[option.id], mealsPerWeek, avoid);
+    const cost = option.id === plan.id ? list.totals.cost : buildList({ plan: active, offers, persons: servings, essentials: week.essentials }).totals.cost;
+    return { id: option.id, cost, meal: active.meals[0] || option.meals[0] };
+  });
 
   // The week's budget covers the whole list; swaps are worked out only when it is over.
   const budget = prefs.budget > 0 ? prefs.budget : null;
@@ -2762,9 +2784,9 @@ function App() {
           : meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
           : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
           : tab === 'shop' ? (data.full ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />` : html`<${CatalogueWait} head=${head} failed=${fullFailed} onRetry=${retryFull} />`)
-          : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
+          : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} cuisineCards=${cuisineCards} />`
           : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} savings=${savings} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} season=${season} />`}
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} season=${season} cuisineCards=${cuisineCards} />`}
       </main>
 
       <nav class="tabbar" aria-label=${L('الأقسام', 'Sections')}>
