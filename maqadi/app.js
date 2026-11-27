@@ -1035,6 +1035,25 @@ function MealPage({ data, plan, meal, index, persons, kids, servings, offers, ba
    the last is the basket.
    ------------------------------------------------------------------- */
 const STORY_MS = 6500;
+const VIDEO_MS = 8000; // the length of a dish's video
+// A dish's video plays in its story when it has one; with reduced motion the photo stays.
+const storyVideo = meal => (meal && meal.video && meal.photo && !calm() ? meal.video : null);
+
+/* The dish's video, full screen behind the story, silent and looping; the
+   photo shows until it plays (and stays if the phone will not autoplay). */
+function StoryVideo({ meal, paused }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    if (paused) video.pause(); else video.play().catch(() => { /* autoplay refused: the photo stays */ });
+  }, [paused]);
+  return html`
+    <video ref=${ref} class="story__video" poster=${'meals/' + meal.photo} muted playsinline autoplay loop preload="auto" aria-hidden="true">
+      <source src=${'meals/' + meal.video} type="video/mp4" />
+      <source src=${'meals/' + meal.video.replace(/\.mp4$/, '.webm')} type="video/webm" />
+    </video>`;
+}
 
 function StoryRings({ items, seen }) {
   return html`
@@ -1055,7 +1074,7 @@ function StoryMeal({ data, item, number, total, offers, onSwap, canSwap, onKeep 
   const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
   const percent = best ? discountPercent(best) : 0;
   return html`
-    <div class="story__hero"><${MealArt} meal=${meal} size=${240} /></div>
+    <div class="story__hero">${storyVideo(meal) ? null : html`<${MealArt} meal=${meal} size=${240} />`}</div>
     <p class="story__count">${L(`الطبخة ${number} من ${total}`, `Meal ${number} of ${total}`)}</p>
     <h2 class="story__name">${nm(meal)}</h2>
     <p class="story__chips">
@@ -1159,14 +1178,15 @@ function Stories({ data, items, start, offers, list, storeRows, verdict, cooked,
   };
   const meals = items.filter(entry => entry.meal);
   return html`
-    <div class=${'story ' + (item.basket ? 'story--basket' : 'story--t' + item.tile)} role="dialog" aria-modal="true" aria-label=${L('قصص الأسبوع', 'This week’s stories')}
+    <div class=${'story ' + (item.basket ? 'story--basket' : 'story--t' + item.tile) + (storyVideo(item.meal) ? ' story--video' : '')} role="dialog" aria-modal="true" aria-label=${L('قصص الأسبوع', 'This week’s stories')}
       onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd}
       onPointerDown=${() => setHeld(true)} onPointerUp=${() => setHeld(false)} onPointerCancel=${() => setHeld(false)} onPointerLeave=${() => setHeld(false)}>
+      ${storyVideo(item.meal) ? html`<${StoryVideo} key=${item.id} meal=${item.meal} paused=${paused} />` : null}
       <div class="story__bars" aria-hidden="true">
         ${items.map((entry, i) => html`
           <i class=${i < index ? 'is-done' : i === index ? 'is-now' : ''}>
             ${i === index ? html`<u key=${entry.id + ':' + index} class=${entry.basket ? 'is-still' : ''}
-              style=${'animation-duration:' + STORY_MS + 'ms;animation-play-state:' + (paused ? 'paused' : 'running')}
+              style=${'animation-duration:' + (storyVideo(entry.meal) ? VIDEO_MS : STORY_MS) + 'ms;animation-play-state:' + (paused ? 'paused' : 'running')}
               onAnimationEnd=${next}></u>` : null}
           </i>`)}
       </div>

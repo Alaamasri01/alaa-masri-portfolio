@@ -43,6 +43,8 @@ test('every meal has its photo, and every photo belongs to a meal', async () => 
   const meals = recipes.cuisines.flatMap(cuisine => cuisine.meals || []);
   const files = new Set(readdirSync('maqadi/meals'));
   assert.deepEqual(meals.filter(meal => !meal.photo || !files.has(meal.photo)).map(meal => meal.id), []);
-  const used = new Set(meals.map(meal => meal.photo));
+  // A video comes as an .mp4 and a .webm of the same name.
+  const used = new Set(meals.flatMap(meal => [meal.photo].concat(meal.video ? [meal.video, meal.video.replace(/\.mp4$/, '.webm')] : [])));
+  assert.deepEqual([...used].filter(file => !files.has(file)), []);
   assert.deepEqual([...files].filter(file => !used.has(file)), []);
 });
