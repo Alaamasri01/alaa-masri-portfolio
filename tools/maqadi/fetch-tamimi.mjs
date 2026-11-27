@@ -161,12 +161,22 @@ export function toOffers(products) {
         note: null,
         category: categoryOf(product),
         barcode: pickBarcode(variant.barcodes),
+        image: tamimiImage(variant.images, product.images),
         in_stock: variant.inStock !== false,
         confidence: 'high'
       });
     });
   });
   return offers;
+}
+
+/* The variant's own picture, else the product's: the first one is the pack front. */
+export function tamimiImage(...lists) {
+  for (const list of lists) {
+    const url = (list || []).find(item => typeof item === 'string' && /^https:\/\/ecommedia\.tamimimarkets\.com\//.test(item));
+    if (url) return url;
+  }
+  return null;
 }
 
 /* A shop-floor code (starting with 2) is the store's own; a GTIN is shared by every store. */
@@ -256,6 +266,7 @@ export function produceOffers(page) {
       note: null,
       category: vegetable ? 'produce_veg' : 'produce_fruit',
       barcode: null,
+      image: tamimiImage(v.images),
       in_stock: v.inStock !== false,
       confidence: 'high'
     };

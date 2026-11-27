@@ -134,6 +134,13 @@ export function frozenCategory(slug, name) {
 }
 
 /* One entry per variety, in the shape the flyer transcriptions use. */
+/* The listing links the 120 px thumbnail; the 600 px picture beside it is
+   still small (about 11 KB) and stays sharp on a phone screen. */
+export function pandaImage(url) {
+  if (!url || !/^https:\/\/images\.todoorstep\.com\//.test(url)) return null;
+  return url.replace(/\?t=$/, '').replace(/_small\.jpg/, '.jpg');
+}
+
 export function toOffers(products, slug) {
   const offers = [];
   products.forEach(product => {
@@ -161,6 +168,7 @@ export function toOffers(products, slug) {
         note: null,
         category: product.category && product.category.parent === FROZEN_PARENT ? frozenCategory(slug, product.name) : categoryFromSlug(slug, product.name),
         barcode: variety.barcode && !/^2\d{12}$/.test(variety.barcode) ? String(variety.barcode) : null,
+        image: pandaImage(variety.imageURL),
         confidence: 'high'
       });
     });

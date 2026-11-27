@@ -94,7 +94,8 @@ export function buildOffers(week, log = console.log) {
           was,
           promo: clean(item.promo),
           note: restriction(item.note),
-          barcode: item.barcode || null
+          barcode: item.barcode || null,
+          image: /^https:\/\/[^\s"']+$/.test(item.image || '') ? item.image : null
         };
         // The two halves of a page overlap; the same product read twice is one offer.
         const key = raw.source_id ? storeId + '|' + raw.source_id : [storeId, page, offer.name, offer.size_text, offer.price].join('|');
@@ -110,6 +111,16 @@ export function buildOffers(week, log = console.log) {
   if (report.dropped.length > 25) log(`  … and ${report.dropped.length - 25} more dropped`);
   report.fixed.forEach(([id, why]) => log(`  fixed   ${id}: ${why}`));
   return { meta, offers, report };
+}
+
+/* The longest start, up to a slash, that every link shares: "" when there are
+   fewer than two links or they share only the scheme. */
+export function imageBase(urls) {
+  if (urls.length < 2) return '';
+  let prefix = urls[0];
+  urls.forEach(url => { let i = 0; while (i < prefix.length && prefix[i] === url[i]) i++; prefix = prefix.slice(0, i); });
+  const base = prefix.slice(0, prefix.lastIndexOf('/') + 1);
+  return /^https:\/\/[^/]+\//.test(base) ? base : '';
 }
 
 export function checkPlans(plans, offers) {
@@ -183,10 +194,19 @@ function main() {
   const out = join(ROOT, 'maqadi/data', week);
   // Phones only need real discounts (the deals screen) and the products the plans buy.
   // Every product is published (the basket can hold anything), without empty fields.
+  // Picture links share a long start per store; it is written once as img_base.
+  Object.keys(stores).forEach(id => {
+    const base = imageBase(offers.filter(offer => offer.store === id && offer.image).map(offer => offer.image));
+    if (base) stores[id].img_base = base;
+  });
   const slim = offer => {
     const out = {};
     ['id', 'store', 'name', 'name_en', 'brand', 'category', 'size_text', 'size_qty', 'size_unit', 'pack_count', 'sold_by', 'price', 'was', 'promo', 'note', 'barcode']
       .forEach(key => { const value = offer[key]; if (value !== null && value !== undefined && !(key === 'pack_count' && value === 1)) out[key] = value; });
+    if (offer.image) {
+      const base = stores[offer.store].img_base || '';
+      out.img = base && offer.image.startsWith(base) ? offer.image.slice(base.length) : offer.image;
+    }
     return out;
   };
   const publish = used => {
