@@ -15,6 +15,7 @@ import { lookupScan } from './lib/scan.js';
 import { fitBudget, budgetBreakdown } from './lib/budget.js';
 import { activePlan, portions, AVOID_FOODS, ALLERGIES } from './lib/prefs.js';
 import { receiptRows, receiptVerdict } from './lib/receipt.js';
+import { tripRecord, saveTrip, savingsSummary } from './lib/savings.js';
 
 /* ---------------------------------------------------------------------
    Language
@@ -135,7 +136,7 @@ const TABS = ['home', 'shop', 'list', 'plan', 'me'];
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const first = parts[0] === 'deals' ? 'shop' : parts[0];
-  const tab = TABS.concat('meal', 'scan', 'story').includes(first) ? first : 'home';
+  const tab = TABS.concat('meal', 'scan', 'story', 'instore', 'savings').includes(first) ? first : 'home';
   return { tab, id: parts[1] || null };
 }
 
@@ -1167,7 +1168,9 @@ function loadImage(src) {
   });
 }
 
-async function drawShareCard({ data, receipt, meals, persons, kids }) {
+/* A 1080×1920 picture on the app's green with its name at the top, and
+   helpers that write in the reader's direction. `pictures` are loaded too. */
+async function cardKit(pictures) {
   const W = 1080;
   const H = 1920;
   const rtl = LANG !== 'en';
@@ -1177,8 +1180,7 @@ async function drawShareCard({ data, receipt, meals, persons, kids }) {
   const ctx = canvas.getContext('2d');
   const sample = 'مقاضي Maqadi 0123456789.';
   await Promise.all([document.fonts.load('700 60px "Readex Pro"', sample), document.fonts.load('400 40px "Readex Pro"', sample)]).catch(() => null);
-  const [logo, party, coin, ...dishes] = await Promise.all(
-    ['icons/icon-192.png', emojiFile('🎉'), emojiFile('💰')].concat(meals.slice(0, 7).map(meal => emojiFile(meal.emoji))).map(loadImage));
+  const [logo, ...images] = await Promise.all(['icons/icon-192.png'].concat(pictures).map(loadImage));
 
   const start = rtl ? W - 80 : 80;
   const sign = rtl ? -1 : 1; // moving along the reading direction
@@ -1200,6 +1202,13 @@ async function drawShareCard({ data, receipt, meals, persons, kids }) {
     return cut + '…';
   };
   const round = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  // A number written left to right, wherever the text runs.
+  const number = (text, x, y, size, options) => {
+    ctx.direction = 'ltr';
+    const width = write(text, x, y, size, options);
+    ctx.direction = rtl ? 'rtl' : 'ltr';
+    return width;
+  };
 
   // The green page, as the app's header.
   const bg = ctx.createRadialGradient(rtl ? 80 : W - 80, 0, 0, rtl ? 80 : W - 80, 0, 2100);
@@ -1223,6 +1232,19 @@ async function drawShareCard({ data, receipt, meals, persons, kids }) {
     ctx.restore();
   }
   write(appName(), start + sign * 140, 172, 64, { weight: 700 });
+
+  // The invitation.
+  write(L('جرّب مقاضي', 'Try Maqadi'), start, H - 150, 50, { weight: 700 });
+  write(fit(L('خطة طبخات الأسبوع وقائمة مقاضيها بأرخص سعر', 'The week’s meals and groceries at the lowest price'), 36, 400, W - 160), start, H - 90, 36, { color: 'rgba(255,255,255,.85)' });
+
+  const done = () => new Promise((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('no picture'))), 'image/png'));
+  return { ctx, W, H, rtl, start, sign, font, write, fit, round, number, images, done };
+}
+
+async function drawShareCard({ data, receipt, meals, persons, kids }) {
+  const kit = await cardKit([emojiFile('🎉'), emojiFile('💰')].concat(meals.slice(0, 7).map(meal => emojiFile(meal.emoji))));
+  const { ctx, W, rtl, start, sign, font, write, fit, round } = kit;
+  const [party, coin, ...dishes] = kit.images;
 
   // What the week saved, or what it costs when nothing was on offer.
   const current = receipt.columns[0];
@@ -1317,14 +1339,59 @@ async function drawShareCard({ data, receipt, meals, persons, kids }) {
       start + sign * 100, y + 76, 46, { weight: 700, color: '#3b2a00' });
   }
 
-  // The invitation.
-  write(L('جرّب مقاضي', 'Try Maqadi'), start, H - 150, 50, { weight: 700 });
-  write(fit(L('خطة طبخات الأسبوع وقائمة مقاضيها بأرخص سعر', 'The week’s meals and groceries at the lowest price'), 36, 400, W - 160), start, H - 90, 36, { color: 'rgba(255,255,255,.85)' });
-
-  return new Promise((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('no picture'))), 'image/png'));
+  return kit.done();
 }
 
-function ShareSheet({ makeCard, caption, listText, onClose }) {
+/* The month's saving as a picture: the total, each shop, and a year at this pace. */
+async function drawSavingsCard(summary) {
+  const kit = await cardKit([emojiFile('🏆'), emojiFile('💰')]);
+  const { ctx, W, rtl, start, sign, write, round, number } = kit;
+  const [trophy, coin] = kit.images;
+  if (trophy) {
+    ctx.save();
+    ctx.translate(rtl ? 200 : W - 200, 430);
+    ctx.rotate(0.18);
+    ctx.drawImage(trophy, -110, -110, 220, 220);
+    ctx.restore();
+  }
+  write(L('هذا الشهر وفّرت', 'This month I saved'), start, 400, 60, { color: 'rgba(255,255,255,.92)' });
+  const whole = String(Math.round(summary.total / 100));
+  const width = number(whole, start, 640, 250, { weight: 700, align: rtl ? 'right' : 'left' });
+  write(riyal(), start + sign * (width + 26), 640, 70, { weight: 600 });
+  write(L(`على مقاضي البيت، في ${summary.trips.length} ${summary.trips.length === 1 ? 'مرة تسوّق' : 'مرات تسوّق'}`, `on the family's groceries, over ${pl(summary.trips.length, 'shop', 'shops')}`), start, 730, 44, { color: 'rgba(255,255,255,.9)' });
+
+  // One bar per shop, the latest in gold.
+  const trips = summary.trips.slice(-6);
+  const top = 820;
+  ctx.fillStyle = 'rgba(255,255,255,.1)';
+  round(80, top, W - 160, 420, 40);
+  ctx.fill();
+  const high = Math.max(1, ...trips.map(trip => trip.saving));
+  const slot = (W - 240) / trips.length;
+  trips.forEach((trip, at) => {
+    const x = rtl ? W - 120 - slot * (at + 1) : 120 + slot * at;
+    const h = Math.max(16, Math.round(trip.saving / high * 230));
+    ctx.fillStyle = at === trips.length - 1 ? '#ffb020' : 'rgba(255,255,255,.35)';
+    round(x + slot * 0.18, top + 330 - h, slot * 0.64, h, 18);
+    ctx.fill();
+    number(String(Math.round(trip.saving / 100)), x + slot / 2, top + 310 - h, 40, { weight: 700, align: 'center' });
+    write(shortDay(trip.date), x + slot / 2, top + 385, 30, { color: 'rgba(255,255,255,.8)', align: 'center' });
+  });
+
+  // A year at this pace.
+  const year = Math.floor(summary.total * 12 / 10000) * 100;
+  if (year >= 100) {
+    const y = top + 480;
+    ctx.fillStyle = '#ffb020';
+    round(80, y, W - 160, 120, 32);
+    ctx.fill();
+    if (coin) ctx.drawImage(coin, rtl ? W - 80 - 100 : 100, y + 26, 68, 68);
+    write(L(`يعني أكثر من ${count(year)} ريال في السنة`, `That's over ${count(year)} SAR a year`), start + sign * 100, y + 76, 46, { weight: 700, color: '#3b2a00' });
+  }
+  return kit.done();
+}
+
+function ShareSheet({ makeCard, caption, listText, title, onClose }) {
   const [card, setCard] = useState(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -1344,15 +1411,15 @@ function ShareSheet({ makeCard, caption, listText, onClose }) {
     if (await sendListText(listText) === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2500); }
   };
   return html`
-    <${Sheet} title=${L('شارك إيصالك', 'Share your receipt')} onClose=${onClose}>
+    <${Sheet} title=${title || L('شارك إيصالك', 'Share your receipt')} onClose=${onClose}>
       <div class="share__preview">
-        ${card ? html`<img src=${card.url} alt=${L('صورة إيصال الأسبوع', 'A picture of the week’s receipt')} />`
+        ${card ? html`<img src=${card.url} alt=${title || L('صورة إيصال الأسبوع', 'A picture of the week’s receipt')} />`
           : html`<span class="share__wait">${failed ? L('تعذّر تجهيز الصورة.', 'The picture couldn’t be made.') : L('جاري تجهيز الصورة…', 'Making the picture…')}</span>`}
       </div>
       <div class="share__actions">
         ${canShare ? html`<button type="button" class="btn btn--wide" onClick=${shareImage}><${Icon} name="share" size=${19} /> ${L('شارك الصورة', 'Share the picture')}</button>` : null}
         ${card ? html`<a class=${'btn btn--wide' + (canShare ? ' btn--ghost' : '')} href=${card.url} download="maqadi.png"><${Icon} name="down" size=${19} /> ${L('حفظ الصورة', 'Save the picture')}</a>` : null}
-        <button type="button" class="btn btn--wide btn--ghost" onClick=${sendText}>${copied ? L('تم نسخ القائمة', 'List copied') : L('أرسل القائمة نصاً', 'Send the list as text')}</button>
+        ${listText ? html`<button type="button" class="btn btn--wide btn--ghost" onClick=${sendText}>${copied ? L('تم نسخ القائمة', 'List copied') : L('أرسل القائمة نصاً', 'Send the list as text')}</button>` : null}
       </div>
     <//>`;
 }
@@ -1368,7 +1435,7 @@ function ListTab({ data, head, list, week, set, period, receipt, plan, persons, 
         <h1 class="head__title">${L('قائمة المقاضي', 'Shopping list')}</h1>
         <p class="head__sub">${period.text}</p>
       </div>
-      ${list.lines.length ? html`<button type="button" class="head__action" onClick=${onShare}><${Icon} name="share" size=${18} /> ${L('مشاركة', 'Share')}</button>` : null}
+      ${list.lines.length ? html`<a class="head__action head__action--solid" href="#/instore"><${Icon} name="cart" size=${19} stroke=${2.1} /> ${L('أنا في المحل', 'I’m in the shop')}</a>` : null}
     </div>`;
 
   if (!total) {
@@ -1460,6 +1527,209 @@ function ListTab({ data, head, list, week, set, period, receipt, plan, persons, 
 /* ---------------------------------------------------------------------
    Shop
    ------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   In the shop: the list as a checklist for one hand, aisle by aisle, with
+   the screen kept awake. Ticks are the list's own ticks.
+   ------------------------------------------------------------------- */
+function useWakeLock() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return undefined;
+    let lock = null;
+    let alive = true;
+    const ask = () => navigator.wakeLock.request('screen').then(got => {
+      if (!alive) { got.release().catch(() => {}); return; }
+      lock = got;
+      setOn(true);
+      got.addEventListener('release', () => setOn(false));
+    }).catch(() => setOn(false));
+    // The lock ends when the phone leaves the page; it is asked for again on return.
+    const onVisible = () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) ask(); };
+    ask();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; document.removeEventListener('visibilitychange', onVisible); if (lock) lock.release().catch(() => {}); };
+  }, []);
+  return on;
+}
+
+function StoreRow({ data, row, done, onTick }) {
+  const line = row.line;
+  return html`
+    <li>
+      <button type="button" class=${'srow' + (done ? ' is-done' : '')} aria-pressed=${done} onClick=${onTick}>
+        ${line ? html`<${Photo} data=${data} offer=${line.offer} width=${128} cls="srow__photo" />` : html`<span class="srow__photo photo--none"><${Emoji} char="🏷️" size=${26} /></span>`}
+        <span class="srow__body">
+          <b>${line ? nm(line.offer) : nm(row.item)}</b>
+          <small>${line ? html`${lineDetail(line)} · <em dir="ltr">${money(line.cost)}</em>` : row.item.need ? L('يلزمك ', 'You need ') + amount(row.item.need) : L('بدون سعر هذا الأسبوع', 'No price this week')}</small>
+        </span>
+        <span class="srow__tick" aria-hidden="true"><${Icon} name="check" size=${22} stroke=${3} /></span>
+      </button>
+    </li>`;
+}
+
+function StoreMode({ data, store, list, week, set, onDone, onClose }) {
+  const awake = useWakeLock();
+  const [toast, setToast] = useState(null);
+  const done = key => week.checked.includes(key);
+  const rows = list.lines.map(line => ({ key: line.key, line, aisle: aisleOf(line.offer.category) }))
+    .concat(list.unpriced.map(item => ({ key: 'u:' + item.name, item, aisle: null })));
+  const got = rows.filter(row => done(row.key));
+  const left = rows.length - got.length;
+  const leftCost = list.lines.filter(line => !done(line.key)).reduce((total, line) => total + line.cost, 0);
+  const tick = row => {
+    const adding = !done(row.key);
+    set.toggleChecked(row.key);
+    setToast(adding ? row : null);
+  };
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  useEffect(() => {
+    document.body.classList.add('is-locked');
+    return () => document.body.classList.remove('is-locked');
+  }, []);
+  const name = row => (row.line ? nm(row.line.offer) : nm(row.item));
+  const groups = AISLES.map(aisle => ({ aisle, rows: rows.filter(row => row.aisle === aisle && !done(row.key)) })).filter(group => group.rows.length);
+  const unpriced = rows.filter(row => !row.aisle && !done(row.key));
+  return html`
+    <div class="instore" role="dialog" aria-modal="true" aria-label=${L('وضع المحل', 'In the shop')}>
+      <header class="instore__top">
+        <div class="instore__bar">
+          <h2 class="instore__title"><${StoreDot} id=${store} />${storeName(data, store)} · ${L('وضع المحل', 'In the shop')}</h2>
+          <button type="button" class="instore__done" onClick=${got.length ? onDone : onClose}>${got.length ? L('خلصت', 'Done') : L('خروج', 'Leave')}</button>
+        </div>
+        <p class="instore__left" aria-live="polite">
+          ${left ? html`<b>${left}</b> ${L(`${left === 1 ? 'صنف باقٍ' : 'أصناف باقية'} من ${rows.length}`, `left of ${rows.length}`)}` : html`<b>${L('كل شي بالسلة!', 'All in the basket!')}</b>`}
+        </p>
+        <div class="instore__progress" role="progressbar" aria-valuemin="0" aria-valuemax=${rows.length} aria-valuenow=${got.length} aria-label=${L('ما تم شراؤه', 'Bought so far')}><i style=${'width:' + (rows.length ? got.length / rows.length * 100 : 0) + '%'}></i></div>
+        <p class="instore__meta">
+          <span>${leftCost ? html`${L('باقي تقريباً', 'About')} <b dir="ltr">${money(leftCost)}</b> ${riyal()}${L('', ' to go')}` : ''}</span>
+          ${awake ? html`<span class="instore__awake">☀ ${L('الشاشة تبقى مضاءة', 'Screen stays on')}</span>` : null}
+        </p>
+      </header>
+
+      ${groups.map(group => html`
+        <section class="instore__aisle">
+          <h3><${Emoji} char=${group.aisle.emoji} size=${22} /> ${aisleName(group.aisle)} <small>${L(group.rows.length + ' باقية', group.rows.length + ' left')}</small></h3>
+          <ul class="srows">${group.rows.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+        </section>`)}
+      ${unpriced.length ? html`
+        <section class="instore__aisle">
+          <h3><${Emoji} char="🏷️" size=${22} /> ${L('بدون سعر هذا الأسبوع', 'No price this week')} <small>${unpriced.length}</small></h3>
+          <ul class="srows">${unpriced.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+        </section>` : null}
+
+      ${got.length ? html`
+        <details class="instore__basket" open=${!left}>
+          <summary><${Icon} name="cart" size=${20} /> ${L('في السلة', 'In the basket')} (${got.length})</summary>
+          <ul class="srows">${got.map(row => html`<${StoreRow} data=${data} row=${row} done=${true} onTick=${() => tick(row)} />`)}</ul>
+        </details>` : null}
+      ${!left ? html`<button type="button" class="btn btn--wide instore__finish" onClick=${onDone}>${L('خلصت المقاضي', 'Finish shopping')}</button>` : null}
+
+      ${toast ? html`
+        <div class="instore__toast" role="status">
+          <span><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('في السلة: ', 'In the basket: ')}${name(toast)}</span>
+          <button type="button" onClick=${() => { set.toggleChecked(toast.key); setToast(null); }}>${L('تراجع', 'Undo')}</button>
+        </div>` : null}
+    </div>`;
+}
+
+/* The end of a shop: what was bought and saved, and what was paid if the
+   shopper wants the counter to know. The shop is counted when this opens. */
+function StoreDone({ data, store, record, month, set, onClose }) {
+  const [paid, setPaid] = useState('');
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { set.recordTrip(null); }, []);
+  const save = event => {
+    event.preventDefault();
+    const value = Math.round(parseFloat(String(paid).replace(',', '.')) * 100);
+    if (!(value > 0)) return;
+    set.recordTrip(value);
+    setSaved(true);
+  };
+  return html`
+    <div class="instore instore--done" role="dialog" aria-modal="true" aria-label=${L('خلصت المقاضي', 'Shopping done')}>
+      <${Emoji} char="🎉" size=${96} />
+      <h2 class="instore__big">${L('خلصت المقاضي!', 'Shopping done!')}</h2>
+      <p>${L(`${record.items} ${record.items === 1 ? 'صنف' : 'أصناف'} من ${storeName(data, store)}`, `${pl(record.items, 'item', 'items')} from ${storeName(data, store)}`)}</p>
+      <div class="instore__stats">
+        <div><b dir="ltr">${money(record.expected)}</b><small>${L('المجموع المتوقّع', 'Expected total')}</small></div>
+        <div class="is-gold"><b dir="ltr">${money(record.offers)}</b><small>${L('وفّرت من العروض', 'Saved on offers')}</small></div>
+      </div>
+      ${record.store_saving ? html`<p class="instore__extra">${L(`ووفّرت ${money(record.store_saving)} ريال لأنك اشتريت من ${storeName(data, store)}`, `and ${money(record.store_saving)} SAR by shopping at ${storeName(data, store)}`)}</p>` : null}
+      ${saved
+        ? html`<p class="instore__thanks"><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('سُجّل. عدّاد التوفير يحسب الآن ما دفعته فعلاً.', 'Saved. The counter now knows what you paid.')}</p>`
+        : html`
+          <form class="instore__ask" onSubmit=${save}>
+            <label for="paid"><b>${L('كم دفعت عند الصندوق؟', 'What did you pay at the till?')}</b><span>${L('اختياري، ليحسب عدّاد التوفير بدقة.', 'Optional, so the savings counter is exact.')}</span></label>
+            <div class="instore__in">
+              <input id="paid" type="text" inputmode="decimal" autocomplete="off" placeholder=${L('مثلاً ', 'e.g. ') + money(record.expected)} value=${paid} onInput=${event => setPaid(event.target.value)} dir="ltr" />
+              <button type="submit" class="btn">${L('سجّل', 'Save')}</button>
+            </div>
+          </form>`}
+      <a class="instore__month" href="#/savings">${L('عدّاد التوفير هذا الشهر: ', 'Saved this month: ')}<b dir="ltr">${money(month.total)}</b> ${riyal()}</a>
+      <button type="button" class="btn btn--light btn--wide" onClick=${onClose}>${L('تم', 'Done')}</button>
+    </div>`;
+}
+
+/* ---------------------------------------------------------------------
+   The savings counter
+   ------------------------------------------------------------------- */
+const monthName = month => dateFormat('month', { month: 'long', year: 'numeric' }).format(fromISO(month + '-01'));
+
+/* The card at the top of the account tab. */
+function SavingsCard({ summary }) {
+  return html`
+    <a class="float savings-card" href="#/savings">
+      <span class="savings-card__pic"><${Emoji} char="💰" size=${34} /></span>
+      <span class="savings-card__body">
+        <span class="savings-card__label">${L('وفّرت مع مقاضي', 'Saved with Maqadi')}</span>
+        ${summary.all.trips
+          ? html`<span class="savings-card__value"><b dir="ltr">${money(summary.total)}</b> ${riyal()} <small>${L('هذا الشهر', 'this month')}</small></span>`
+          : html`<span class="savings-card__hint">${L('يبدأ العدّ مع أول تسوّق بوضع المحل', 'It starts counting with your first shop in shop mode')}</span>`}
+      </span>
+      <${Icon} name="chevron" size=${18} />
+    </a>`;
+}
+
+function SavingsPage({ data, head, summary, onShare }) {
+  const high = Math.max(1, ...summary.trips.map(trip => trip.saving));
+  const better = summary.previous > 0 && summary.total > summary.previous;
+  return html`
+    <${Head} ...${head} small>
+      <h1 class="head__title">${L('وفّرت مع مقاضي', 'Saved with Maqadi')}</h1>
+      <p class="head__sub">${monthName(summary.month)}${summary.trips.length ? ' · ' + L(summary.trips.length + ' مرات تسوّق', pl(summary.trips.length, 'shop', 'shops')) : ''}</p>
+    <//>
+    <section class="float panel saved">
+      <p class="saved__top"><span>${L('هذا الشهر', 'This month')}</span>${better ? html`<span class="badge badge--save">${L('أكثر من الشهر الماضي', 'More than last month')}</span>` : null}</p>
+      <p class="saved__value"><b dir="ltr">${money(summary.total)}</b> ${riyal()}</p>
+      ${summary.trips.length ? html`
+        <div class="saved__bars" role="img" aria-label=${summary.trips.map(trip => shortDay(trip.date) + ': ' + money(trip.saving)).join(L('، ', ', '))}>
+          ${summary.trips.map((trip, at) => html`
+            <div class=${at === summary.trips.length - 1 ? 'is-now' : ''}>
+              <b dir="ltr">${money(trip.saving)}</b>
+              <i style=${'height:' + Math.max(6, Math.round(trip.saving / high * 90)) + 'px'}></i>
+              <small>${shortDay(trip.date)}</small>
+            </div>`)}
+        </div>`
+        : html`<p class="saved__empty">${L('لا يوجد تسوّق مسجّل هذا الشهر. عندما تنهي التسوّق بوضع المحل يُحسب توفيرك هنا.', 'No shops recorded this month. Finish a shop in shop mode and your saving is counted here.')}</p>`}
+    </section>
+    ${summary.all.trips ? html`
+      <div class="saved__split">
+        <div><small><${Emoji} char="🏷️" size=${20} /> ${L('من العروض', 'From offers')}</small><b dir="ltr">${money(summary.offers)}</b></div>
+        <div><small><${Emoji} char="🛒" size=${20} /> ${L('من المتجر الأرخص', 'From the cheaper store')}</small><b dir="ltr">${money(summary.store)}</b></div>
+      </div>
+      <div class="saved__row"><${Emoji} char="💰" size=${28} /><span>${L('منذ أول تسوّق', 'Since your first shop')}<small>${shortDay(summary.all.since)} · ${L(summary.all.trips + ' مرات تسوّق', pl(summary.all.trips, 'shop', 'shops'))}</small></span><b dir="ltr">${money(summary.all.total)}</b></div>
+      ${summary.paid ? html`<div class="saved__row"><${Emoji} char="🧾" size=${28} /><span>${L('دفعت فعلاً هذا الشهر', 'Paid this month')}<small>${L('المتوقّع كان ', 'Expected ')}<span dir="ltr">${money(summary.paid.expected)}</span></small></span><b dir="ltr">${money(summary.paid.paid)}</b></div>` : null}
+      ${summary.total ? html`<button type="button" class="btn btn--wide saved__share" onClick=${onShare}><${Icon} name="share" size=${19} /> ${L('شارك توفيرك', 'Share your saving')}</button>` : null}`
+      : html`<a class="btn btn--wide saved__share" href="#/list">${L('افتح قائمة المقاضي', 'Open the shopping list')}</a>`}
+    <p class="fineprint">${L(
+      'يُحسب فقط ما علّمت أنك اشتريته في وضع المحل: ما خصمته العروض منه، وكم كانت نفس الأصناف ستكلّف أكثر في المتجر التالي الأرخص. كل هذا محفوظ على جهازك فقط.',
+      'Only what you ticked as bought in shop mode counts: what the offers took off it, and how much more the same items would have cost at the next-cheapest store. All of it stays on your phone.')}</p>`;
+}
+
 /* Shop and the scanner before the whole catalogue has arrived. */
 function CatalogueWait({ head, failed, onRetry }) {
   return html`
@@ -1797,7 +2067,7 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
 /* ---------------------------------------------------------------------
    Account and settings
    ------------------------------------------------------------------- */
-function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerWeek, maxMeals, set, plusOn, openStore, openPrefs, budgetInfo, lang }) {
+function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerWeek, maxMeals, set, plusOn, openStore, openPrefs, budgetInfo, lang, savings }) {
   const storeIds = Object.keys(data.offers.stores);
   return html`
     <${Head} ...${head} small>
@@ -1810,7 +2080,8 @@ function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerW
       </div>
     <//>
 
-    <section class="float panel">
+    <${SavingsCard} summary=${savings} />
+    <section class="panel me-panel">
       <div class="row"><span>${L('عدد أفراد الأسرة', 'People in the family')}</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} /></div>
       <button type="button" class="row row--button" onClick=${openPrefs}>
         <span>${L('تفضيلات العائلة', 'Family preferences')}</span>
@@ -1978,6 +2249,7 @@ function App() {
   const [prefs, setPrefs] = useState(readPrefs);
   const [route, setRoute] = useState(parseRoute);
   const [sheet, setSheet] = useState(null);
+  const [shopDone, setShopDone] = useState(false);
   const lastTab = useRef('home');
 
   const lang = prefs.lang === 'en' || prefs.lang === 'ar' ? prefs.lang : phoneLanguage();
@@ -2005,8 +2277,9 @@ function App() {
   const retryFull = () => setFullTry(n => n + 1);
   useEffect(() => {
     const onHash = () => {
-      setRoute(previous => { if (!['meal', 'scan', 'story'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
+      setRoute(previous => { if (!['meal', 'scan', 'story', 'instore', 'savings'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
       setSheet(null);
+      setShopDone(false);
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', onHash);
@@ -2178,6 +2451,12 @@ function App() {
     }),
     hideFitNote: () => setWeek(() => ({ budgetFit: null })),
     seen: id => setWeek(current => ({ seen: (current.seen || []).includes(id) ? current.seen : (current.seen || []).concat(id) })),
+    // A finished shop; typing nothing keeps an amount typed before for the same shop.
+    recordTrip: paid => patch(previous => {
+      const before = (previous.history || []).find(record => record.week === weekId && record.store === store);
+      const record = tripRecord({ week: weekId, store, date: riyadhToday(), list, checked: week.checked, receipt, paid: paid === null && before ? before.paid : paid });
+      return { history: saveTrip(previous.history, record) };
+    }),
     scanTipSeen: () => { if (!prefs.scanTipSeen) patch({ scanTipSeen: true }); },
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
@@ -2189,7 +2468,9 @@ function App() {
   const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
-  const tab = ['meal', 'scan', 'story'].includes(route.tab) ? lastTab.current : route.tab;
+  const tab = route.tab === 'savings' ? 'me' : ['meal', 'scan', 'story', 'instore'].includes(route.tab) ? lastTab.current : route.tab;
+  const history = Array.isArray(prefs.history) ? prefs.history : [];
+  const savings = savingsSummary(history, riyadhToday().slice(0, 7));
   const openShare = () => setSheet('share');
   const shareCaption = L(`${list.totals.saved ? 'وفّرت ' + money(list.totals.saved) + ' ريال على مقاضي الأسبوع' : 'مقاضي أسبوعي'} مع تطبيق مقاضي`, `${list.totals.saved ? 'I saved ' + money(list.totals.saved) + ' SAR on this week’s groceries' : 'My week’s groceries'} with Maqadi`)
     + ' ' + window.location.origin + window.location.pathname;
@@ -2197,11 +2478,12 @@ function App() {
   return html`
     <div class="shell">
       <main class="main" id="main">
-        ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
+        ${route.tab === 'savings' ? html`<${SavingsPage} data=${data} head=${head} summary=${savings} onShare=${() => setSheet('savings')} />`
+          : meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
           : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
           : tab === 'shop' ? (data.full ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />` : html`<${CatalogueWait} head=${head} failed=${fullFailed} onRetry=${retryFull} />`)
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} />`
+          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} savings=${savings} />`
           : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} />`}
       </main>
 
@@ -2219,6 +2501,10 @@ function App() {
             </a>`)}
       </nav>
 
+      ${route.tab === 'instore' && !shopDone && (list.lines.length || list.unpriced.length) ? html`<${StoreMode} data=${data} store=${store} list=${list} week=${week} set=${set}
+          onDone=${() => setShopDone(true)} onClose=${() => { window.location.hash = '#/list'; }} />` : null}
+      ${route.tab === 'instore' && shopDone ? html`<${StoreDone} data=${data} store=${store} set=${set} month=${savings}
+          record=${tripRecord({ week: weekId, store, date: riyadhToday(), list, checked: week.checked, receipt })} onClose=${() => { window.location.hash = '#/list'; }} />` : null}
       ${route.tab === 'story' && stories.length ? html`<${Stories} data=${data} items=${stories} start=${route.id} offers=${offers} list=${list} storeRows=${storeRows} verdict=${receipt.verdict}
           cooked=${cookedMeals.length} essentials=${week.essentials && Boolean(plan.essentials)} swaps=${swapOptions} seen=${week.seen} set=${set}
           onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onShare=${openShare} />` : null}
@@ -2231,6 +2517,8 @@ function App() {
           breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(nm).join(L('، ', ', ')) : '' })} />` : null}
       ${sheet === 'share' && list.lines.length ? html`<${ShareSheet} caption=${shareCaption} listText=${shareText(data, list, period)} onClose=${() => setSheet(null)}
           makeCard=${() => drawShareCard({ data, receipt, meals: cookedMeals.map(({ meal }) => meal), persons, kids })} />` : null}
+      ${sheet === 'savings' && savings.total ? html`<${ShareSheet} title=${L('شارك توفيرك', 'Share your saving')} caption=${L(`وفّرت ${money(savings.total)} ريال هذا الشهر على مقاضي البيت مع تطبيق مقاضي`, `I saved ${money(savings.total)} SAR on groceries this month with Maqadi`) + ' ' + window.location.origin + window.location.pathname}
+          onClose=${() => setSheet(null)} makeCard=${() => drawSavingsCard(savings)} />` : null}
       ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
       ${prefs.welcomed ? null : html`<${Welcome} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
     </div>`;

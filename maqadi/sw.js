@@ -7,7 +7,7 @@
  */
 const CACHE = 'maqadi-v3';
 // Every module app.js imports, so the app also starts offline on its first visit after an update.
-const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'lib/plan.js', 'lib/htm-preact.js', 'lib/barcode.js', 'lib/scan.js', 'lib/budget.js', 'lib/prefs.js', 'lib/receipt.js',
+const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'lib/plan.js', 'lib/htm-preact.js', 'lib/barcode.js', 'lib/scan.js', 'lib/budget.js', 'lib/prefs.js', 'lib/receipt.js', 'lib/savings.js',
   'fonts/readex-pro-arabic.woff2', 'fonts/readex-pro-latin.woff2', 'icons/logo.svg', 'icons/icon-192.png', 'data/current.json'];
 const PATIENCE_MS = 4000;
 
