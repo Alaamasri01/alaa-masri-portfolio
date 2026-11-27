@@ -948,26 +948,61 @@ function SwapSheet({ meal, options, offers, onPick, onClose }) {
 /* ---------------------------------------------------------------------
    One meal
    ------------------------------------------------------------------- */
+/* The recipe as text, for sending to someone who will cook it. */
+function recipeText(meal, scale) {
+  const steps = LANG === 'en' && meal.steps_en ? meal.steps_en : meal.steps;
+  return [
+    nm(meal), L(meal.summary, meal.summary_en || meal.summary), '',
+    L('المكونات:', 'Ingredients:'),
+    ...meal.ingredients.map(ingredient => `▫️ ${nm(ingredient)}${ingredientAmount(ingredient, scale) ? ' — ' + ingredientAmount(ingredient, scale) : ''}`), '',
+    L('الطريقة:', 'Method:'),
+    ...steps.map((step, at) => `${at + 1}. ${step}`), '',
+    L('من تطبيق مقاضي', 'From the Maqadi app') + ' ' + window.location.origin + window.location.pathname
+  ].join('\n');
+}
+
 function MealPage({ data, plan, meal, index, persons, kids, servings, offers, backHref }) {
+  const [sent, setSent] = useState(false);
   const scale = servings / plan.base_persons;
   const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
   const steps = LANG === 'en' && meal.steps_en ? meal.steps_en : meal.steps;
   const tip = LANG === 'en' && meal.tip_en ? meal.tip_en : meal.tip;
+  const photo = MEAL_PHOTOS && meal.photo;
+  // The week's offer on this dish, named by its ingredient ("whole chicken") rather than the product.
+  const best = mealHighlight(meal, offers);
+  const bestFor = best ? meal.ingredients.find(ingredient => ingredient.offer === best.id) : null;
+  const share = async () => {
+    if (await sendListText(recipeText(meal, scale)) === 'copied') { setSent(true); setTimeout(() => setSent(false), 2500); }
+  };
+  const chips = html`
+    <span class="chip-soft"><${Icon} name="clock" size=${15} /> ${meal.minutes}${L(' دقيقة', ' min')}</span>
+    <span class="chip-soft"><${Icon} name="people" size=${15} /> ${L('تكفي ', 'Serves ')}${familyLabel(persons, kids)}</span>
+    <span class="chip-soft"><${Icon} name="cart" size=${15} /> ${L(bought + ' مكونات من المتجر', pl(bought, 'item', 'items') + ' to buy')}</span>`;
+  const summary = L(meal.summary, meal.summary_en || meal.summary);
   return html`
     <article class="recipe">
-      <header class=${'recipe__hero tile-' + (Math.max(0, index) % 6)}>
-        <a class="recipe__back" href=${backHref} aria-label=${L('رجوع', 'Back')}><${Icon} name="back" size=${20} stroke=${2.2} /></a>
-        <${MealArt} meal=${meal} size=${MEAL_PHOTOS && meal.photo ? 220 : 132} />
-      </header>
-      <div class="recipe__head">
-        <h1 class="recipe__name">${nm(meal)}</h1>
-        <p class="recipe__summary">${L(meal.summary, meal.summary_en || meal.summary)}</p>
-        <div class="recipe__chips">
-          <span class="chip-soft"><${Icon} name="clock" size=${15} /> ${meal.minutes}${L(' دقيقة', ' min')}</span>
-          <span class="chip-soft"><${Icon} name="people" size=${15} /> ${L('تكفي ', 'Serves ')}${familyLabel(persons, kids)}</span>
-          <span class="chip-soft"><${Icon} name="cart" size=${15} /> ${L(bought + ' مكونات من المتجر', pl(bought, 'item', 'items') + ' to buy')}</span>
-        </div>
-      </div>
+      ${photo ? html`
+        <header class="recipe__hero recipe__hero--photo">
+          <img class="recipe__bg" src=${'meals/' + meal.photo} alt="" decoding="async" />
+          <a class="recipe__back recipe__glass" href=${backHref} aria-label=${L('رجوع', 'Back')}><${Icon} name="back" size=${20} stroke=${2.2} /></a>
+          <button type="button" class="recipe__share recipe__glass" onClick=${share} aria-label=${L('أرسل الوصفة', 'Send the recipe')}><${Icon} name=${sent ? 'check' : 'share'} size=${19} stroke=${2.1} /></button>
+          <div class="recipe__over">
+            ${best && bestFor ? html`<span class="recipe__deal">${L('عرض: ', 'Offer: ')}${nm(bestFor)} <b dir="ltr">${money(halalas(best.price))}</b> ${L('بدل', 'instead of')} <s dir="ltr">${money(halalas(best.was))}</s></span>` : null}
+            <h1 class="recipe__name">${nm(meal)}</h1>
+            <p class="recipe__summary">${summary}</p>
+            <div class="recipe__chips">${chips}</div>
+          </div>
+        </header>`
+        : html`
+        <header class=${'recipe__hero tile-' + (Math.max(0, index) % 6)}>
+          <a class="recipe__back" href=${backHref} aria-label=${L('رجوع', 'Back')}><${Icon} name="back" size=${20} stroke=${2.2} /></a>
+          <${MealArt} meal=${meal} size=${132} />
+        </header>
+        <div class="recipe__head">
+          <h1 class="recipe__name">${nm(meal)}</h1>
+          <p class="recipe__summary">${summary}</p>
+          <div class="recipe__chips">${chips}</div>
+        </div>`}
 
       <h2 class="section-title">${L('المكونات', 'Ingredients')}</h2>
       <ul class="ingredients">
