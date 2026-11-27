@@ -14,6 +14,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { canonicalGtin } from './barcode.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = 'https://www.tamimimarkets.com/tag/Weekly%20Offers';
@@ -160,7 +161,8 @@ export function toOffers(products) {
         promo: null,
         note: null,
         category: categoryOf(product),
-        barcode: pickBarcode(variant.barcodes),
+        barcode: allBarcodes(variant.barcodes)[0] || null,
+        barcodes: allBarcodes(variant.barcodes),
         image: tamimiImage(variant.images, product.images),
         in_stock: variant.inStock !== false,
         confidence: 'high'
@@ -179,17 +181,9 @@ export function tamimiImage(...lists) {
   return null;
 }
 
-/* A shop-floor code (starting with 2) is the store's own; a GTIN is shared by every store. */
-export function normalizeBarcode(code) {
-  let digits = String(code || '').replace(/\D/g, '');
-  if (digits.length === 14 && digits[0] === '0') digits = digits.slice(1);
-  if (digits.length === 12 && digits[0] === '2') return null;
-  if (digits.length === 12) digits = '0' + digits;
-  if (digits.length !== 13 && digits.length !== 8) return null;
-  if (digits.length === 13 && digits[0] === '2') return null;
-  return digits;
-}
-export const pickBarcode = codes => (codes || []).map(normalizeBarcode).find(Boolean) || null;
+/* A variant often lists several codes (a new pack, the single inside a
+   multipack); every valid one is kept so another store's code can meet it. */
+export const allBarcodes = codes => Array.from(new Set((codes || []).map(canonicalGtin).filter(Boolean)));
 
 /* Fresh produce is not in the weekly listing, so it is read from single product pages. */
 const PRODUCE_AR = [

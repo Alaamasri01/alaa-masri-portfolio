@@ -15,6 +15,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pandaGtin } from './barcode.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = 'https://panda.sa';
@@ -73,6 +74,34 @@ export function parseArabicSize(size, unit) {
   const word = String(unit || '').trim().replace(/\s+/g, ' ');
   if (!(qty > 0) || !word) return null;
   for (const [pattern, code] of AR_UNITS) if (pattern.test(word)) return { qty, unit: code };
+  return null;
+}
+
+/* Panda's size field often holds one piece of a multipack ("170 جرام" for
+   "زبادي 6×170 جرام", or "6 قطع" for "سويس رول 6×55 جم"). When the name
+   spells N×size and one of its numbers is the size field, the pack is
+   counted whole; when they disagree, the store's own field is kept. */
+const NAME_UNITS = [
+  [/^(كجم|كغ|كيلو|kg)$/i, 'kg'], [/^(جرام|غرام|جم|غم|غ|gm|g)$/i, 'g'],
+  [/^(ملل|مل|ml)$/i, 'ml'], [/^(لتر|ل|l)$/i, 'l']
+];
+const UNIT_AR = { g: 'جرام', kg: 'كجم', ml: 'مل', l: 'لتر' };
+const NAME_BASE = { g: 1, kg: 1000, ml: 1, l: 1000 };
+export function packFromName(name, size) {
+  const text = String(name || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.');
+  const match = /(\d+(?:\.\d+)?)\s*[×xX*]\s*(\d+(?:\.\d+)?)\s*(كجم|كغ|كيلو|جرام|غرام|جم|غم|غ|ملل|مل|لتر|ل|kg|gm|g|ml|l)(?![\p{L}\d])/iu.exec(text);
+  if (!match || !size) return null;
+  const unit = (NAME_UNITS.find(([pattern]) => pattern.test(match[3])) || [])[1];
+  const [a, b] = [Number(match[1]), Number(match[2])];
+  // The label keeps the name's own order; only the total matters for prices and quantities.
+  const pack = (count, qty) => (Number.isInteger(count) && count > 1 && count <= 96 ? { count, qty, unit, text: `${a}×${b} ${UNIT_AR[unit]}` } : null);
+  if (size.unit === 'pcs') return size.qty === a ? pack(a, b) : size.qty === b ? pack(b, a) : null;
+  if (!NAME_BASE[size.unit] || !unit) return null;
+  const mass = u => u === 'g' || u === 'kg';
+  if (mass(size.unit) !== mass(unit)) return null;
+  const field = size.qty * NAME_BASE[size.unit];
+  if (field === b * NAME_BASE[unit]) return pack(a, b);
+  if (field === a * NAME_BASE[unit]) return pack(b, a);
   return null;
 }
 
@@ -149,8 +178,10 @@ export function toOffers(products, slug) {
       if (!(price > 0)) return;
       const before = Number(variety.undiscounted_price);
       const weighted = Boolean(variety.wighted);
-      const size = weighted ? null : parseArabicSize(variety.size, variety.unit);
-      const label = weighted ? 'للكيلو' : [variety.size, variety.unit].filter(Boolean).join(' ').trim() || null;
+      const field = weighted ? null : parseArabicSize(variety.size, variety.unit);
+      const pack = weighted ? null : packFromName(product.name, field);
+      const size = pack ? { qty: pack.qty, unit: pack.unit } : field;
+      const label = weighted ? 'للكيلو' : pack ? pack.text : [variety.size, variety.unit].filter(Boolean).join(' ').trim() || null;
       offers.push({
         page: 1,
         source_id: String(variety.id),
@@ -160,14 +191,14 @@ export function toOffers(products, slug) {
         size_text: label,
         size_qty: weighted ? 1 : (size ? size.qty : null),
         size_unit: weighted ? 'kg' : (size ? size.unit : null),
-        pack_count: 1,
+        pack_count: pack ? pack.count : 1,
         sold_by: weighted ? 'kg' : null,
         price: Math.round(price * 100) / 100,
         was: before > price ? Math.round(before * 100) / 100 : null,
         promo: null,
         note: null,
         category: product.category && product.category.parent === FROZEN_PARENT ? frozenCategory(slug, product.name) : categoryFromSlug(slug, product.name),
-        barcode: variety.barcode && !/^2\d{12}$/.test(variety.barcode) ? String(variety.barcode) : null,
+        barcode: pandaGtin(variety.barcode),
         image: pandaImage(variety.imageURL),
         confidence: 'high'
       });

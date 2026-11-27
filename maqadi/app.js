@@ -958,12 +958,12 @@ function App() {
   }), []);
 
   const offers = useMemo(() => new Map(data ? data.offers.offers.map(offer => [offer.id, offer]) : []), [data]);
-  // The cheapest product per store and barcode, to find the same product elsewhere.
-  const barcodes = useMemo(() => {
+  // The same product at each store (matched when the data is built), cheapest first.
+  const sameIndex = useMemo(() => {
     const index = new Map();
     if (data) data.offers.offers.forEach(offer => {
-      if (!offer.barcode) return;
-      const key = offer.store + '|' + offer.barcode;
+      if (!offer.same) return;
+      const key = offer.store + '|' + offer.same;
       const current = index.get(key);
       if (!current || offer.price < current.price) index.set(key, offer);
     });
@@ -1007,8 +1007,8 @@ function App() {
   const list = buildList({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras });
 
   // The same week at the other stores: same meals, each store's own products;
-  // hand-added products follow by barcode when the other store sells the same one.
-  const twin = (offer, storeId) => (offer && offer.barcode ? barcodes.get(storeId + '|' + offer.barcode) || null : null);
+  // hand-added products follow when the other store sells the same one.
+  const twin = (offer, storeId) => (offer && offer.same ? sameIndex.get(storeId + '|' + offer.same) || null : null);
   const compare = planStores.filter(id => id !== store).map(id => {
     const otherBase = setsBy[id].plans.find(option => option.id === basePlan.id);
     if (!otherBase) return null;

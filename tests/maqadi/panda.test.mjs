@@ -15,12 +15,12 @@ test('Arabic sizes the store prints', () => {
 test('weighed produce is priced per kilo; only real discounts keep an old price', () => {
   const offers = toOffers([
     { name: 'بصل أحمر طازج', varieties: [{ id: 1, price: '3.99', size: '0.5', unit: 'كجم', wighted: true, undiscounted_price: '5.99', barcode: '2552210000000' }] },
-    { name: 'حليب طازج', brand: { name: 'المراعي' }, varieties: [{ id: 2, price: '6.50', size: '1', unit: 'لتر', wighted: false, undiscounted_price: null, barcode: '6281007025344' }] },
+    { name: 'حليب طازج', brand: { name: 'المراعي' }, varieties: [{ id: 2, price: '6.50', size: '1', unit: 'لتر', wighted: false, undiscounted_price: null, barcode: '6281007025340' }] },
     { name: 'بلا سعر', varieties: [{ id: 3, price: '0', size: '1', unit: 'لتر' }] }
   ], 'fruits-and-vegetables-352');
   assert.equal(offers.length, 2);
   assert.deepEqual([offers[0].sold_by, offers[0].size_qty, offers[0].size_unit, offers[0].price, offers[0].was, offers[0].barcode], ['kg', 1, 'kg', 3.99, 5.99, null]);
-  assert.deepEqual([offers[1].size_qty, offers[1].size_unit, offers[1].was, offers[1].barcode, offers[1].brand], [1, 'l', null, '6281007025344', 'المراعي']);
+  assert.deepEqual([offers[1].size_qty, offers[1].size_unit, offers[1].was, offers[1].barcode, offers[1].brand], [1, 'l', null, '6281007025348', 'المراعي']);
   assert.equal(offers[0].category, 'produce_veg');
 });
 
@@ -51,4 +51,17 @@ test('frozen produce is told apart from fresh by its parent aisle', () => {
   ], 'fruits-and-vegetables-352');
   assert.equal(fresh.category, 'produce_veg');
   assert.equal(frozen.category, 'frozen_veg');
+});
+
+test('a multipack in the name is counted whole when the size field agrees', async () => {
+  const { packFromName } = await import('../../tools/maqadi/fetch-panda.mjs');
+  const pack = (name, qty, unit) => packFromName(name, parseArabicSize(qty, unit));
+  assert.deepEqual(pack('المراعي زبادي سادة 6×170 جرام', '170', 'جرام'), { count: 6, qty: 170, unit: 'g', text: '6×170 جرام' });
+  assert.deepEqual(pack('نادك زبادي عبوة متعددة 170x6 جرام', '170', 'جرام'), { count: 6, qty: 170, unit: 'g', text: '170×6 جرام' });
+  assert.deepEqual(pack('سفن دايز سويس رول 6×55 جم', '6', 'قطع'), { count: 6, qty: 55, unit: 'g', text: '6×55 جرام' });
+  assert.equal(pack('سويس رول ١٢×٢٠ غرام', '20', 'جرام').count, 12);
+  assert.equal(pack('حليب 4×1 لتر', '1', 'لتر').count, 4);
+  assert.equal(pack('شاي 10×20 جم', '15', 'جرام'), null);      // the field disagrees: keep the store's
+  assert.equal(pack('لبن 2 لتر', '2', 'لتر'), null);
+  assert.equal(pack('زبادي 6×170 جرام', '1', 'لتر'), null);      // grams in the name, litres in the field
 });

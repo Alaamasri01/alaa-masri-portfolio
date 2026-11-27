@@ -95,6 +95,7 @@ export function buildOffers(week, log = console.log) {
           promo: clean(item.promo),
           note: restriction(item.note),
           barcode: item.barcode || null,
+          barcodes: Array.isArray(item.barcodes) && item.barcodes.length ? item.barcodes : (item.barcode ? [item.barcode] : []),
           image: /^https:\/\/[^\s"']+$/.test(item.image || '') ? item.image : null
         };
         // The two halves of a page overlap; the same product read twice is one offer.
@@ -121,6 +122,65 @@ export function imageBase(urls) {
   urls.forEach(url => { let i = 0; while (i < prefix.length && prefix[i] === url[i]) i++; prefix = prefix.slice(0, i); });
   const base = prefix.slice(0, prefix.lastIndexOf('/') + 1);
   return /^https:\/\/[^/]+\//.test(base) ? base : '';
+}
+
+/* What a barcode match must also agree on: the whole pack, within 3%.
+   A store sometimes files the single's code under the multipack, or keeps
+   an old size; when the contents differ, or either is unknown, the two are
+   not called the same product. */
+function contents(offer) {
+  const base = toBase(offer.size_qty, offer.size_unit);
+  return base ? { qty: base.qty * (offer.pack_count || 1), family: base.family } : null;
+}
+export function sameSize(a, b) {
+  const x = contents(a);
+  const y = contents(b);
+  if (!x || !y || x.family !== y.family) return false;
+  return Math.abs(x.qty - y.qty) <= 0.03 * Math.max(x.qty, y.qty);
+}
+
+/* Marks the same product at different stores with a shared `same` key (a
+   barcode), so the app can show what it costs elsewhere. Products are
+   joined through any barcode they share, and only when their sizes agree. */
+export function sameProducts(offers, log = () => {}) {
+  const byCode = new Map();
+  offers.forEach(offer => (offer.barcodes || []).forEach(code => {
+    if (!byCode.has(code)) byCode.set(code, []);
+    byCode.get(code).push(offer);
+  }));
+  const parent = new Map();
+  const find = offer => { while (parent.get(offer) !== offer) offer = parent.get(offer); return offer; };
+  const join = (a, b) => { parent.set(find(a), find(b)); };
+  const rejected = [];
+  byCode.forEach((list, code) => {
+    const stores = new Set(list.map(offer => offer.store));
+    if (stores.size < 2) return;
+    list.forEach(offer => { if (!parent.has(offer)) parent.set(offer, offer); });
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const [a, b] = [list[i], list[j]];
+        if (a.store === b.store) continue;
+        if (sameSize(a, b)) join(a, b);
+        else rejected.push([code, a, b]);
+      }
+    }
+  });
+  const groups = new Map();
+  parent.forEach((_, offer) => {
+    const root = find(offer);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(offer);
+  });
+  let matched = 0;
+  groups.forEach(members => {
+    if (new Set(members.map(offer => offer.store)).size < 2) return;
+    const key = members.flatMap(offer => offer.barcodes).sort()[0];
+    members.forEach(offer => { offer.same = key; });
+    matched += 1;
+  });
+  log(`same product at more than one store: ${matched} products; ${rejected.length} barcode pairs set aside because the sizes differ or are unknown`);
+  rejected.slice(0, 8).forEach(([code, a, b]) => log(`  set aside ${code}: ${a.store} ${a.name} (${a.size_text || '?'}) ≠ ${b.store} ${b.name} (${b.size_text || '?'})`));
+  return { matched, rejected: rejected.length };
 }
 
 export function checkPlans(plans, offers) {
@@ -185,6 +245,7 @@ function main() {
   if (!/^\d{4}-w\d{2}$/.test(week)) { console.error('usage: node tools/maqadi/build-data.mjs 2026-w48'); process.exit(2); }
   const dir = join(ROOT, 'tools/maqadi/weeks', week);
   const { meta, offers } = buildOffers(week);
+  sameProducts(offers, console.log);
 
   const stores = {};
   Object.keys(meta.stores).forEach(id => {
@@ -201,7 +262,7 @@ function main() {
   });
   const slim = offer => {
     const out = {};
-    ['id', 'store', 'name', 'name_en', 'brand', 'category', 'size_text', 'size_qty', 'size_unit', 'pack_count', 'sold_by', 'price', 'was', 'promo', 'note', 'barcode']
+    ['id', 'store', 'name', 'name_en', 'brand', 'category', 'size_text', 'size_qty', 'size_unit', 'pack_count', 'sold_by', 'price', 'was', 'promo', 'note', 'same']
       .forEach(key => { const value = offer[key]; if (value !== null && value !== undefined && !(key === 'pack_count' && value === 1)) out[key] = value; });
     if (offer.image) {
       const base = stores[offer.store].img_base || '';
