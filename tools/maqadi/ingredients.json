@@ -312,6 +312,14 @@
    ],
    "include": "parsley|بقدونس",
    "exclude": "flake|dried|chopped|frozen|مجفف"
+  },
+  "cucumber": {
+   "name": "خيار",
+   "categories": [
+    "produce_veg"
+   ],
+   "include": "cucumber|خيار",
+   "exclude": "pickle|مخلل|lotion|deodorant|antiperspirant|mask"
   }
  }
 }

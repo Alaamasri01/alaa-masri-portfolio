@@ -98,3 +98,14 @@ test('offers used by the plans have a size the app can buy by', () => {
     });
   });
 });
+
+test('every swap a family can make can be costed too', () => {
+  plansFile.plans.forEach(plan => {
+    (plan.alternatives || []).forEach(meal => {
+      const swapped = Object.assign({}, plan, { meals: [meal] });
+      const list = buildList({ plan: swapped, offers: byId, persons: 4, essentials: false });
+      list.lines.forEach(line => assert.equal(line.approx, false, `${plan.id} › ${meal.id}: ${line.offer.id}`));
+      if (!meal.unavailable) assert.ok(list.lines.length > 0, `${plan.id} › ${meal.id} has nothing to buy`);
+    });
+  });
+});

@@ -157,6 +157,12 @@ export function checkPlans(plans, offers) {
       (meal.ingredients || []).forEach(ingredient => checkIngredient(ingredient, where));
       if (!(meal.ingredients || []).some(ingredient => ingredient.offer)) say(where, 'uses no offer at all');
     });
+    (plan.alternatives || []).forEach(meal => {
+      const where = `${at} › alternative ${meal.name || meal.id}`;
+      if (!meal.id || mealIds.has(meal.id)) say(where, 'meal id missing or repeated');
+      mealIds.add(meal.id);
+      (meal.ingredients || []).forEach(ingredient => checkIngredient(ingredient, where));
+    });
     if (plan.essentials) (plan.essentials.items || []).forEach(item => checkIngredient(item, `${at} › essentials`));
   });
   return problems;
@@ -211,7 +217,7 @@ function main() {
     process.exit(1);
   }
   const used = new Set();
-  plans.plans.forEach(plan => plan.meals.flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
+  plans.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
     .forEach(item => { if (item.offer) used.add(item.offer); }));
   console.log(`published ${publish(used)} of ${offers.length} products (discounts and the ones the plans buy)`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));

@@ -13,6 +13,8 @@ const CONFIG = {
   name: 'مقاضي',
   minPersons: 1,
   maxPersons: 12,
+  minMeals: 3,
+  maxMeals: 7,
   dealsPage: 40,
   /* Subscription. Off until a payment provider is connected: with
      `enabled: false` every meal is open. `?plus=preview` shows how the
@@ -84,6 +86,17 @@ function parseRoute() {
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const plusPreview = () => new URLSearchParams(window.location.search).get('plus') === 'preview';
 
+/* The family's week: the picks they made (or the week's suggestions),
+   topped up from the alternatives or trimmed to the number of meals they
+   want. `choices` holds every meal that can be swapped in. */
+function activePlan(plan, storedPicks, count) {
+  const choices = plan.meals.concat(plan.alternatives || []);
+  const byId = new Map(choices.map(meal => [meal.id, meal]));
+  const ids = (storedPicks || plan.meals.map(meal => meal.id)).filter((id, i, all) => byId.has(id) && all.indexOf(id) === i);
+  choices.filter(meal => !meal.unavailable).forEach(meal => { if (ids.length < count && !ids.includes(meal.id)) ids.push(meal.id); });
+  return Object.assign({}, plan, { meals: ids.slice(0, count).map(id => byId.get(id)), choices });
+}
+
 /* ---------------------------------------------------------------------
    Small pieces
    ------------------------------------------------------------------- */
@@ -96,7 +109,9 @@ const ICONS = {
   share: 'M12 15V4M8 8l4-4 4 4M5 13v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z',
   clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',
-  check: 'M5 12.5l4.5 4.5L19 7.5'
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  swap: 'M7 7h11l-3-3M17 17H6l3 3',
+  close: 'M6 6l12 12M18 6 6 18'
 };
 const Icon = ({ name, size = 22 }) => html`
   <svg class="icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -160,6 +175,9 @@ function pricePeriod(data) {
    ------------------------------------------------------------------- */
 function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
   const planStore = storeName(data, data.plans.store || Object.keys(data.offers.stores)[0]);
+  const [swapFor, setSwapFor] = useState(null);
+  const picked = new Set(plan.meals.map(meal => meal.id));
+  const swaps = plan.choices.filter(meal => !picked.has(meal.id));
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   return html`
     <section class="hero" aria-label="ملخص الأسبوع">
@@ -180,9 +198,9 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
       </div>
     </section>
 
-    <div class="segmented" role="tablist" aria-label="نوع السفرة">
+    <div class="chips chips--plans" role="group" aria-label="نوع السفرة">
       ${data.plans.plans.map(option => html`
-        <button type="button" role="tab" class="segmented__item" aria-selected=${option.id === plan.id} onClick=${() => set.plan(option.id)}>${option.name}</button>`)}
+        <button type="button" class="chip" aria-pressed=${option.id === plan.id} onClick=${() => set.plan(option.id)}>${option.name}</button>`)}
     </div>
     <p class="plan-tagline">${plan.tagline}</p>
 
@@ -204,9 +222,16 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
               </span>
             </a>
             ${isLocked ? null : html`
-              <button type="button" class="meal__toggle" aria-pressed=${!off} aria-label=${(off ? 'إضافة ' : 'استبعاد ') + meal.name} onClick=${() => set.toggleMeal(meal.id)}>
-                <${Icon} name="check" size=${18} />
-              </button>`}
+              <div class="meal__actions">
+                <button type="button" class="meal__toggle" aria-pressed=${!off} aria-label=${(off ? 'إضافة ' : 'استبعاد ') + meal.name} onClick=${() => set.toggleMeal(meal.id)}>
+                  <${Icon} name="check" size=${18} />
+                </button>
+                ${swaps.length ? html`
+                  <button type="button" class="meal__swap" aria-label=${'تبديل ' + meal.name} onClick=${() => setSwapFor(meal)}>
+                    <${Icon} name="swap" size=${18} />
+                    <span>بدّل</span>
+                  </button>` : null}
+              </div>`}
           </li>`;
       })}
     </ol>
@@ -220,11 +245,50 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
         </span>
       </label>` : null}
 
+    ${swapFor ? html`<${SwapSheet} meal=${swapFor} options=${swaps} offers=${offers} onPick=${id => { set.swap(swapFor.id, id); setSwapFor(null); }} onClose=${() => setSwapFor(null)} />` : null}
+
     <a class="cta" href="#/list">
       <span>قائمة المقاضي · ${cooked} طبخات</span>
       <span class="cta__count">${list.totals.items} صنف</span>
     </a>
     <p class="fineprint">الطبخات والأصناف تُختار تلقائياً كل أسبوع من أرخص ما يغطي حاجة الأسرة في ${planStore}. الأسعار من المتجر نفسه وقد تختلف حسب الفرع وتوفّر الكمية، والتوفير محسوب فقط للأصناف التي عليها خصم فعلي.</p>`;
+}
+
+/* A bottom sheet listing the meals that can take this one's place. */
+function SwapSheet({ meal, options, offers, onPick, onClose }) {
+  useEffect(() => {
+    const onKey = event => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const first = document.querySelector('.sheet button');
+    if (first) first.focus();
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+  return html`
+    <div class="sheet-backdrop" onClick=${onClose}></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="swap-title">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="swap-title">بدل «${meal.name}»</h2>
+        <button type="button" class="sheet__close" aria-label="إغلاق" onClick=${onClose}><${Icon} name="close" size=${20} /></button>
+      </div>
+      <ul class="sheet__list">
+        ${options.map((option, i) => {
+          const best = mealHighlight(option, offers);
+          const groupStart = option.cuisine && !(options[i - 1] && options[i - 1].cuisine);
+          return html`
+            ${groupStart ? html`<li class="sheet__group">من سفر أخرى</li>` : null}
+            <li>
+              <button type="button" class="swap-option" onClick=${() => onPick(option.id)}>
+                <span class="swap-option__tile" aria-hidden="true">${option.emoji}</span>
+                <span class="swap-option__body">
+                  <span class="swap-option__name">${option.name}</span>
+                  <span class="swap-option__meta">${option.cuisine ? option.cuisine + ' · ' : ''}${option.minutes} دقيقة${best ? html` · ${best.name} <b dir="ltr">${money(halalas(best.price))}</b>` : null}</span>
+                  ${option.unavailable ? html`<span class="swap-option__note">مكوّنها الأساسي غير متوفر في المتجر هذا الأسبوع</span>` : null}
+                </span>
+              </button>
+            </li>`;
+        })}
+      </ul>
+    </div>`;
 }
 
 /* ---------------------------------------------------------------------
@@ -459,7 +523,8 @@ function DealsTab({ data, week, set }) {
 /* ---------------------------------------------------------------------
    Settings and about
    ------------------------------------------------------------------- */
-function MeTab({ data, plan, persons, set, plusOn }) {
+function MeTab({ data, plan, persons, mealsPerWeek, set, plusOn }) {
+  const maxMeals = Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length);
   const stores = Object.keys(data.offers.stores).map(id => data.offers.stores[id]);
   return html`
     <h1 class="page-title">الإعدادات</h1>
@@ -468,6 +533,10 @@ function MeTab({ data, plan, persons, set, plusOn }) {
       <div class="row">
         <span>عدد أفراد الأسرة</span>
         <${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${value => set.persons(value)} />
+      </div>
+      <div class="row">
+        <span>عدد الطبخات في الأسبوع</span>
+        <${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label="عدد الطبخات في الأسبوع" onChange=${value => set.mealsPerWeek(value)} />
       </div>
       <div class="row">
         <label for="plan-select">نوع السفرة</label>
@@ -563,7 +632,9 @@ function App() {
     extras: stored.extras || {},
     essentials: stored.essentials !== false
   };
-  const plan = data.plans.plans.find(option => option.id === prefs.plan) || data.plans.plans[0];
+  const basePlan = data.plans.plans.find(option => option.id === prefs.plan) || data.plans.plans[0];
+  const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
+  const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek);
   const persons = clamp(prefs.persons || plan.base_persons, CONFIG.minPersons, CONFIG.maxPersons);
   const plusOn = CONFIG.plus.enabled || plusPreview();
   const locked = new Set(plusOn ? plan.meals.slice(CONFIG.plus.freeMeals).map(meal => meal.id) : []);
@@ -580,6 +651,12 @@ function App() {
     plan: id => patch({ plan: id }),
     essentials: on => setWeek(() => ({ essentials: on })),
     toggleMeal: id => setWeek(current => ({ skipped: toggleIn(current.skipped, id) })),
+    swap: (from, to) => setWeek(current => {
+      const picks = Object.assign({}, current.picks);
+      picks[plan.id] = plan.meals.map(meal => (meal.id === from ? to : meal.id));
+      return { picks, skipped: current.skipped.filter(id => id !== from) };
+    }),
+    mealsPerWeek: value => patch({ mealsPerWeek: value }),
     toggleChecked: key => setWeek(current => ({ checked: toggleIn(current.checked, key) })),
     extra: (id, units) => setWeek(current => {
       const extras = Object.assign({}, current.extras);
@@ -591,7 +668,7 @@ function App() {
 
   const period = pricePeriod(data);
   const expired = period.stale;
-  const meal = route.tab === 'meal' ? plan.meals.find(item => item.id === route.id && !locked.has(item.id)) : null;
+  const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
   const tab = route.tab === 'meal' ? 'plan' : route.tab;
 
   return html`
@@ -607,7 +684,7 @@ function App() {
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} persons=${persons} offers=${offers} />`
           : tab === 'list' ? html`<${ListTab} data=${data} list=${list} week=${week} set=${set} period=${period} />`
           : tab === 'deals' ? html`<${DealsTab} data=${data} week=${week} set=${set} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} plan=${plan} persons=${persons} set=${set} plusOn=${plusOn} />`
+          : tab === 'me' ? html`<${MeTab} data=${data} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} set=${set} plusOn=${plusOn} />`
           : html`<${PlanTab} data=${data} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} />`}
       </main>
 
