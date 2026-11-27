@@ -54,3 +54,4 @@ $RECYCLE.BIN/
 
 # --- Maqadi data tooling cache ---
 tools/maqadi/.cache/
+tools/maqadi/marketing/out/

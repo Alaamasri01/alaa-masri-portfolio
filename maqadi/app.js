@@ -176,6 +176,20 @@ function Emoji({ char, size = 28 }) {
   return html`<img class="emoji" src=${emojiFile(char)} width=${size} height=${size} alt="" aria-hidden="true" decoding="async" onError=${() => setBroken(true)} />`;
 }
 
+/* A dish: its photo when every meal of the week has one (so photos and
+   emoji never sit side by side), otherwise its emoji. `?photos=all` shows
+   the photos there are, for previews. `fill` covers its box; otherwise the
+   photo is a round plate of `size`. */
+let MEAL_PHOTOS = false;
+function MealArt({ meal, size = 84, fill = false }) {
+  const [broken, setBroken] = useState(false);
+  if (!MEAL_PHOTOS || !meal.photo || broken) return html`<${Emoji} char=${meal.emoji} size=${size} />`;
+  return html`
+    <span class=${'dish' + (fill ? ' dish--fill' : '')} style=${fill ? null : `width:${size}px;height:${size}px`}>
+      <img src=${'meals/' + meal.photo} alt="" loading="lazy" decoding="async" onError=${() => setBroken(true)} />
+    </span>`;
+}
+
 function Photo({ data, offer, width = 384, cls = 'photo' }) {
   const src = photoUrl(data, offer, width);
   const [broken, setBroken] = useState(false);
@@ -203,42 +217,139 @@ function Logo({ size = 40, glass = false }) {
 /* ---------------------------------------------------------------------
    Small pieces
    ------------------------------------------------------------------- */
+/* Maqadi's icons. Plain ones are one line path. The ones that carry the
+   brand have three layers: a soft fill inside (stronger when selected), the
+   line, and one gold touch from the logo's leaf. The basket is the logo's. */
+const TAG_PATH = 'M3.5 11.8V5a1.5 1.5 0 0 1 1.5-1.5h6.8c.4 0 .8.2 1.1.4l7.6 7.6a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0L3.9 12.9a1.5 1.5 0 0 1-.4-1.1z';
+const HOUSE_PATH = 'M4 10.6 12 4l8 6.6V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z';
+const FAMILY = {
+  fill: 'M3 20c.5-3.2 2.8-5 5.7-5s5.2 1.8 5.7 5zM15.2 20c.4-2.3 1.6-3.6 3.3-3.6 1.6 0 2.9 1.3 3.2 3.6z',
+  line: 'M3 20c.5-3.2 2.8-5 5.7-5s5.2 1.8 5.7 5M8.7 12a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8ZM15.2 20c.4-2.3 1.6-3.6 3.3-3.6 1.6 0 2.9 1.3 3.2 3.6M18.5 14.2a2.4 2.4 0 1 0 0-4.8 2.4 2.4 0 0 0 0 4.8Z'
+};
 const ICONS = {
-  home: 'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z',
-  shop: 'M3 12.6V4a1 1 0 0 1 1-1h8.6a1 1 0 0 1 .7.3l7.4 7.4a1 1 0 0 1 0 1.4l-8.6 8.6a1 1 0 0 1-1.4 0L3.3 13.3a1 1 0 0 1-.3-.7ZM8 8h.01',
-  plan: 'M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8.5 14l2.3 2.3 4.7-4.6',
-  me: 'M4 20c.7-3.4 3.9-5.5 8-5.5s7.3 2.1 8 5.5M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
-  cart: 'M3 4h2l2.4 11h10.2L20 7H6.2M9.5 20h.01M17 20h.01',
-  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-3.5-3.5',
+  home: { fill: HOUSE_PATH, line: HOUSE_PATH + 'M10 20.6v-4.4a2 2 0 0 1 4 0v4.4', dot: [17.6, 5.2, 1.7] },
+  shop: { fill: TAG_PATH, line: TAG_PATH + 'M10.2 15.6l4.4-4.4', dot: [7.8, 7.8, 1.6] },
+  plan: { fill: 'M6.5 5h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z', line: 'M3.5 8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9.5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3zM8 3v3.6M16 3v3.6M3.5 10h17M8.3 15.2h7.4a3.7 3.7 0 0 1-7.4 0z', dot: [12, 12.6, 0.9] },
+  me: FAMILY,
+  people: FAMILY,
+  cart: {
+    fill: 'M5 11h14l-1.6 7.3a2 2 0 0 1-2 1.6H8.6a2 2 0 0 1-2-1.6z',
+    line: 'M3.5 11h17M5 11l1.6 7.3a2 2 0 0 0 2 1.6h6.8a2 2 0 0 0 2-1.6L19 11M9.5 14.3v2.6M12 14.3v2.6M14.5 14.3v2.6',
+    leaves: true
+  },
+  search: { fill: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z', line: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM20 20l-4.4-4.4', dot: [13, 8, 1.4] },
+  share: { fill: 'M5 12.5h14V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', line: 'M12 14.5V3.8M8 7.6l4-3.8 4 3.8M5 12.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5.5', dot: [12, 17, 1.4] },
+  clock: { fill: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z', line: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM12 9v4.2l2.8 1.8M10 2.8h4', dot: [12, 13, 1.3] },
+  swap: { fill: 'M9 6h6a6 6 0 0 1 0 12H9A6 6 0 0 1 9 6Z', line: 'M5 9.5h12.5l-3.2-3.2M19 14.5H6.5l3.2 3.2', dots: [[5, 9.5, 1.5], [19, 14.5, 1.5]] },
+  scan: { fill: 'M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z', line: 'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 9v6M11 9v6M14 9v6M16.8 9v6', goldLine: 'M3.5 12h17' },
+  leaf: { fill: 'M12 21s-7.5-4.4-7.5-10.2A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7.5 2.8C19.5 16.6 12 21 12 21Z', line: 'M12 21s-7.5-4.4-7.5-10.2A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7.5 2.8C19.5 16.6 12 21 12 21Z', mint: 'M12 8c-.2-2.4 1-4.2 3.6-4.8.2 2.6-1 4.3-3.6 4.8Z' },
   back: 'M9 5l7 7-7 7',
-  share: 'M12 15V4M8 8l4-4 4 4M5 13v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z',
-  clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',
   check: 'M5 12.5l4.5 4.5L19 7.5',
-  swap: 'M7 7h11l-3-3M17 17H6l3 3',
   close: 'M6 6l12 12M18 6 6 18',
   down: 'M6 9l6 6 6-6',
-  people: 'M16 19c-.5-2.6-2.4-4-5-4s-4.5 1.4-5 4M11 12a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM17.5 12.5c1.9.3 3.1 1.6 3.5 3.5M15.5 5.8a3 3 0 0 1 0 5.6',
   chevron: 'M15 6l-6 6 6 6',
-  scan: 'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 9v6M10 9v6M13 9v6M16.5 9v6',
   flash: 'M13 3 5 14h6l-1 7 8-11h-6l1-7Z',
   keys: 'M4 7h16v10H4zM7 10h.01M10 10h.01M13 10h.01M16 10h.01M8 14h8',
   plus: 'M12 5v14M5 12h14',
   pen: 'M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4',
   wand: 'M4 20 15 9M14 4v2M19 9h2M17.5 5.5 19 4M9 5l1 1M18 14l1 1',
-  leaf: 'M5 19c8 0 14-6 14-14-8 0-14 6-14 14ZM5 19l7-7',
   globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z'
 };
 // Arrows that point "back" or "in" turn round with the reading direction.
 const DIRECTIONAL = new Set(['back', 'chevron']);
-const Icon = ({ name, size = 22, stroke = 1.9 }) => html`
-  <svg class=${'icon' + (DIRECTIONAL.has(name) ? ' icon--dir' : '')} width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d=${ICONS[name]} />
-  </svg>`;
+const Icon = ({ name, size = 22, stroke = 1.9 }) => {
+  const icon = ICONS[name];
+  const rich = typeof icon === 'object';
+  const dots = rich ? (icon.dots || (icon.dot ? [icon.dot] : [])) : [];
+  return html`
+    <svg class=${'icon' + (rich ? ' icon--duo' : '') + (DIRECTIONAL.has(name) ? ' icon--dir' : '')} width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${rich ? Math.min(stroke, 1.9) : stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      ${rich ? html`<path class="icon__fill" d=${icon.fill} />` : null}
+      <path d=${rich ? icon.line : icon} />
+      ${dots.map(([cx, cy, r]) => html`<circle class="icon__gold" cx=${cx} cy=${cy} r=${r} />`)}
+      ${rich && icon.goldLine ? html`<path class="icon__goldline" d=${icon.goldLine} />` : null}
+      ${rich && icon.mint ? html`<path class="icon__mint" d=${icon.mint} />` : null}
+      ${rich && icon.leaves ? html`<path class="icon__gold" d="M12 9.6c-.3-3 1.6-5.3 5.2-6 .3 3.4-1.6 5.6-5.2 6Z" /><path class="icon__mint" d="M12 9.6c.2-2.4-1.2-4.2-4-4.7-.3 2.6 1.2 4.3 4 4.7Z" />` : null}
+    </svg>`;
+};
+
+/* ---------------------------------------------------------------------
+   Motion. Each one is skipped when the phone asks for reduced motion.
+   ------------------------------------------------------------------- */
+const calm = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* A product's photo flies along an arc into the basket in the tab bar, which bounces. */
+function flyToCart(from) {
+  const cart = document.querySelector('.tabbar__fab');
+  if (calm() || !from || !cart || !from.animate) return;
+  const a = from.getBoundingClientRect();
+  const b = cart.getBoundingClientRect();
+  if (!a.width || !b.width) return;
+  const flyer = from.cloneNode(true);
+  flyer.className = 'flyer';
+  flyer.removeAttribute('loading');
+  Object.assign(flyer.style, { left: a.left + a.width / 2 - 32 + 'px', top: a.top + a.height / 2 - 32 + 'px' });
+  document.body.appendChild(flyer);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+  const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  flyer.animate([
+    { transform: 'translate(0, 0) scale(1) rotate(0)' },
+    { transform: `translate(${dx * 0.35}px, ${Math.min(dy * 0.1, 0) - 120}px) scale(1.08) rotate(-12deg)`, offset: 0.4 },
+    { transform: `translate(${dx}px, ${dy}px) scale(.25) rotate(8deg)`, opacity: 0.6 }
+  ], { duration: 760, easing: 'cubic-bezier(.45, 0, .55, 1)', fill: 'forwards' }).onfinish = () => {
+    flyer.remove();
+    cart.animate([{ transform: 'rotate(-6deg) scale(1)' }, { transform: 'rotate(-6deg) scale(1.22)' }, { transform: 'rotate(-6deg) scale(.95)' }, { transform: 'rotate(-6deg) scale(1)' }], { duration: 480, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    const badge = cart.querySelector('em');
+    if (badge) badge.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 400 });
+  };
+}
+
+/* A burst of paper around an element: the receipt's stamp, a finished shop. */
+function confetti(around, count = 28) {
+  if (calm() || !around || !around.animate) return;
+  const r = around.getBoundingClientRect();
+  const colors = ['#ffb020', '#17945a', '#e5383b', '#9be0b6', '#0b6e45'];
+  for (let i = 0; i < count; i++) {
+    const bit = document.createElement('i');
+    bit.className = 'confetti';
+    bit.style.background = colors[i % colors.length];
+    bit.style.left = r.left + r.width / 2 + 'px';
+    bit.style.top = r.top + r.height / 2 + 'px';
+    document.body.appendChild(bit);
+    const angle = Math.random() * Math.PI * 2;
+    const reach = 80 + Math.random() * 110;
+    bit.animate([
+      { transform: 'translate(0, 0) rotate(0)', opacity: 1 },
+      { transform: `translate(${Math.cos(angle) * reach}px, ${Math.sin(angle) * reach + 140}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+    ], { duration: 1200 + Math.random() * 500, easing: 'cubic-bezier(.1, .6, .4, 1)', fill: 'forwards' }).onfinish = () => bit.remove();
+  }
+}
+
+/* A number that counts to its new value instead of jumping. */
+function useCountUp(value, ms = 650) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  useEffect(() => {
+    if (calm() || from.current === value) { from.current = value; setShown(value); return undefined; }
+    const start = from.current;
+    const t0 = performance.now();
+    let frame = 0;
+    const step = now => {
+      const k = Math.min(1, (now - t0) / ms);
+      setShown(Math.round(start + (value - start) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) frame = requestAnimationFrame(step); else from.current = value;
+    };
+    frame = requestAnimationFrame(step);
+    return () => { cancelAnimationFrame(frame); from.current = value; };
+  }, [value]);
+  return shown;
+}
 
 /* 287.45 → big "287" with a small ".45" */
-function Sum({ value }) {
-  const [whole, cents] = money(value).split('.');
+function Sum({ value, count = false }) {
+  const counted = useCountUp(count ? value : 0);
+  const shown = count ? counted : value;
+  const [whole, cents] = money(shown).split('.');
   return html`<span class="sum" dir="ltr"><span class="sum__whole">${whole}</span>${cents ? html`<span class="sum__cents">.${cents}</span>` : null}</span>`;
 }
 
@@ -352,7 +463,7 @@ function ProductCard({ data, offer, units, onSet, twins }) {
         <span class="pcard__store"><${StoreDot} id=${offer.store} />${storeName(data, offer.store)}</span>
         ${units
           ? html`<${Stepper} cls="stepper--card" value=${units} min=${0} max=${20} step=${step} label=${L('الكمية من ', 'Quantity of ') + nm(offer)} onChange=${onSet} />`
-          : html`<button type="button" class="pcard__add" aria-label=${L('إضافة ' + nm(offer) + ' إلى القائمة', 'Add ' + nm(offer) + ' to the list')} onClick=${() => onSet(step)}>+</button>`}
+          : html`<button type="button" class="pcard__add" aria-label=${L('إضافة ' + nm(offer) + ' إلى القائمة', 'Add ' + nm(offer) + ' to the list')} onClick=${event => { flyToCart(event.currentTarget.closest('.pcard').querySelector('.pcard__photo')); onSet(step); }}>+</button>`}
       </div>
       <div class="pcard__body">
         <p class="pcard__price">
@@ -596,7 +707,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
         ${season && season.phase === 'during' ? L('رمضان كريم · اليوم ' + season.day, 'Ramadan Kareem · day ' + season.day) : L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
         <button type="button" class="head__family" onClick=${openFamily} aria-label=${L('عدد أفراد الأسرة ' + persons + '. تغيير', 'Family of ' + persons + '. Change')}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${familyLabel(persons, kids)}</button>
       </p>
-      <p class="head__total"><${Sum} value=${list.totals.cost} /><span>${L('ريال للأسبوع', 'SAR this week')}</span></p>
+      <p class="head__total"><${Sum} value=${list.totals.cost} count /><span>${L('ريال للأسبوع', 'SAR this week')}</span></p>
       ${budgetInfo.budget ? html`<${BudgetMeter} budget=${budgetInfo.budget} total=${list.totals.cost} onEdit=${budgetInfo.openBudget} />` : null}
       <div class="head__chips">
         ${list.totals.saved ? html`<span class="hchip hchip--gold">${L('وفّرت', 'You save')} <b dir="ltr">${money(list.totals.saved)}</b> ${riyal()}</span>` : null}
@@ -639,7 +750,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
             <a class="mcard__link" href=${isLocked ? '#/me' : '#/meal/' + meal.id} aria-label=${nm(meal)}>
               <span class=${'mcard__art tile-' + (index % 6)}>
                 <span class="mcard__tags"><span class="mcard__day">${L('اليوم ', 'Day ')}${index + 1}</span>${isNew ? html`<span class="mcard__new">${L('جديد', 'New')}</span>` : swappedIn ? html`<span class="mcard__new">${L('بديل', 'Swapped in')}</span>` : null}</span>
-                <${Emoji} char=${meal.emoji} size=${84} />
+                <${MealArt} meal=${meal} size=${84} fill />
               </span>
               <span class="mcard__body">
                 <span class="mcard__name">${nm(meal)}</span>
@@ -754,7 +865,7 @@ function PlanTab({ data, head, plans, plan, persons, kids, avoid, mealsPerWeek, 
         return html`
           <li class=${'meal' + (off ? ' is-off' : '') + (isLocked ? ' is-locked' : '')}>
             <a class="meal__main" href=${isLocked ? '#/me' : '#/meal/' + meal.id}>
-              <span class=${'meal__tile tile-' + (index % 6)}><${Emoji} char=${meal.emoji} size=${48} /></span>
+              <span class=${'meal__tile tile-' + (index % 6)}><${MealArt} meal=${meal} size=${48} fill /></span>
               <span class="meal__body">
                 <span class="meal__day">${L('اليوم ', 'Day ')}${index + 1}${week.fresh.includes(meal.id) ? html` <span class="badge badge--gold">${L('جديد', 'New')}</span>` : plan.replacements.includes(meal.id) ? html` <span class="badge badge--gold">${L('بديل', 'Swapped in')}</span>` : null}</span>
                 <span class="meal__name">${nm(meal)}</span>
@@ -805,7 +916,7 @@ function SwapSheet({ meal, options, offers, onPick, onClose }) {
             ${groupStart ? html`<li class="sheet__group">${L('من سفر أخرى', 'From other cuisines')}</li>` : null}
             <li>
               <button type="button" class="swap-option" onClick=${() => onPick(option.id)}>
-                <span class="swap-option__tile"><${Emoji} char=${option.emoji} size=${34} /></span>
+                <span class="swap-option__tile"><${MealArt} meal=${option} size=${34} fill /></span>
                 <span class="swap-option__body">
                   <span class="swap-option__name">${nm(option)}</span>
                   <span class="swap-option__meta">${option.cuisine ? cuisineLabel(option.cuisine) + ' · ' : ''}${option.minutes}${L(' دقيقة', ' min')}${best ? html` · ${nm(best)} <b dir="ltr">${money(halalas(best.price))}</b>` : null}</span>
@@ -830,7 +941,7 @@ function MealPage({ data, plan, meal, index, persons, kids, servings, offers, ba
     <article class="recipe">
       <header class=${'recipe__hero tile-' + (Math.max(0, index) % 6)}>
         <a class="recipe__back" href=${backHref} aria-label=${L('رجوع', 'Back')}><${Icon} name="back" size=${20} stroke=${2.2} /></a>
-        <${Emoji} char=${meal.emoji} size=${132} />
+        <${MealArt} meal=${meal} size=${MEAL_PHOTOS && meal.photo ? 220 : 132} />
       </header>
       <div class="recipe__head">
         <h1 class="recipe__name">${nm(meal)}</h1>
@@ -880,7 +991,7 @@ function StoryRings({ items, seen }) {
       ${items.map((item, at) => html`
         <a class=${'ring' + (seen.includes(item.id) ? ' is-seen' : '') + (item.basket ? ' ring--basket' : '')} href=${'#/story/' + at}
           aria-label=${(item.basket ? L('قصة السلة', 'Basket story') : L('قصة ', 'Story: ') + item.label) + (seen.includes(item.id) ? L('، شاهدتها', ', seen') : '')}>
-          <span class="ring__pic"><span class=${'ring__in' + (item.basket ? '' : ' tile-' + item.tile)}><${Emoji} char=${item.emoji} size=${36} /></span></span>
+          <span class="ring__pic"><span class=${'ring__in' + (item.basket ? '' : ' tile-' + item.tile)}>${item.meal ? html`<${MealArt} meal=${item.meal} size=${36} fill />` : html`<${Emoji} char=${item.emoji} size=${36} />`}</span></span>
           <span class="ring__name" aria-hidden="true">${item.label}</span>
         </a>`)}
     </nav>`;
@@ -893,7 +1004,7 @@ function StoryMeal({ data, item, number, total, offers, onSwap, canSwap, onKeep 
   const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
   const percent = best ? discountPercent(best) : 0;
   return html`
-    <div class="story__hero"><${Emoji} char=${meal.emoji} size=${240} /></div>
+    <div class="story__hero"><${MealArt} meal=${meal} size=${240} /></div>
     <p class="story__count">${L(`الطبخة ${number} من ${total}`, `Meal ${number} of ${total}`)}</p>
     <h2 class="story__name">${nm(meal)}</h2>
     <p class="story__chips">
@@ -1087,6 +1198,12 @@ function stampOf(data, receipt) {
 
 function Receipt({ data, receipt, plan, persons, kids, onShare, onStore }) {
   const [open, setOpen] = useState(false);
+  const stampRef = useRef(null);
+  // The stamp lands after the receipt prints (see .receipt__stamp in app.css); then a burst of paper.
+  useEffect(() => {
+    const timer = setTimeout(() => confetti(stampRef.current), 900);
+    return () => clearTimeout(timer);
+  }, []);
   const { columns, rows, verdict } = receipt;
   const current = columns[0];
   const shown = open ? rows : rows.slice(0, RECEIPT_ROWS);
@@ -1143,7 +1260,7 @@ function Receipt({ data, receipt, plan, persons, kids, onShare, onStore }) {
         </div>
       </div>
       ${stamp ? html`
-        <p class="receipt__stamp">
+        <p class="receipt__stamp" ref=${stampRef}>
           <small>${stamp.top}</small>
           <b dir="ltr">${money(stamp.value)}</b>
           <span>${stamp.bottom}</span>
@@ -1555,11 +1672,11 @@ function useWakeLock() {
   return on;
 }
 
-function StoreRow({ data, row, done, onTick }) {
+function StoreRow({ data, row, done, leaving, onTick }) {
   const line = row.line;
   return html`
     <li>
-      <button type="button" class=${'srow' + (done ? ' is-done' : '')} aria-pressed=${done} onClick=${onTick}>
+      <button type="button" class=${'srow' + (done ? ' is-done' : '') + (leaving ? ' is-leaving' : '')} aria-pressed=${done} onClick=${onTick}>
         ${line ? html`<${Photo} data=${data} offer=${line.offer} width=${128} cls="srow__photo" />` : html`<span class="srow__photo photo--none"><${Emoji} char="🏷️" size=${26} /></span>`}
         <span class="srow__body">
           <b>${line ? nm(line.offer) : nm(row.item)}</b>
@@ -1573,14 +1690,22 @@ function StoreRow({ data, row, done, onTick }) {
 function StoreMode({ data, store, list, week, set, onDone, onClose }) {
   const awake = useWakeLock();
   const [toast, setToast] = useState(null);
+  const [leaving, setLeaving] = useState([]);
   const done = key => week.checked.includes(key);
   const rows = list.lines.map(line => ({ key: line.key, line, aisle: aisleOf(line.offer.category) }))
     .concat(list.unpriced.map(item => ({ key: 'u:' + item.name, item, aisle: null })));
   const got = rows.filter(row => done(row.key));
   const left = rows.length - got.length;
   const leftCost = list.lines.filter(line => !done(line.key)).reduce((total, line) => total + line.cost, 0);
+  // A ticked row fills its circle and slides away for a moment before it joins the basket.
   const tick = row => {
     const adding = !done(row.key);
+    if (adding && !calm()) {
+      if (leaving.includes(row.key)) return;
+      setLeaving(keys => keys.concat(row.key));
+      setTimeout(() => { setLeaving(keys => keys.filter(key => key !== row.key)); set.toggleChecked(row.key); setToast(row); }, 380);
+      return;
+    }
     set.toggleChecked(row.key);
     setToast(adding ? row : null);
   };
@@ -1616,12 +1741,12 @@ function StoreMode({ data, store, list, week, set, onDone, onClose }) {
       ${groups.map(group => html`
         <section class="instore__aisle">
           <h3><${Emoji} char=${group.aisle.emoji} size=${22} /> ${aisleName(group.aisle)} <small>${L(group.rows.length + ' باقية', group.rows.length + ' left')}</small></h3>
-          <ul class="srows">${group.rows.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+          <ul class="srows">${group.rows.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} leaving=${leaving.includes(row.key)} onTick=${() => tick(row)} />`)}</ul>
         </section>`)}
       ${unpriced.length ? html`
         <section class="instore__aisle">
           <h3><${Emoji} char="🏷️" size=${22} /> ${L('بدون سعر هذا الأسبوع', 'No price this week')} <small>${unpriced.length}</small></h3>
-          <ul class="srows">${unpriced.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} onTick=${() => tick(row)} />`)}</ul>
+          <ul class="srows">${unpriced.map(row => html`<${StoreRow} data=${data} row=${row} done=${false} leaving=${leaving.includes(row.key)} onTick=${() => tick(row)} />`)}</ul>
         </section>` : null}
 
       ${got.length ? html`
@@ -1644,7 +1769,8 @@ function StoreMode({ data, store, list, week, set, onDone, onClose }) {
 function StoreDone({ data, store, record, month, set, onClose }) {
   const [paid, setPaid] = useState('');
   const [saved, setSaved] = useState(false);
-  useEffect(() => { set.recordTrip(null); }, []);
+  const party = useRef(null);
+  useEffect(() => { set.recordTrip(null); const timer = setTimeout(() => confetti(party.current, 36), 250); return () => clearTimeout(timer); }, []);
   const save = event => {
     event.preventDefault();
     const value = Math.round(parseFloat(String(paid).replace(',', '.')) * 100);
@@ -1654,7 +1780,7 @@ function StoreDone({ data, store, record, month, set, onClose }) {
   };
   return html`
     <div class="instore instore--done" role="dialog" aria-modal="true" aria-label=${L('خلصت المقاضي', 'Shopping done')}>
-      <${Emoji} char="🎉" size=${96} />
+      <span ref=${party} class="instore__party"><${Emoji} char="🎉" size=${96} /></span>
       <h2 class="instore__big">${L('خلصت المقاضي!', 'Shopping done!')}</h2>
       <p>${L(`${record.items} ${record.items === 1 ? 'صنف' : 'أصناف'} من ${storeName(data, store)}`, `${pl(record.items, 'item', 'items')} from ${storeName(data, store)}`)}</p>
       <div class="instore__stats">
@@ -1707,7 +1833,7 @@ function SavingsPage({ data, head, summary, onShare }) {
     <//>
     <section class="float panel saved">
       <p class="saved__top"><span>${L('هذا الشهر', 'This month')}</span>${better ? html`<span class="badge badge--save">${L('أكثر من الشهر الماضي', 'More than last month')}</span>` : null}</p>
-      <p class="saved__value"><b dir="ltr">${money(summary.total)}</b> ${riyal()}</p>
+      <p class="saved__value"><b dir="ltr"><${Sum} value=${summary.total} count /></b> ${riyal()}</p>
       ${summary.trips.length ? html`
         <div class="saved__bars" role="img" aria-label=${summary.trips.map(trip => shortDay(trip.date) + ': ' + money(trip.saving)).join(L('، ', ', '))}>
           ${summary.trips.map((trip, at) => html`
@@ -1767,7 +1893,7 @@ function RamadanToday({ plan, season, meals }) {
           </div>`)}
         ${part === 'iftar' && main ? html`
           <a class="plate-card plate-card--main" href=${'#/meal/' + main.id}>
-            <span class="plate-card__pic tile-4"><${Emoji} char=${main.emoji} size=${34} /></span>
+            <span class="plate-card__pic tile-4"><${MealArt} meal=${main} size=${34} fill /></span>
             <span><b>${nm(main)}</b><small>${L('الطبق الرئيسي · ', 'Main dish · ')}${main.minutes}${L(' دقيقة', ' min')}</small></span>
           </a>` : null}
       </div>
@@ -2273,25 +2399,41 @@ function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerW
 /* ---------------------------------------------------------------------
    Welcome (first visit)
    ------------------------------------------------------------------- */
-function Welcome({ rows, persons, kids, avoid, budget, lang, set, onDone }) {
+/* The welcome picture: the logo's basket with this week's dishes and offers
+   around it, and two real numbers (the best discount, the cheaper store). */
+function WelcomeScene({ data, plan, offers, rows }) {
+  const dishes = plan.meals.slice(0, 3);
+  const deals = plan.meals.map(meal => mealHighlight(meal, offers)).filter(Boolean);
+  const best = deals.sort((a, b) => discountPercent(b) - discountPercent(a))[0];
+  const products = plan.meals.flatMap(meal => meal.ingredients.map(item => item.offer && offers.get(item.offer))).filter(offer => offer && offer.img)
+    .filter((offer, at, all) => all.indexOf(offer) === at).slice(0, 2);
+  const cheapest = rows.find(row => row.cheapest);
+  const lead = cheapest ? Math.max(0, ...rows.filter(row => row !== cheapest).map(row => row.cost - cheapest.cost)) : 0;
+  return html`
+    <div class="wscene" aria-hidden="true">
+      ${dishes.map((meal, at) => html`<span class=${'wscene__dish wscene__dish--' + at}><${MealArt} meal=${meal} size=${at === 0 ? 118 : 90} /></span>`)}
+      ${products.map((offer, at) => html`<${Photo} data=${data} offer=${offer} width=${256} cls=${'wscene__prod wscene__prod--' + at} />`)}
+      <span class="wscene__basket"><${Logo} size=${190} /></span>
+      ${best ? html`<span class="wscene__tag wscene__tag--off" dir="ltr">−${discountPercent(best)}%</span>` : null}
+      ${lead ? html`<span class="wscene__tag wscene__tag--lead">${L('أرخص بـ ', 'Save ')}<b dir="ltr">${money(lead)}</b></span>` : null}
+    </div>`;
+}
+
+function Welcome({ data, plan, offers, rows, persons, kids, avoid, budget, lang, set, onDone }) {
   const [step, setStep] = useState(0);
   if (step === 0) {
     return html`
-      <div class="welcome" role="dialog" aria-modal="true" aria-label=${L('أهلاً في مقاضي', 'Welcome to Maqadi')}>
+      <div class="welcome welcome--hello" role="dialog" aria-modal="true" aria-label=${L('أهلاً في مقاضي', 'Welcome to Maqadi')}>
         <${LangSwitch} lang=${lang} onPick=${set.lang} cls="lang-switch--welcome" />
-        <div class="welcome__top">
-          <${Logo} size=${84} glass />
-          <h1 class="welcome__title">${L('مقاضي الأسبوع بأرخص سعر', 'Your weekly groceries at the lowest price')}</h1>
-          <p class="welcome__sub">${L('اعرف كم ستدفع قبل أن تذهب إلى السوق.', 'Know what you’ll pay before you go shopping.')}</p>
+        <p class="welcome__brand"><${Logo} size=${38} glass /> ${appName()}</p>
+        <${WelcomeScene} data=${data} plan=${plan} offers=${offers} rows=${rows} />
+        <div class="welcome__words">
+          <h1 class="welcome__title">${L('مقاضي الأسبوع', 'Your week’s groceries')}<br /><em>${L('بأرخص سعر', 'at the lowest price')}</em></h1>
+          <p class="welcome__sub">${L('طبخات الأسبوع جاهزة، وقائمة مقاضيها بأسعار المتاجر، فتعرف كم ستدفع قبل أن تخرج من البيت.', 'The week’s meals, ready, with their shopping list at the stores’ prices, so you know what you’ll pay before you leave home.')}</p>
         </div>
-        <ul class="welcome__points">
-          <li><${Emoji} char="🍽️" size=${48} /><span><b>${L('خطة طبخ جاهزة كل أسبوع', 'A ready meal plan every week')}</b>${L('طبخات مبنية على عروض هذا الأسبوع، ويمكنك تبديل أي طبخة.', 'Meals built on this week’s offers, and you can swap any of them.')}</span></li>
-          <li><${Emoji} char="🛒" size=${48} /><span><b>${L('قائمة مقاضي بالأسعار الحقيقية', 'A shopping list with real prices')}</b>${L('أكل وخضار ومنظفات وكل أغراض البيت، مع المجموع بالريال.', 'Food, vegetables, cleaning and everything for the home, with the total in riyals.')}</span></li>
-          <li><${Emoji} char="💰" size=${48} /><span><b>${L('قارن بين المتاجر', 'Compare stores')}</b>${L('نفس القائمة في كل متجر، لتعرف أين الأرخص.', 'The same list at each store, so you know where it’s cheapest.')}</span></li>
-        </ul>
         <div class="welcome__actions">
           <button type="button" class="btn btn--wide btn--light" onClick=${() => setStep(1)}>${L('ابدأ', 'Start')}</button>
-          <button type="button" class="welcome__skip" onClick=${onDone}>${L('تخطي', 'Skip')}</button>
+          <button type="button" class="welcome__skip" onClick=${onDone}>${L('بلا حساب: كل شيء يبقى على جوالك · تخطي', 'No account: everything stays on your phone · Skip')}</button>
         </div>
       </div>`;
   }
@@ -2480,6 +2622,7 @@ function App() {
   // A cuisine picked during Ramadan is kept apart, so the family's usual one comes back after Eid.
   const basePlan = (during && (plans.find(option => option.id === prefs.ramadanPlan) || seasonal)) || plans.find(option => option.id === prefs.plan) || plans[0];
   document.documentElement.classList.toggle('is-ramadan', during);
+  MEAL_PHOTOS = new URLSearchParams(window.location.search).get('photos') === 'all' || basePlan.meals.every(meal => meal.photo);
   const themeColor = document.querySelector('meta[name="theme-color"]');
   if (themeColor) themeColor.setAttribute('content', during ? '#24235e' : '#0b6e45');
   const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
@@ -2657,7 +2800,7 @@ function App() {
       ${sheet === 'savings' && savings.total ? html`<${ShareSheet} title=${L('شارك توفيرك', 'Share your saving')} caption=${L(`وفّرت ${money(savings.total)} ريال هذا الشهر على مقاضي البيت مع تطبيق مقاضي`, `I saved ${money(savings.total)} SAR on groceries this month with Maqadi`) + ' ' + window.location.origin + window.location.pathname}
           onClose=${() => setSheet(null)} makeCard=${() => drawSavingsCard(savings)} />` : null}
       ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
-      ${prefs.welcomed ? null : html`<${Welcome} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
+      ${prefs.welcomed ? null : html`<${Welcome} data=${data} plan=${plan} offers=${offers} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
     </div>`;
 }
 
