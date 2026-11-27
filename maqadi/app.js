@@ -1,19 +1,31 @@
 /*
- * مقاضي — واجهة التطبيق
+ * مقاضي — واجهة التطبيق / Maqadi — the app
  * One static page: it reads the week's offers and plans from data/ and keeps
- * the family's choices on the device. All arithmetic lives in lib/plan.js.
+ * the family's choices on the device. All arithmetic lives in lib/.
+ * Every word on screen is written twice, L('عربي', 'English'), so the two
+ * languages never drift apart.
  */
 import { html, render, useState, useEffect, useMemo, useCallback, useRef } from './lib/htm-preact.js';
 import {
   buildList, mealHighlight, discountPercent, unitPrice, normalizeAr, money, amount,
-  ingredientAmount, offerSize, isLoose, halalas
+  ingredientAmount, offerSize, isLoose, halalas, setLang as setPlanLang
 } from './lib/plan.js';
 import { scannedGtin } from './lib/barcode.js';
 import { lookupScan } from './lib/scan.js';
 import { fitBudget, budgetBreakdown } from './lib/budget.js';
+import { activePlan, portions, AVOID_FOODS, ALLERGIES } from './lib/prefs.js';
+
+/* ---------------------------------------------------------------------
+   Language
+   ------------------------------------------------------------------- */
+let LANG = 'ar';
+const L = (ar, en) => (LANG === 'en' ? en : ar);
+const pl = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+// A product, meal, ingredient or cuisine in the reader's language, Arabic when there is no English.
+const nm = item => (item ? (LANG === 'en' && item.name_en) || item.name : '');
+const phoneLanguage = () => (/^ar\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'ar') ? 'ar' : 'en');
 
 const CONFIG = {
-  name: 'مقاضي',
   minPersons: 1,
   maxPersons: 12,
   minMeals: 3,
@@ -25,45 +37,63 @@ const CONFIG = {
      locked state will look without charging anyone. */
   plus: { enabled: false, freeMeals: 2, priceLabel: null, checkoutUrl: null }
 };
+const appName = () => L('مقاضي', 'Maqadi');
 
 const AISLES = [
-  { id: 'produce', name: 'خضار وفواكه', emoji: '🥦', categories: ['produce_veg', 'produce_fruit'] },
-  { id: 'butcher', name: 'لحوم ودجاج وأسماك', emoji: '🥩', categories: ['meat', 'poultry', 'fish'] },
-  { id: 'dairy', name: 'ألبان وبيض', emoji: '🥛', categories: ['eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream'] },
-  { id: 'bakery', name: 'مخبوزات', emoji: '🍞', categories: ['bakery'] },
-  { id: 'frozen', name: 'مجمدات', emoji: '🧊', categories: ['frozen_chicken', 'frozen_veg', 'frozen_other'] },
-  { id: 'pantry', name: 'مؤونة', emoji: '🫙', categories: ['rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'breakfast_spreads', 'dates_sweets', 'snacks'] },
-  { id: 'drinks', name: 'مشروبات', emoji: '🧃', categories: ['drinks_water', 'drinks_juice', 'tea_coffee'] },
-  { id: 'home', name: 'المنزل والعناية', emoji: '🧽', categories: ['household', 'personal_care', 'baby'] },
-  { id: 'other', name: 'أخرى', emoji: '🛒', categories: ['other'] }
+  { id: 'produce', name: 'خضار وفواكه', en: 'Fruit and vegetables', emoji: '🥦', categories: ['produce_veg', 'produce_fruit'] },
+  { id: 'butcher', name: 'لحوم ودجاج وأسماك', en: 'Meat, chicken and fish', emoji: '🥩', categories: ['meat', 'poultry', 'fish'] },
+  { id: 'dairy', name: 'ألبان وبيض', en: 'Dairy and eggs', emoji: '🥛', categories: ['eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream'] },
+  { id: 'bakery', name: 'مخبوزات', en: 'Bakery', emoji: '🍞', categories: ['bakery'] },
+  { id: 'frozen', name: 'مجمدات', en: 'Frozen', emoji: '🧊', categories: ['frozen_chicken', 'frozen_veg', 'frozen_other'] },
+  { id: 'pantry', name: 'مؤونة', en: 'Pantry', emoji: '🫙', categories: ['rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'breakfast_spreads', 'dates_sweets', 'snacks'] },
+  { id: 'drinks', name: 'مشروبات', en: 'Drinks', emoji: '🧃', categories: ['drinks_water', 'drinks_juice', 'tea_coffee'] },
+  { id: 'home', name: 'المنزل والعناية', en: 'Home and personal care', emoji: '🧽', categories: ['household', 'personal_care', 'baby'] },
+  { id: 'other', name: 'أخرى', en: 'Other', emoji: '🛒', categories: ['other'] }
 ];
 const aisleOf = category => AISLES.find(aisle => aisle.categories.includes(category)) || AISLES[AISLES.length - 1];
+const aisleName = aisle => L(aisle.name, aisle.en);
 // Groceries come before the rest wherever the app suggests products.
 const isFood = offer => !['home', 'other'].includes(aisleOf(offer.category).id);
 
-const CATEGORY_NAMES = {
-  produce_veg: 'خضار', produce_fruit: 'فواكه', meat: 'لحوم', poultry: 'دجاج', fish: 'أسماك', eggs: 'بيض',
-  dairy_milk: 'حليب', dairy_cheese: 'أجبان', dairy_yogurt_labneh: 'لبن ولبنة', butter_cream: 'زبدة وقشطة',
-  bakery: 'مخبوزات', rice_grains: 'أرز وحبوب', pasta_noodles: 'مكرونة', flour_baking: 'طحين وسكر',
-  oil_ghee: 'زيوت وسمن', canned: 'معلبات', sauces_condiments: 'صلصات', spices: 'بهارات',
-  legumes_nuts: 'بقوليات ومكسرات', frozen_chicken: 'دجاج مجمد', frozen_veg: 'خضار مجمدة', frozen_other: 'مجمدات',
-  breakfast_spreads: 'فطور', drinks_water: 'مياه', drinks_juice: 'عصائر', tea_coffee: 'شاي وقهوة',
-  dates_sweets: 'تمور وحلويات', snacks: 'سناكات', household: 'منظفات ومنزلية', personal_care: 'عناية شخصية', baby: 'أطفال', other: 'أخرى'
+const CATEGORIES = {
+  produce_veg: ['خضار', 'Vegetables', '🥦'], produce_fruit: ['فواكه', 'Fruit', '🍎'], meat: ['لحوم', 'Meat', '🥩'],
+  poultry: ['دجاج', 'Chicken', '🍗'], fish: ['أسماك', 'Fish', '🐟'], eggs: ['بيض', 'Eggs', '🥚'],
+  dairy_milk: ['حليب', 'Milk', '🥛'], dairy_cheese: ['أجبان', 'Cheese', '🧀'], dairy_yogurt_labneh: ['لبن ولبنة', 'Yoghurt and labneh', '🥣'],
+  butter_cream: ['زبدة وقشطة', 'Butter and cream', '🧈'], bakery: ['مخبوزات', 'Bakery', '🍞'], rice_grains: ['أرز وحبوب', 'Rice and grains', '🍚'],
+  pasta_noodles: ['مكرونة', 'Pasta', '🍝'], flour_baking: ['طحين وسكر', 'Flour and sugar', '🌾'], oil_ghee: ['زيوت وسمن', 'Oil and ghee', '🫒'],
+  canned: ['معلبات', 'Canned', '🥫'], sauces_condiments: ['صلصات', 'Sauces', '🍅'], spices: ['بهارات', 'Spices', '🌶️'],
+  legumes_nuts: ['بقوليات ومكسرات', 'Pulses and nuts', '🫘'], frozen_chicken: ['دجاج مجمد', 'Frozen chicken', '🧊'],
+  frozen_veg: ['خضار مجمدة', 'Frozen vegetables', '🫛'], frozen_other: ['مجمدات', 'Frozen', '🧊'], breakfast_spreads: ['فطور', 'Breakfast', '🍯'],
+  drinks_water: ['مياه', 'Water', '💧'], drinks_juice: ['عصائر', 'Juice', '🧃'], tea_coffee: ['شاي وقهوة', 'Tea and coffee', '☕'],
+  dates_sweets: ['تمور وحلويات', 'Dates and sweets', '🍫'], snacks: ['سناكات', 'Snacks', '🍪'], household: ['منظفات ومنزلية', 'Household', '🧽'],
+  personal_care: ['عناية شخصية', 'Personal care', '🧴'], baby: ['أطفال', 'Baby', '🍼'], other: ['أخرى', 'Other', '🛒']
 };
-const CATEGORY_EMOJI = {
-  produce_veg: '🥦', produce_fruit: '🍎', meat: '🥩', poultry: '🍗', fish: '🐟', eggs: '🥚',
-  dairy_milk: '🥛', dairy_cheese: '🧀', dairy_yogurt_labneh: '🥣', butter_cream: '🧈',
-  bakery: '🍞', rice_grains: '🍚', pasta_noodles: '🍝', flour_baking: '🌾',
-  oil_ghee: '🫒', canned: '🥫', sauces_condiments: '🍅', spices: '🌶️',
-  legumes_nuts: '🫘', frozen_chicken: '🧊', frozen_veg: '🫛', frozen_other: '🧊',
-  breakfast_spreads: '🍯', drinks_water: '💧', drinks_juice: '🧃', tea_coffee: '☕',
-  dates_sweets: '🍫', snacks: '🍪', household: '🧽', personal_care: '🧴', baby: '🍼', other: '🛒'
-};
+const categoryName = id => (CATEGORIES[id] ? L(CATEGORIES[id][0], CATEGORIES[id][1]) : id);
+const categoryEmoji = id => (CATEGORIES[id] ? CATEGORIES[id][2] : '🛒');
 const CUISINE_EMOJI = { khaliji: '🍛', shami: '🥙', quick: '🍳', healthy: '🥗', budget: '💰' };
 const STORE_COLORS = { panda: '#e2231a', tamimi: '#f28c28', othaim: '#1f5fae' };
+const STORE_EN = { panda: 'Panda', tamimi: 'Tamimi', othaim: 'Othaim' };
 
-const SOLD_BY = { each: 'للحبة', plate: 'للطبق', kg: 'للكيلو', pack: 'للعبوة', carton: 'للكرتون', bag: 'للكيس', bunch: 'للحزمة', box: 'للعلبة' };
-const NOTES = { 'selected branches': 'في فروع مختارة', 'Iktissab members': 'لأعضاء اكتساب' };
+const SOLD_BY = {
+  each: ['للحبة', 'each'], plate: ['للطبق', 'per tray'], kg: ['للكيلو', 'per kg'], pack: ['للعبوة', 'per pack'],
+  carton: ['للكرتون', 'per carton'], bag: ['للكيس', 'per bag'], bunch: ['للحزمة', 'per bunch'], box: ['للعلبة', 'per box']
+};
+const soldBy = key => (SOLD_BY[key] ? L(SOLD_BY[key][0], SOLD_BY[key][1]) : '');
+const NOTES = { 'selected branches': ['في فروع مختارة', 'selected branches'], 'Iktissab members': ['لأعضاء اكتساب', 'Iktissab members'] };
+const noteText = note => (NOTES[note] ? L(NOTES[note][0], NOTES[note][1]) : note);
+
+const TAG_INFO = {
+  fish: { ar: 'سمك ومأكولات بحرية', en: 'Fish and seafood', short: ['بدون سمك', 'No fish'], emoji: '🐟' },
+  red_meat: { ar: 'لحم أحمر', en: 'Red meat', short: ['بدون لحم أحمر', 'No red meat'], emoji: '🥩' },
+  chicken: { ar: 'دجاج', en: 'Chicken', short: ['بدون دجاج', 'No chicken'], emoji: '🍗' },
+  egg: { ar: 'بيض', en: 'Eggs', short: ['حساسية: بيض', 'Allergy: eggs'], emoji: '🥚' },
+  dairy: { ar: 'حليب ومشتقاته', en: 'Milk and dairy', short: ['حساسية: ألبان', 'Allergy: dairy'], emoji: '🥛' },
+  gluten: { ar: 'قمح (غلوتين)', en: 'Wheat (gluten)', short: ['حساسية: قمح', 'Allergy: wheat'], emoji: '🌾' },
+  sesame: { ar: 'سمسم', en: 'Sesame', short: ['حساسية: سمسم', 'Allergy: sesame'] },
+  nuts: { ar: 'مكسرات', en: 'Nuts', short: ['حساسية: مكسرات', 'Allergy: nuts'] }
+};
+const tagName = tag => L(TAG_INFO[tag].ar, TAG_INFO[tag].en);
+const tagShort = tag => L(TAG_INFO[tag].short[0], TAG_INFO[tag].short[1]);
 
 /* ---------------------------------------------------------------------
    Storage, dates, data
@@ -77,11 +107,15 @@ function writePrefs(prefs) {
 }
 
 const riyadhToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
-const dayFormat = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const shortDayFormat = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const formats = {};
+const dateFormat = (key, options) => {
+  const id = LANG + key;
+  if (!formats[id]) formats[id] = new Intl.DateTimeFormat(LANG === 'en' ? 'en-GB' : 'ar-SA-u-ca-gregory-nu-latn', Object.assign({ timeZone: 'UTC' }, options));
+  return formats[id];
+};
 const fromISO = iso => new Date(iso + 'T00:00:00Z');
-const longDay = iso => dayFormat.format(fromISO(iso));
-const shortDay = iso => shortDayFormat.format(fromISO(iso));
+const longDay = iso => dateFormat('long', { weekday: 'long', day: 'numeric', month: 'long' }).format(fromISO(iso));
+const shortDay = iso => dateFormat('short', { day: 'numeric', month: 'long' }).format(fromISO(iso));
 
 async function getJSON(path) {
   const response = await fetch(path, { cache: 'no-cache' });
@@ -105,17 +139,7 @@ function parseRoute() {
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const plusPreview = () => new URLSearchParams(window.location.search).get('plus') === 'preview';
 const count = n => n.toLocaleString('en-US');
-
-/* The family's week: the picks they made (or the week's suggestions),
-   topped up from the alternatives or trimmed to the number of meals they
-   want. `choices` holds every meal that can be swapped in. */
-function activePlan(plan, storedPicks, mealCount) {
-  const choices = plan.meals.concat(plan.alternatives || []);
-  const byId = new Map(choices.map(meal => [meal.id, meal]));
-  const ids = (storedPicks || plan.meals.map(meal => meal.id)).filter((id, i, all) => byId.has(id) && all.indexOf(id) === i);
-  choices.filter(meal => !meal.unavailable).forEach(meal => { if (ids.length < mealCount && !ids.includes(meal.id)) ids.push(meal.id); });
-  return Object.assign({}, plan, { meals: ids.slice(0, mealCount).map(id => byId.get(id)), choices });
-}
+const riyal = () => L('ريال', 'SAR');
 
 /* Fitting a week to a budget tries every swap; the answer is kept until something changes. */
 let fitMemo = { key: null, value: null };
@@ -152,7 +176,7 @@ function Photo({ data, offer, width = 384, cls = 'photo' }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => setBroken(false), [src]);
   if (!src || broken) {
-    return html`<span class=${cls + ' photo--none'} aria-hidden="true"><${Emoji} char=${CATEGORY_EMOJI[offer && offer.category] || '🛒'} size=${width > 200 ? 56 : 26} /></span>`;
+    return html`<span class=${cls + ' photo--none'} aria-hidden="true"><${Emoji} char=${categoryEmoji(offer && offer.category)} size=${width > 200 ? 56 : 26} /></span>`;
   }
   return html`<img class=${cls} src=${src} alt="" loading="lazy" decoding="async" onError=${() => setBroken(true)} />`;
 }
@@ -196,10 +220,14 @@ const ICONS = {
   keys: 'M4 7h16v10H4zM7 10h.01M10 10h.01M13 10h.01M16 10h.01M8 14h8',
   plus: 'M12 5v14M5 12h14',
   pen: 'M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4',
-  wand: 'M4 20 15 9M14 4v2M19 9h2M17.5 5.5 19 4M9 5l1 1M18 14l1 1'
+  wand: 'M4 20 15 9M14 4v2M19 9h2M17.5 5.5 19 4M9 5l1 1M18 14l1 1',
+  leaf: 'M5 19c8 0 14-6 14-14-8 0-14 6-14 14ZM5 19l7-7',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z'
 };
+// Arrows that point "back" or "in" turn round with the reading direction.
+const DIRECTIONAL = new Set(['back', 'chevron']);
 const Icon = ({ name, size = 22, stroke = 1.9 }) => html`
-  <svg class="icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <svg class=${'icon' + (DIRECTIONAL.has(name) ? ' icon--dir' : '')} width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d=${ICONS[name]} />
   </svg>`;
 
@@ -212,9 +240,9 @@ function Sum({ value }) {
 function Stepper({ value, min, max, step = 1, label, onChange, format, cls = '' }) {
   return html`
     <div class=${'stepper ' + cls} role="group" aria-label=${label}>
-      <button type="button" class="stepper__btn" disabled=${value <= min} onClick=${() => onChange(Math.max(min, value - step))} aria-label="إنقاص">−</button>
+      <button type="button" class="stepper__btn" disabled=${value <= min} onClick=${() => onChange(Math.max(min, value - step))} aria-label=${L('إنقاص', 'Less')}>−</button>
       <output class="stepper__value" aria-live="polite">${format ? format(value) : value}</output>
-      <button type="button" class="stepper__btn" disabled=${value >= max} onClick=${() => onChange(Math.min(max, value + step))} aria-label="زيادة">+</button>
+      <button type="button" class="stepper__btn" disabled=${value >= max} onClick=${() => onChange(Math.min(max, value + step))} aria-label=${L('زيادة', 'More')}>+</button>
     </div>`;
 }
 
@@ -228,8 +256,17 @@ function OfferPrice({ offer }) {
     </span>`;
 }
 
-const storeName = (data, id) => (data.offers.stores[id] ? data.offers.stores[id].name : id);
+const storeName = (data, id) => {
+  const store = data.offers.stores[id];
+  if (!store) return id;
+  return L(store.name, store.name_en || STORE_EN[id] || store.name);
+};
 const StoreDot = ({ id }) => html`<i class="store-dot" style=${'background:' + (STORE_COLORS[id] || '#0b6e45')} aria-hidden="true"></i>`;
+const familyLabel = (persons, kids) => (kids
+  ? L(`${persons} أفراد (منهم ${kids === 1 ? 'طفل' : kids === 2 ? 'طفلان' : kids + ' أطفال'})`, `${pl(persons, 'person', 'people')} (${pl(kids, 'child', 'children')})`)
+  : L(`${persons} أفراد`, pl(persons, 'person', 'people')));
+const mealsCount = n => L(n + ' طبخات', pl(n, 'meal', 'meals'));
+const mealsWord = n => L(n === 1 ? 'طبخة واحدة' : n === 2 ? 'طبختين' : n + ' طبخات', pl(n, 'meal', 'meals'));
 
 const DAY_MS = 86400000;
 /* How old the prices the plans are built on are, and how to say it. A
@@ -237,21 +274,24 @@ const DAY_MS = 86400000;
    and is refreshed weekly, so after eight days it is out of date. */
 function pricePeriod(data, id) {
   const store = data.offers.stores[id] || {};
+  const name = storeName(data, id);
   const today = riyadhToday();
   if (store.checked) {
     const age = Math.round((fromISO(today) - fromISO(store.checked)) / DAY_MS);
     return {
-      badge: `أسعار ${shortDay(store.checked)}`,
-      text: `أسعار ${store.name} كما ظهرت يوم ${shortDay(store.checked)}`,
+      badge: L(`أسعار ${shortDay(store.checked)}`, `Prices of ${shortDay(store.checked)}`),
+      text: L(`أسعار ${name} كما ظهرت يوم ${shortDay(store.checked)}`, `${name} prices as shown on ${shortDay(store.checked)}`),
       stale: age > 8,
-      staleText: `هذه أسعار ${store.name} كما ظهرت يوم ${longDay(store.checked)}، أي قبل ${age} يوماً، وقد تغيّرت منذ ذلك الحين. تتحدّث الخطة كل أسبوع.`
+      staleText: L(`هذه أسعار ${name} كما ظهرت يوم ${longDay(store.checked)}، أي قبل ${age} يوماً، وقد تغيّرت منذ ذلك الحين. تتحدّث الخطة كل أسبوع.`,
+        `These are ${name}'s prices from ${longDay(store.checked)}, ${age} days ago, and they may have changed since. The plan is updated every week.`)
     };
   }
   return {
-    badge: `حتى ${shortDay(store.valid_to)}`,
-    text: `عروض ${store.name || ''} سارية حتى ${shortDay(store.valid_to)}`,
+    badge: L(`حتى ${shortDay(store.valid_to)}`, `Until ${shortDay(store.valid_to)}`),
+    text: L(`عروض ${name} سارية حتى ${shortDay(store.valid_to)}`, `${name} offers valid until ${shortDay(store.valid_to)}`),
     stale: today > store.valid_to,
-    staleText: `انتهت مدة هذه العروض يوم ${longDay(store.valid_to)}. الأسعار المعروضة قد لا تكون سارية.`
+    staleText: L(`انتهت مدة هذه العروض يوم ${longDay(store.valid_to)}. الأسعار المعروضة قد لا تكون سارية.`,
+      `These offers ended on ${longDay(store.valid_to)}. The prices shown may no longer apply.`)
   };
 }
 
@@ -271,7 +311,7 @@ function Sheet({ title, onClose, children }) {
       <span class="sheet__grip" aria-hidden="true"></span>
       <div class="sheet__head">
         <h2 class="sheet__title">${title}</h2>
-        <button type="button" class="sheet__close" aria-label="إغلاق" onClick=${onClose}><${Icon} name="close" size=${20} /></button>
+        <button type="button" class="sheet__close" aria-label=${L('إغلاق', 'Close')} onClick=${onClose}><${Icon} name="close" size=${20} /></button>
       </div>
       ${children}
     </div>`;
@@ -282,9 +322,9 @@ function Head({ data, store, period, onStore, small, children }) {
   return html`
     <header class=${'head' + (small ? ' head--small' : '')}>
       <div class="head__row">
-        <a class="brand" href="#/home" aria-label="مقاضي — الرئيسية"><${Logo} size=${38} glass /><span class="brand__name">${CONFIG.name}</span></a>
-        <button type="button" class="storebtn" onClick=${onStore} aria-label=${'تتسوّق من ' + storeName(data, store) + '. تغيير المتجر'}>
-          <span class="storebtn__label">تتسوّق من</span>
+        <a class="brand" href="#/home" aria-label=${L('مقاضي — الرئيسية', 'Maqadi — home')}><${Logo} size=${38} glass /><span class="brand__name">${appName()}</span></a>
+        <button type="button" class="storebtn" onClick=${onStore} aria-label=${L('تتسوّق من ' + storeName(data, store) + '. تغيير المتجر', 'Shopping at ' + storeName(data, store) + '. Change store')}>
+          <span class="storebtn__label">${L('تتسوّق من', 'Shopping at')}</span>
           <span class="storebtn__name"><${StoreDot} id=${store} />${storeName(data, store)}<${Icon} name="down" size=${15} stroke=${2.4} /></span>
         </button>
       </div>
@@ -298,7 +338,7 @@ function ProductCard({ data, offer, units, onSet, twins }) {
   const percent = discountPercent(offer);
   const per = unitPrice(offer);
   const step = isLoose(offer) ? 0.5 : 1;
-  const size = [offerSize(offer), SOLD_BY[offer.sold_by]].filter(Boolean).join(' · ');
+  const size = [offerSize(offer), soldBy(offer.sold_by)].filter(Boolean).join(' · ');
   return html`
     <article class="pcard">
       <div class="pcard__media">
@@ -306,19 +346,19 @@ function ProductCard({ data, offer, units, onSet, twins }) {
         ${percent ? html`<span class="pcard__off" dir="ltr">−${percent}%</span>` : null}
         <span class="pcard__store"><${StoreDot} id=${offer.store} />${storeName(data, offer.store)}</span>
         ${units
-          ? html`<${Stepper} cls="stepper--card" value=${units} min=${0} max=${20} step=${step} label=${'الكمية من ' + offer.name} onChange=${onSet} />`
-          : html`<button type="button" class="pcard__add" aria-label=${'إضافة ' + offer.name + ' إلى القائمة'} onClick=${() => onSet(step)}>+</button>`}
+          ? html`<${Stepper} cls="stepper--card" value=${units} min=${0} max=${20} step=${step} label=${L('الكمية من ', 'Quantity of ') + nm(offer)} onChange=${onSet} />`
+          : html`<button type="button" class="pcard__add" aria-label=${L('إضافة ' + nm(offer) + ' إلى القائمة', 'Add ' + nm(offer) + ' to the list')} onClick=${() => onSet(step)}>+</button>`}
       </div>
       <div class="pcard__body">
         <p class="pcard__price">
-          <b dir="ltr">${money(halalas(offer.price))}</b><span class="pcard__cur">ريال</span>
+          <b dir="ltr">${money(halalas(offer.price))}</b><span class="pcard__cur">${riyal()}</span>
           ${offer.was > offer.price ? html`<s dir="ltr">${money(halalas(offer.was))}</s>` : null}
         </p>
-        <h3 class="pcard__name">${offer.name}</h3>
+        <h3 class="pcard__name">${nm(offer)}</h3>
         ${size ? html`<p class="pcard__size">${size}</p>` : null}
-        ${per ? html`<p class="pcard__per"><span dir="ltr">${per.value.toFixed(2)}</span> ريال ${per.per === 'kg' ? 'للكيلو' : 'لليتر'}</p>` : null}
-        ${(twins || []).map(other => html`<span class=${'pcard__twin' + (other.price < offer.price ? ' is-cheaper' : '')}>في ${storeName(data, other.store)}: <b dir="ltr">${money(halalas(other.price))}</b></span>`)}
-        ${offer.note ? html`<span class="badge badge--note">${NOTES[offer.note] || offer.note}</span>` : null}
+        ${per ? html`<p class="pcard__per"><span dir="ltr">${per.value.toFixed(2)}</span> ${riyal()} ${per.per === 'kg' ? L('للكيلو', 'per kg') : L('لليتر', 'per litre')}</p>` : null}
+        ${(twins || []).map(other => html`<span class=${'pcard__twin' + (other.price < offer.price ? ' is-cheaper' : '')}>${L('في ', 'At ')}${storeName(data, other.store)}: <b dir="ltr">${money(halalas(other.price))}</b></span>`)}
+        ${offer.note ? html`<span class="badge badge--note">${noteText(offer.note)}</span>` : null}
       </div>
     </article>`;
 }
@@ -326,11 +366,11 @@ function ProductCard({ data, offer, units, onSet, twins }) {
 /* The cuisines, as round picture buttons. */
 function Cuisines({ plans, current, onPick }) {
   return html`
-    <div class="circles" role="group" aria-label="نوع السفرة">
+    <div class="circles" role="group" aria-label=${L('نوع السفرة', 'Cuisine')}>
       ${plans.map(option => html`
         <button type="button" class="circle" aria-pressed=${option.id === current} onClick=${() => onPick(option.id)}>
           <span class="circle__pic"><${Emoji} char=${CUISINE_EMOJI[option.id] || option.meals[0].emoji} size=${40} /></span>
-          <span class="circle__name">${option.name}</span>
+          <span class="circle__name">${nm(option)}</span>
         </button>`)}
     </div>`;
 }
@@ -338,14 +378,88 @@ function Cuisines({ plans, current, onPick }) {
 const SectionTitle = ({ title, emoji, href, more }) => html`
   <div class="section-head">
     <h2 class="section-head__title">${emoji ? html`<${Emoji} char=${emoji} size=${22} /> ` : null}${title}</h2>
-    ${href ? html`<a class="section-head__more" href=${href}>${more || 'عرض الكل'}</a>` : null}
+    ${href ? html`<a class="section-head__more" href=${href}>${more || L('عرض الكل', 'See all')}</a>` : null}
   </div>`;
+
+/* The two languages, side by side. */
+const LangSwitch = ({ lang, onPick, cls = '' }) => html`
+  <div class=${'lang-switch ' + cls} role="group" aria-label="اللغة / Language">
+    <button type="button" lang="ar" aria-pressed=${lang === 'ar'} onClick=${() => onPick('ar')}>العربية</button>
+    <button type="button" lang="en" dir="ltr" aria-pressed=${lang === 'en'} onClick=${() => onPick('en')}>English</button>
+  </div>`;
+
+/* ---------------------------------------------------------------------
+   Family preferences
+   ------------------------------------------------------------------- */
+function TagChips({ tags, chosen, onToggle, allergy }) {
+  return html`
+    <div class="tag-chips">
+      ${tags.map(tag => html`
+        <button type="button" class=${'tag-chip' + (allergy ? ' is-allergy' : '')} aria-pressed=${chosen.includes(tag)} onClick=${() => onToggle(tag)}>
+          ${TAG_INFO[tag].emoji ? html`<${Emoji} char=${TAG_INFO[tag].emoji} size=${20} />` : null}
+          ${tagName(tag)}${chosen.includes(tag) ? ' ✓' : ''}
+        </button>`)}
+    </div>`;
+}
+
+const AllergyWarning = () => html`
+  <p class="allergy-warning"><${Emoji} char="⚠️" size=${20} /><span>${L(
+    'نستبعد الطبخات التي فيها هذه المكونات، لكن بعض المنتجات قد تحتوي على آثار منها. في الحساسية الشديدة راجع ملصق كل منتج.',
+    'We leave out meals with these ingredients, but some products may contain traces of them. For a severe allergy, check each product’s label.')}</span></p>`;
+
+function PrefsSheet({ avoid, kids, persons, set, onClose }) {
+  const [chosen, setChosen] = useState(avoid);
+  const [children, setChildren] = useState(Math.min(kids, persons - 1));
+  const toggle = tag => setChosen(chosen.includes(tag) ? chosen.filter(item => item !== tag) : chosen.concat(tag));
+  return html`
+    <${Sheet} title=${L('تفضيلات العائلة', 'Family preferences')} onClose=${onClose}>
+      <p class="sheet__sub">${L('نختار طبخات الأسبوع على ذوق عائلتك.', 'We pick the week’s meals to suit your family.')}</p>
+      <div class="pref-group">
+        <h3>${L('لا نأكل', 'We don’t eat')}</h3>
+        <${TagChips} tags=${AVOID_FOODS} chosen=${chosen} onToggle=${toggle} />
+      </div>
+      <div class="pref-group">
+        <h3>${L('حساسية', 'Allergies')} <small>${L('· نستبعد كل طبخة فيها المكوّن', '· every meal with it is left out')}</small></h3>
+        <${TagChips} tags=${ALLERGIES} chosen=${chosen} onToggle=${toggle} allergy />
+      </div>
+      <div class="pref-group pref-group--row">
+        <div><b>${L('منهم أطفال تحت 12 سنة', 'Children under 12')}</b><small>${L('الطفل يُحسب نصف حصة في الكميات', 'A child counts as half a portion')}</small></div>
+        <${Stepper} value=${children} min=${0} max=${Math.max(0, persons - 1)} label=${L('عدد الأطفال', 'Children')} onChange=${setChildren} />
+      </div>
+      <${AllergyWarning} />
+      <button type="button" class="btn btn--wide" onClick=${() => { set.prefs(chosen, children); onClose(); }}>${L('حفظ', 'Save')}</button>
+    <//>`;
+}
+
+/* On the plan screen: what the preferences changed this week. */
+function PrefsCard({ plan, avoid, mealsPerWeek, onEdit }) {
+  if (!avoid.length) return null;
+  const allergy = avoid.some(tag => ALLERGIES.includes(tag));
+  const byId = new Map(plan.choices.map(meal => [meal.id, meal]));
+  const added = plan.replacements.map(id => byId.get(id)).filter(Boolean);
+  const join = list => list.join(L('، ', ', '));
+  return html`
+    <section class="prefs-card">
+      <div class="prefs-card__line">
+        <span>${L('حسب تفضيلات عائلتك:', 'For your family:')}</span>
+        ${avoid.map(tag => html`<span class=${'pchip' + (ALLERGIES.includes(tag) ? ' is-allergy' : '')}>${tagShort(tag)}</span>`)}
+        <button type="button" class="link link--green" onClick=${onEdit}>${L('تعديل', 'Edit')}</button>
+      </div>
+      ${plan.removed.length || plan.droppedBasics.length || plan.meals.length < mealsPerWeek ? html`
+        <div class="prefs-card__changes">
+          ${plan.removed.length ? html`<span>${L('استبعدنا: ', 'Left out: ')}${plan.removed.map((meal, i) => html`${i ? L('، ', ', ') : ''}<s>${nm(meal)}</s>`)}</span>` : null}
+          ${added.length ? html`<span>${L('وأضفنا: ', 'Added instead: ')}<b>${join(added.map(nm))}</b></span>` : null}
+          ${plan.droppedBasics.length ? html`<span>${L('وأزلنا من أساسيات الفطور: ', 'Removed from the breakfast basics: ')}${join(plan.droppedBasics.map(nm))}</span>` : null}
+          ${plan.meals.length < mealsPerWeek ? html`<span>${L(`تناسب تفضيلاتكم ${plan.meals.length} طبخات فقط هذا الأسبوع.`, `Only ${pl(plan.meals.length, 'meal suits', 'meals suit')} your preferences this week.`)}</span>` : null}
+        </div>` : null}
+      ${allergy ? html`<${AllergyWarning} />` : null}
+    </section>`;
+}
 
 /* ---------------------------------------------------------------------
    Budget
    ------------------------------------------------------------------- */
 const BUDGET_PRESETS = [150, 200, 250, 300, 400];
-const mealsWord = n => (n === 1 ? 'طبخة واحدة' : n === 2 ? 'طبختين' : n + ' طبخات');
 
 /* The meter under the week's total in the green header. */
 function BudgetMeter({ budget, total, onEdit }) {
@@ -354,10 +468,12 @@ function BudgetMeter({ budget, total, onEdit }) {
   return html`
     <div class=${'meter' + (over ? ' is-over' : '')}>
       <div class="meter__row">
-        <span>ميزانيتك <b dir="ltr">${budget}</b> ريال <button type="button" class="meter__edit" onClick=${onEdit}><${Icon} name="pen" size=${13} stroke=${2} /> تعديل</button></span>
-        <span class="meter__state">${over ? html`أغلى بـ <span dir="ltr">${money(total - limit)}</span>` : html`باقي <span dir="ltr">${money(limit - total)}</span> ريال`}</span>
+        <span>${L('ميزانيتك', 'Budget')} <b dir="ltr">${budget}</b> ${riyal()} <button type="button" class="meter__edit" onClick=${onEdit}><${Icon} name="pen" size=${13} stroke=${2} /> ${L('تعديل', 'Edit')}</button></span>
+        <span class="meter__state">${over
+          ? html`${L('أغلى بـ', 'Over by')} <span dir="ltr">${money(total - limit)}</span>`
+          : html`${L('باقي', 'Left')} <span dir="ltr">${money(limit - total)}</span> ${riyal()}`}</span>
       </div>
-      <div class="meter__bar" role="progressbar" aria-label="ما تصرفه من الميزانية" aria-valuemin="0" aria-valuemax=${budget} aria-valuenow=${Math.round(total / 100)}>
+      <div class="meter__bar" role="progressbar" aria-label=${L('ما تصرفه من الميزانية', 'Budget used')} aria-valuemin="0" aria-valuemax=${budget} aria-valuenow=${Math.round(total / 100)}>
         <i style=${'width:' + Math.min(100, total / limit * 100) + '%'}></i>
       </div>
     </div>`;
@@ -369,23 +485,25 @@ function BudgetCard({ budget, over, fit, done, onFit, onEdit, onMeals, onDismiss
     if (!fit.swaps.length) {
       return html`
         <section class="budget-card is-over">
-          <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>السفرة أغلى من ميزانيتك</b><span>لا توجد طبخات أرخص تكفي لـ ${budget} ريال هذا الأسبوع. يمكنك تقليل عدد الطبخات أو رفع الميزانية.</span></div></div>
-          <div class="budget-card__actions"><button type="button" class="btn" onClick=${onMeals}>قلّل الطبخات</button><button type="button" class="btn btn--ghost" onClick=${onEdit}>عدّل الميزانية</button></div>
+          <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>${L('السفرة أغلى من ميزانيتك', 'This week is over your budget')}</b><span>${L(
+            `لا توجد طبخات أرخص تكفي لـ ${budget} ريال هذا الأسبوع. يمكنك تقليل عدد الطبخات أو رفع الميزانية.`,
+            `No cheaper meals bring it to ${budget} SAR this week. You can cook fewer meals or raise the budget.`)}</span></div></div>
+          <div class="budget-card__actions"><button type="button" class="btn" onClick=${onMeals}>${L('قلّل الطبخات', 'Fewer meals')}</button><button type="button" class="btn btn--ghost" onClick=${onEdit}>${L('عدّل الميزانية', 'Change budget')}</button></div>
         </section>`;
     }
     return html`
       <section class="budget-card is-over">
-        <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>السفرة أغلى من ميزانيتك</b><span>${fit.fits
-          ? `يمكننا ترتيبها ضمن ${budget} ريال بتبديل ${mealsWord(fit.swaps.length)} بأرخص منها.`
-          : `أقرب ما نصل إليه ${money(fit.after)} ريال بتبديل ${mealsWord(fit.swaps.length)}.`}</span></div></div>
-        <button type="button" class="btn btn--wide" onClick=${onFit}><${Icon} name="wand" size=${20} stroke=${2} /> ${fit.fits ? 'رتّبها ضمن ميزانيتي' : 'اقترب من ميزانيتي'}</button>
+        <div class="budget-card__top"><${Emoji} char="💰" size=${40} /><div><b>${L('السفرة أغلى من ميزانيتك', 'This week is over your budget')}</b><span>${fit.fits
+          ? L(`يمكننا ترتيبها ضمن ${budget} ريال بتبديل ${mealsWord(fit.swaps.length)} بأرخص منها.`, `We can bring it within ${budget} SAR by swapping ${mealsWord(fit.swaps.length)} for cheaper ones.`)
+          : L(`أقرب ما نصل إليه ${money(fit.after)} ريال بتبديل ${mealsWord(fit.swaps.length)}.`, `The closest we can get is ${money(fit.after)} SAR, by swapping ${mealsWord(fit.swaps.length)}.`)}</span></div></div>
+        <button type="button" class="btn btn--wide" onClick=${onFit}><${Icon} name="wand" size=${20} stroke=${2} /> ${fit.fits ? L('رتّبها ضمن ميزانيتي', 'Fit it to my budget') : L('اقترب من ميزانيتي', 'Get closer to my budget')}</button>
       </section>`;
   }
   if (done && !over) {
     return html`
       <section class="budget-card is-done">
-        <div class="budget-card__top"><${Emoji} char="✨" size=${36} /><div><b>سفرتك ضمن ميزانيتك</b><span>بدّلنا ${mealsWord(done.count)} ووفّرنا <b class="inline" dir="ltr">${money(done.saved)}</b> ريال.</span></div>
-          <button type="button" class="budget-card__close" aria-label="إخفاء" onClick=${onDismiss}><${Icon} name="close" size=${16} /></button></div>
+        <div class="budget-card__top"><${Emoji} char="✨" size=${36} /><div><b>${L('سفرتك ضمن ميزانيتك', 'Your week is within budget')}</b><span>${L('بدّلنا ', 'We swapped ')}${mealsWord(done.count)}${L(' ووفّرنا ', ' and saved ')}<b class="inline" dir="ltr">${money(done.saved)}</b> ${riyal()}.</span></div>
+          <button type="button" class="budget-card__close" aria-label=${L('إخفاء', 'Hide')} onClick=${onDismiss}><${Icon} name="close" size=${16} /></button></div>
       </section>`;
   }
   return null;
@@ -394,69 +512,73 @@ function BudgetCard({ budget, over, fit, done, onFit, onEdit, onMeals, onDismiss
 function BudgetSheet({ budget, total, breakdown, set, onClose }) {
   const suggested = Math.max(50, Math.ceil(total / 1000) * 10);
   const [value, setValue] = useState(budget || suggested);
-  const save = amount => { set.budget(amount); onClose(); };
+  const save = amountValue => { set.budget(amountValue); onClose(); };
   return html`
-    <${Sheet} title="ميزانية الأسبوع" onClose=${onClose}>
-      <p class="sheet__sub">كم تريد أن تصرف على المقاضي هذا الأسبوع؟</p>
+    <${Sheet} title=${L('ميزانية الأسبوع', 'Weekly budget')} onClose=${onClose}>
+      <p class="sheet__sub">${L('كم تريد أن تصرف على المقاضي هذا الأسبوع؟', 'How much do you want to spend on groceries this week?')}</p>
       <div class="budget-amount">
-        <${Stepper} cls="stepper--budget" value=${value} min=${50} max=${3000} step=${10} label="ميزانية الأسبوع بالريال" onChange=${setValue} format=${v => html`<b dir="ltr">${v}</b><small>ريال</small>`} />
+        <${Stepper} cls="stepper--budget" value=${value} min=${50} max=${3000} step=${10} label=${L('ميزانية الأسبوع بالريال', 'Weekly budget in riyals')} onChange=${setValue} format=${v => html`<b dir="ltr">${v}</b><small>${riyal()}</small>`} />
       </div>
-      <div class="pills pills--sheet" role="group" aria-label="مبالغ جاهزة">
-        ${BUDGET_PRESETS.map(amount => html`<button type="button" class="pill" aria-pressed=${value === amount} onClick=${() => setValue(amount)}>${amount}</button>`)}
+      <div class="pills pills--sheet" role="group" aria-label=${L('مبالغ جاهزة', 'Quick amounts')}>
+        ${BUDGET_PRESETS.map(preset => html`<button type="button" class="pill" aria-pressed=${value === preset} onClick=${() => setValue(preset)}>${preset}</button>`)}
       </div>
       <div class="budget-includes">
-        <b>الميزانية تشمل كل ما في قائمتك:</b>
+        <b>${L('الميزانية تشمل كل ما في قائمتك:', 'The budget covers everything on your list:')}</b>
         <ul>
-          <li><span>الطبخات</span><span dir="ltr">${money(breakdown.meals)}</span></li>
-          ${breakdown.basics ? html`<li><span>الأساسيات${breakdown.basicsNames ? ': ' + breakdown.basicsNames : ''}</span><span dir="ltr">${money(breakdown.basics)}</span></li>` : null}
-          <li><span>أغراض أضفتها بنفسك</span><span dir="ltr">${money(breakdown.added)}</span></li>
-          <li class="is-total"><span>المجموع الآن</span><span dir="ltr">${money(breakdown.total)}</span></li>
+          <li><span>${L('الطبخات', 'Meals')}</span><span dir="ltr">${money(breakdown.meals)}</span></li>
+          ${breakdown.basics ? html`<li><span>${L('الأساسيات', 'Basics')}${breakdown.basicsNames ? ': ' + breakdown.basicsNames : ''}</span><span dir="ltr">${money(breakdown.basics)}</span></li>` : null}
+          <li><span>${L('أغراض أضفتها بنفسك', 'Items you added')}</span><span dir="ltr">${money(breakdown.added)}</span></li>
+          <li class="is-total"><span>${L('المجموع الآن', 'Total now')}</span><span dir="ltr">${money(breakdown.total)}</span></li>
         </ul>
       </div>
-      <button type="button" class="btn btn--wide" onClick=${() => save(value)}>حفظ</button>
-      ${budget ? html`<button type="button" class="sheet__link" onClick=${() => save(null)}>بدون ميزانية</button>` : null}
+      <button type="button" class="btn btn--wide" onClick=${() => save(value)}>${L('حفظ', 'Save')}</button>
+      ${budget ? html`<button type="button" class="sheet__link" onClick=${() => save(null)}>${L('بدون ميزانية', 'No budget')}</button>` : null}
     <//>`;
 }
 
 function FitSheet({ fit, budget, onApply, onClose }) {
   const diff = budget * 100 - fit.after;
   return html`
-    <${Sheet} title=${fit.fits ? 'ضمن ميزانية ' + budget + ' ريال' : 'أقرب ما يمكن لميزانيتك'} onClose=${onClose}>
-      <p class="sheet__sub">بدّلنا ${mealsWord(fit.swaps.length)} بأرخص منها من عروض هذا الأسبوع. باقي السفرة كما هي.</p>
+    <${Sheet} title=${fit.fits ? L('ضمن ميزانية ' + budget + ' ريال', 'Within ' + budget + ' SAR') : L('أقرب ما يمكن لميزانيتك', 'As close as we can get')} onClose=${onClose}>
+      <p class="sheet__sub">${L(`بدّلنا ${mealsWord(fit.swaps.length)} بأرخص منها من عروض هذا الأسبوع. باقي السفرة كما هي.`, `We swapped ${mealsWord(fit.swaps.length)} for cheaper ones from this week’s offers. The rest of the week stays as it is.`)}</p>
       <ul class="fit-list">
         ${fit.swaps.map((swap, i) => html`
           <li class="fit-swap">
             <span class="fit-swap__pics" aria-hidden="true">
               <span class=${'fit-swap__pic tile-' + ((i * 2 + 2) % 6)}><${Emoji} char=${swap.from.emoji} size=${30} /></span>
-              <span class="fit-swap__arrow">←</span>
+              <span class="fit-swap__arrow">${L('←', '→')}</span>
               <span class=${'fit-swap__pic tile-' + ((i * 2 + 4) % 6)}><${Emoji} char=${swap.to.emoji} size=${30} /></span>
             </span>
             <span class="fit-swap__body">
-              <s>${swap.from.name}</s>
-              <b>${swap.to.name}</b>
-              <small>${[swap.to.cuisine, swap.to.minutes + ' دقيقة'].filter(Boolean).join(' · ')}</small>
+              <s>${nm(swap.from)}</s>
+              <b>${nm(swap.to)}</b>
+              <small>${[swap.to.cuisine ? cuisineLabel(swap.to.cuisine) : null, swap.to.minutes + L(' دقيقة', ' min')].filter(Boolean).join(' · ')}</small>
             </span>
             <span class="fit-swap__save" dir="ltr">−${money(swap.saves)}</span>
           </li>`)}
       </ul>
       <div class="fit-sum">
-        <div><span>السفرة الآن</span><s dir="ltr">${money(fit.before)}</s></div>
-        <div><span>بعد التبديل</span><span dir="ltr">${money(fit.after)}</span></div>
-        <div class=${'fit-sum__result' + (diff < 0 ? ' is-over' : '')}><span>${diff >= 0 ? 'تحت ميزانيتك بـ' : 'أغلى من ميزانيتك بـ'}</span><span><b dir="ltr">${money(Math.abs(diff))}</b> ريال</span></div>
+        <div><span>${L('السفرة الآن', 'Now')}</span><s dir="ltr">${money(fit.before)}</s></div>
+        <div><span>${L('بعد التبديل', 'After the swaps')}</span><span dir="ltr">${money(fit.after)}</span></div>
+        <div class=${'fit-sum__result' + (diff < 0 ? ' is-over' : '')}><span>${diff >= 0 ? L('تحت ميزانيتك بـ', 'Under budget by') : L('أغلى من ميزانيتك بـ', 'Over budget by')}</span><span><b dir="ltr">${money(Math.abs(diff))}</b> ${riyal()}</span></div>
       </div>
-      ${fit.fits ? null : html`<p class="fit-hint">لتصل إلى ${budget} ريال يمكنك أيضاً تقليل عدد الطبخات من «الخطة».</p>`}
+      ${fit.fits ? null : html`<p class="fit-hint">${L(`لتصل إلى ${budget} ريال يمكنك أيضاً تقليل عدد الطبخات من «الخطة».`, `To reach ${budget} SAR you can also cook fewer meals, from “Plan”.`)}</p>`}
       <div class="sheet__actions">
-        <button type="button" class="btn" onClick=${onApply}>طبّق التبديلات</button>
-        <button type="button" class="btn btn--ghost" onClick=${onClose}>لا، اتركها</button>
+        <button type="button" class="btn" onClick=${onApply}>${L('طبّق التبديلات', 'Apply the swaps')}</button>
+        <button type="button" class="btn btn--ghost" onClick=${onClose}>${L('لا، اتركها', 'No, keep it')}</button>
       </div>
-      <p class="sheet__note">يمكنك تبديل أي طبخة لاحقاً من «الخطة».</p>
+      <p class="sheet__note">${L('يمكنك تبديل أي طبخة لاحقاً من «الخطة».', 'You can swap any meal later from “Plan”.')}</p>
     <//>`;
 }
+
+/* A meal borrowed from another cuisine says which ("شامية" is stored in Arabic). */
+const CUISINE_NAMES = { 'خليجية': 'Gulf', 'شامية': 'Levantine', 'سريعة': 'Quick', 'صحية': 'Healthy', 'اقتصادية': 'Budget' };
+const cuisineLabel = name => L(name, CUISINE_NAMES[name] || name);
 
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, list, offers, locked, set, openFamily, scanTip, budgetInfo }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -466,26 +588,26 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
   return html`
     <${Head} ...${head}>
       <p class="head__greet">
-        سفرة أسبوعك جاهزة
-        <button type="button" class="head__family" onClick=${openFamily} aria-label=${'عدد أفراد الأسرة ' + persons + '. تغيير'}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${persons} أفراد</button>
+        ${L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
+        <button type="button" class="head__family" onClick=${openFamily} aria-label=${L('عدد أفراد الأسرة ' + persons + '. تغيير', 'Family of ' + persons + '. Change')}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${familyLabel(persons, kids)}</button>
       </p>
-      <p class="head__total"><${Sum} value=${list.totals.cost} /><span>ريال للأسبوع</span></p>
+      <p class="head__total"><${Sum} value=${list.totals.cost} /><span>${L('ريال للأسبوع', 'SAR this week')}</span></p>
       ${budgetInfo.budget ? html`<${BudgetMeter} budget=${budgetInfo.budget} total=${list.totals.cost} onEdit=${budgetInfo.openBudget} />` : null}
       <div class="head__chips">
-        ${list.totals.saved ? html`<span class="hchip hchip--gold">وفّرت <b dir="ltr">${money(list.totals.saved)}</b> ريال</span>` : null}
-        <span class="hchip">${cooked} طبخات · ${list.totals.items} صنف</span>
-        ${list.unpriced.length ? html`<span class="hchip">${list.unpriced.length} بدون سعر</span>` : null}
-        ${budgetInfo.budget ? null : html`<button type="button" class="hchip hchip--button" onClick=${budgetInfo.openBudget}><${Icon} name="plus" size=${14} stroke=${2.4} /> ميزانية الأسبوع</button>`}
+        ${list.totals.saved ? html`<span class="hchip hchip--gold">${L('وفّرت', 'You save')} <b dir="ltr">${money(list.totals.saved)}</b> ${riyal()}</span>` : null}
+        <span class="hchip">${mealsCount(cooked)} · ${L(list.totals.items + ' صنف', pl(list.totals.items, 'item', 'items'))}</span>
+        ${list.unpriced.length ? html`<span class="hchip">${L(list.unpriced.length + ' بدون سعر', list.unpriced.length + ' without a price')}</span>` : null}
+        ${budgetInfo.budget ? null : html`<button type="button" class="hchip hchip--button" onClick=${budgetInfo.openBudget}><${Icon} name="plus" size=${14} stroke=${2.4} /> ${L('ميزانية الأسبوع', 'Weekly budget')}</button>`}
       </div>
     <//>
     <div class="float searchbar">
-      <a class="searchbar__link" href="#/shop/search"><${Icon} name="search" size=${20} /><span>ابحث عن أي غرض: بصل، حليب، منظف…</span></a>
-      <a class="searchbar__scan" href="#/scan" aria-label="امسح باركود منتج وقارن سعره"><${Icon} name="scan" size=${24} stroke=${2} /></a>
+      <a class="searchbar__link" href="#/shop/search"><${Icon} name="search" size=${20} /><span>${L('ابحث عن أي غرض: بصل، حليب، منظف…', 'Search anything: onions, milk, cleaner…')}</span></a>
+      <a class="searchbar__scan" href="#/scan" aria-label=${L('امسح باركود منتج وقارن سعره', 'Scan a barcode and compare prices')}><${Icon} name="scan" size=${24} stroke=${2} /></a>
     </div>
     ${scanTip ? html`
       <button type="button" class="scan-tip" onClick=${set.scanTipSeen}>
-        <b>جديد: امسح وقارن</b>
-        وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.
+        <b>${L('جديد: امسح وقارن', 'New: scan and compare')}</b>
+        ${L('وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.', 'In the shop, scan any product’s barcode to see its price at the other stores.')}
       </button>` : null}
 
     <${BudgetCard} budget=${budgetInfo.budget} over=${budgetInfo.over} fit=${budgetInfo.fit} done=${week.budgetFit}
@@ -493,30 +615,32 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
 
     ${storeRows.length > 1 ? html`<${StoreCards} data=${data} rows=${storeRows} onPick=${set.store} />` : null}
 
-    <${SectionTitle} title="نوع السفرة" />
+    <${SectionTitle} title=${L('نوع السفرة', 'Cuisine')} />
     <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} />
 
-    <${SectionTitle} title="طبخات الأسبوع" href="#/plan" />
+    <${SectionTitle} title=${L('طبخات الأسبوع', 'This week’s meals')} href="#/plan" />
     <div class="carousel">
       ${plan.meals.map((meal, index) => {
         const off = week.skipped.includes(meal.id);
         const isLocked = locked.has(meal.id);
         const best = mealHighlight(meal, offers);
+        const isNew = week.fresh.includes(meal.id);
+        const swappedIn = plan.replacements.includes(meal.id);
         return html`
           <article class=${'mcard' + (off ? ' is-off' : '') + (isLocked ? ' is-locked' : '')}>
-            <a class="mcard__link" href=${isLocked ? '#/me' : '#/meal/' + meal.id} aria-label=${meal.name}>
+            <a class="mcard__link" href=${isLocked ? '#/me' : '#/meal/' + meal.id} aria-label=${nm(meal)}>
               <span class=${'mcard__art tile-' + (index % 6)}>
-                <span class="mcard__tags"><span class="mcard__day">اليوم ${index + 1}</span>${week.fresh.includes(meal.id) ? html`<span class="mcard__new">جديد</span>` : null}</span>
+                <span class="mcard__tags"><span class="mcard__day">${L('اليوم ', 'Day ')}${index + 1}</span>${isNew ? html`<span class="mcard__new">${L('جديد', 'New')}</span>` : swappedIn ? html`<span class="mcard__new">${L('بديل', 'Swapped in')}</span>` : null}</span>
                 <${Emoji} char=${meal.emoji} size=${84} />
               </span>
               <span class="mcard__body">
-                <span class="mcard__name">${meal.name}</span>
-                <span class="mcard__meta">${isLocked ? html`<${Icon} name="lock" size=${13} /> مع مقاضي بلس` : html`<${Icon} name="clock" size=${13} /> ${meal.minutes} دقيقة`}</span>
-                ${best && !isLocked ? html`<span class="mcard__deal">عرض ${best.name} <b dir="ltr">${money(halalas(best.price))}</b></span>` : null}
+                <span class="mcard__name">${nm(meal)}</span>
+                <span class="mcard__meta">${isLocked ? html`<${Icon} name="lock" size=${13} /> ${L('مع مقاضي بلس', 'With Maqadi Plus')}` : html`<${Icon} name="clock" size=${13} /> ${meal.minutes}${L(' دقيقة', ' min')}`}</span>
+                ${best && !isLocked ? html`<span class="mcard__deal">${L('عرض ', 'Offer: ')}${nm(best)} <b dir="ltr">${money(halalas(best.price))}</b></span>` : null}
               </span>
             </a>
             ${isLocked ? null : html`
-              <button type="button" class="mcard__toggle" aria-pressed=${!off} aria-label=${(off ? 'إضافة ' : 'استبعاد ') + meal.name} onClick=${() => set.toggleMeal(meal.id)}>
+              <button type="button" class="mcard__toggle" aria-pressed=${!off} aria-label=${(off ? L('إضافة ', 'Add ') : L('استبعاد ', 'Leave out ')) + nm(meal)} onClick=${() => set.toggleMeal(meal.id)}>
                 <${Icon} name="check" size=${15} stroke=${2.6} />
               </button>`}
           </article>`;
@@ -524,30 +648,32 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
     </div>
 
     ${rail.length ? html`
-      <${SectionTitle} title=${'عروض ' + storeName(data, store) + ' هذا الأسبوع'} emoji="🔥" href="#/shop" />
+      <${SectionTitle} title=${L('عروض ' + storeName(data, store) + ' هذا الأسبوع', storeName(data, store) + ' offers this week')} emoji="🔥" href="#/shop" />
       <div class="rail">
         ${rail.map(offer => html`<${ProductCard} data=${data} offer=${offer} units=${week.extras[offer.id] || 0} onSet=${value => set.extra(offer.id, value)} />`)}
       </div>` : null}
 
-    <p class="fineprint">الطبخات والأصناف تُختار تلقائياً كل أسبوع من أرخص ما يغطي حاجة الأسرة في كل متجر. الأسعار من المتاجر نفسها وقد تختلف حسب الفرع وتوفّر الكمية، والتوفير محسوب فقط للأصناف التي عليها خصم فعلي.</p>`;
+    <p class="fineprint">${L(
+      'الطبخات والأصناف تُختار تلقائياً كل أسبوع من أرخص ما يغطي حاجة الأسرة في كل متجر. الأسعار من المتاجر نفسها وقد تختلف حسب الفرع وتوفّر الكمية، والتوفير محسوب فقط للأصناف التي عليها خصم فعلي.',
+      'Meals and items are chosen every week from the cheapest products that cover the family’s needs at each store. Prices come from the stores themselves and may differ by branch and stock; savings count only items with a real discount.')}</p>`;
 }
 
 /* The same week at each store; the cheapest is marked only when every
    store priced the same number of items, so the comparison is fair. */
 function StoreCards({ data, rows, onPick }) {
   return html`
-    <div class="stores" role="group" aria-label="نفس السفرة في كل متجر">
+    <div class="stores" role="group" aria-label=${L('نفس السفرة في كل متجر', 'The same week at each store')}>
       ${rows.map(row => html`
         <button type="button" class=${'scard' + (row.current ? ' is-current' : '')} aria-pressed=${row.current} onClick=${() => onPick(row.id)}>
-          ${row.cheapest ? html`<span class="scard__tag">الأرخص</span>` : null}
+          ${row.cheapest ? html`<span class="scard__tag">${L('الأرخص', 'Cheapest')}</span>` : null}
           <span class="scard__name"><${StoreDot} id=${row.id} />${row.name}</span>
-          <span class="scard__value"><b dir="ltr">${money(row.cost)}</b> <small>ريال</small></span>
+          <span class="scard__value"><b dir="ltr">${money(row.cost)}</b> <small>${riyal()}</small></span>
           <span class=${'scard__note' + (row.current ? ' is-good' : row.diff > 0 ? ' is-bad' : row.diff < 0 ? ' is-good' : '')}>
-            ${row.current ? 'متجرك الحالي'
+            ${row.current ? L('متجرك الحالي', 'Your store')
               : row.diff === null ? row.caveat
-              : row.diff > 0 ? html`أغلى بـ <span dir="ltr">${money(row.diff)}</span>`
-              : row.diff < 0 ? html`أرخص بـ <span dir="ltr">${money(-row.diff)}</span>`
-              : 'نفس التكلفة'}
+              : row.diff > 0 ? html`${L('أغلى بـ', 'More by')} <span dir="ltr">${money(row.diff)}</span>`
+              : row.diff < 0 ? html`${L('أرخص بـ', 'Less by')} <span dir="ltr">${money(-row.diff)}</span>`
+              : L('نفس التكلفة', 'Same cost')}
           </span>
         </button>`)}
     </div>`;
@@ -555,15 +681,15 @@ function StoreCards({ data, rows, onPick }) {
 
 function StoreSheet({ data, rows, onPick, onClose }) {
   return html`
-    <${Sheet} title="من أين تتسوّق؟" onClose=${onClose}>
-      <p class="sheet__sub">تكلفة نفس السفرة في كل متجر، لعدد أفراد أسرتك.</p>
+    <${Sheet} title=${L('من أين تتسوّق؟', 'Where do you shop?')} onClose=${onClose}>
+      <p class="sheet__sub">${L('تكلفة نفس السفرة في كل متجر، لعدد أفراد أسرتك.', 'The same week at each store, for your family.')}</p>
       <ul class="sheet__list">
         ${rows.map(row => html`
           <li>
             <button type="button" class=${'store-option' + (row.current ? ' is-current' : '')} onClick=${() => { onPick(row.id); onClose(); }}>
-              <span class="store-option__name"><${StoreDot} id=${row.id} />${row.name}${row.cheapest ? html`<span class="badge badge--gold">الأرخص</span>` : null}</span>
+              <span class="store-option__name"><${StoreDot} id=${row.id} />${row.name}${row.cheapest ? html`<span class="badge badge--gold">${L('الأرخص', 'Cheapest')}</span>` : null}</span>
               <span class="store-option__sub">${pricePeriod(data, row.id).text}${row.caveat ? ' · ' + row.caveat : ''}</span>
-              <span class="store-option__value"><b dir="ltr">${money(row.cost)}</b> ريال</span>
+              <span class="store-option__value"><b dir="ltr">${money(row.cost)}</b> ${riyal()}</span>
               ${row.current ? html`<span class="store-option__check"><${Icon} name="check" size=${16} stroke=${2.6} /></span>` : null}
             </button>
           </li>`)}
@@ -571,38 +697,45 @@ function StoreSheet({ data, rows, onPick, onClose }) {
     <//>`;
 }
 
-function FamilySheet({ persons, mealsPerWeek, maxMeals, set, onClose }) {
+function FamilySheet({ persons, mealsPerWeek, maxMeals, set, onClose, openPrefs }) {
   return html`
-    <${Sheet} title="أسرتك" onClose=${onClose}>
+    <${Sheet} title=${L('أسرتك', 'Your family')} onClose=${onClose}>
       <div class="sheet__rows">
-        <div class="row"><span>عدد أفراد الأسرة</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} /></div>
-        <div class="row"><span>عدد الطبخات في الأسبوع</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label="عدد الطبخات في الأسبوع" onChange=${set.mealsPerWeek} /></div>
+        <div class="row"><span>${L('عدد أفراد الأسرة', 'People in the family')}</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} /></div>
+        <div class="row"><span>${L('عدد الطبخات في الأسبوع', 'Meals a week')}</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label=${L('عدد الطبخات في الأسبوع', 'Meals a week')} onChange=${set.mealsPerWeek} /></div>
+        <button type="button" class="row row--button" onClick=${openPrefs}><span>${L('تفضيلات العائلة', 'Family preferences')}</span><span class="row__value"><${Icon} name="chevron" size=${18} /></span></button>
       </div>
-      <button type="button" class="btn btn--wide" onClick=${onClose}>تم</button>
+      <button type="button" class="btn btn--wide" onClick=${onClose}>${L('تم', 'Done')}</button>
     <//>`;
 }
 
 /* ---------------------------------------------------------------------
    Plan
    ------------------------------------------------------------------- */
-function PlanTab({ data, head, plans, plan, persons, mealsPerWeek, maxMeals, week, offers, locked, set }) {
+function PlanTab({ data, head, plans, plan, persons, kids, avoid, mealsPerWeek, maxMeals, week, offers, locked, set, openPrefs }) {
   const [swapFor, setSwapFor] = useState(null);
   const picked = new Set(plan.meals.map(meal => meal.id));
   const swaps = plan.choices.filter(meal => !picked.has(meal.id));
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   return html`
     <${Head} ...${head} small>
-      <h1 class="head__title">خطة الأسبوع</h1>
-      <p class="head__sub">${plan.name} · ${cooked} طبخات · ${persons} أفراد</p>
+      <h1 class="head__title">${L('خطة الأسبوع', 'This week’s plan')}</h1>
+      <p class="head__sub">${nm(plan)} · ${mealsCount(cooked)} · ${familyLabel(persons, kids)}</p>
     <//>
     <div class="float panel">
-      <div class="row"><span><${Icon} name="people" size=${20} /> أفراد الأسرة</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} /></div>
-      <div class="row"><span><${Icon} name="plan" size=${20} /> طبخات الأسبوع</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label="عدد الطبخات في الأسبوع" onChange=${set.mealsPerWeek} /></div>
+      <div class="row"><span><${Icon} name="people" size=${20} /> ${L('أفراد الأسرة', 'Family')}</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} /></div>
+      <div class="row"><span><${Icon} name="plan" size=${20} /> ${L('طبخات الأسبوع', 'Meals a week')}</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label=${L('عدد الطبخات في الأسبوع', 'Meals a week')} onChange=${set.mealsPerWeek} /></div>
+      <button type="button" class="row row--button" onClick=${openPrefs}>
+        <span><${Icon} name="leaf" size=${20} /> ${L('تفضيلات العائلة', 'Family preferences')}</span>
+        <span class="row__value">${avoid.length ? L(avoid.length + ' مختارة', avoid.length + ' set') : L('لا شيء', 'None')} <${Icon} name="chevron" size=${18} /></span>
+      </button>
     </div>
 
-    <${SectionTitle} title="نوع السفرة" />
+    <${PrefsCard} plan=${plan} avoid=${avoid} mealsPerWeek=${mealsPerWeek} onEdit=${openPrefs} />
+
+    <${SectionTitle} title=${L('نوع السفرة', 'Cuisine')} />
     <${Cuisines} plans=${plans} current=${plan.id} onPick=${set.plan} />
-    <p class="tagline">${plan.tagline}</p>
+    <p class="tagline">${L(plan.tagline, plan.tagline_en || plan.tagline)}</p>
 
     <ol class="meals">
       ${plan.meals.map((meal, index) => {
@@ -615,58 +748,60 @@ function PlanTab({ data, head, plans, plan, persons, mealsPerWeek, maxMeals, wee
             <a class="meal__main" href=${isLocked ? '#/me' : '#/meal/' + meal.id}>
               <span class=${'meal__tile tile-' + (index % 6)}><${Emoji} char=${meal.emoji} size=${48} /></span>
               <span class="meal__body">
-                <span class="meal__day">اليوم ${index + 1}${week.fresh.includes(meal.id) ? html` <span class="badge badge--gold">جديد</span>` : null}</span>
-                <span class="meal__name">${meal.name}</span>
+                <span class="meal__day">${L('اليوم ', 'Day ')}${index + 1}${week.fresh.includes(meal.id) ? html` <span class="badge badge--gold">${L('جديد', 'New')}</span>` : plan.replacements.includes(meal.id) ? html` <span class="badge badge--gold">${L('بديل', 'Swapped in')}</span>` : null}</span>
+                <span class="meal__name">${nm(meal)}</span>
                 ${isLocked
-                  ? html`<span class="meal__meta"><${Icon} name="lock" size=${13} /> مع مقاضي بلس</span>`
-                  : html`<span class="meal__meta"><${Icon} name="clock" size=${13} /> ${meal.minutes} دقيقة · ${bought.length} مكونات من المتجر</span>
-                    ${best ? html`<span class="meal__deal">عرض: ${best.name} <b dir="ltr">${money(halalas(best.price))}</b> بدل <s dir="ltr">${money(halalas(best.was))}</s></span>` : null}
+                  ? html`<span class="meal__meta"><${Icon} name="lock" size=${13} /> ${L('مع مقاضي بلس', 'With Maqadi Plus')}</span>`
+                  : html`<span class="meal__meta"><${Icon} name="clock" size=${13} /> ${meal.minutes}${L(' دقيقة', ' min')} · ${L(bought.length + ' مكونات من المتجر', pl(bought.length, 'item', 'items') + ' to buy')}</span>
+                    ${best ? html`<span class="meal__deal">${L('عرض: ', 'Offer: ')}${nm(best)} <b dir="ltr">${money(halalas(best.price))}</b> ${L('بدل', 'instead of')} <s dir="ltr">${money(halalas(best.was))}</s></span>` : null}
                     <span class="thumbs">${bought.slice(0, 4).map(offer => html`<${Photo} data=${data} offer=${offer} width=${128} cls="thumb" />`)}${bought.length > 4 ? html`<em>+${bought.length - 4}</em>` : null}</span>`}
               </span>
             </a>
             ${isLocked ? null : html`
               <div class="meal__actions">
-                <button type="button" class="meal__toggle" aria-pressed=${!off} aria-label=${(off ? 'إضافة ' : 'استبعاد ') + meal.name} onClick=${() => set.toggleMeal(meal.id)}>
+                <button type="button" class="meal__toggle" aria-pressed=${!off} aria-label=${(off ? L('إضافة ', 'Add ') : L('استبعاد ', 'Leave out ')) + nm(meal)} onClick=${() => set.toggleMeal(meal.id)}>
                   <${Icon} name="check" size=${16} stroke=${2.6} />
                 </button>
-                ${swaps.length ? html`<button type="button" class="meal__swap" aria-label=${'تبديل ' + meal.name} onClick=${() => setSwapFor(meal)}><${Icon} name="swap" size=${15} /> بدّل</button>` : null}
+                ${swaps.length ? html`<button type="button" class="meal__swap" aria-label=${L('تبديل ', 'Swap ') + nm(meal)} onClick=${() => setSwapFor(meal)}><${Icon} name="swap" size=${15} /> ${L('بدّل', 'Swap')}</button>` : null}
               </div>`}
           </li>`;
       })}
     </ol>
 
-    ${plan.essentials ? html`
+    ${plan.essentials && plan.essentials.items.length ? html`
       <label class="essentials">
-        <span class="essentials__pic"><${Emoji} char="🥚" size=${34} /></span>
+        <span class="essentials__pic"><${Emoji} char=${plan.essentials.items.some(item => (item.tags || []).includes('egg')) ? '🥚' : '🍞'} size=${34} /></span>
         <span class="essentials__body">
-          <span class="essentials__name">${plan.essentials.name}</span>
-          <span class="essentials__text">${plan.essentials.items.map(item => item.name).join('، ')}</span>
+          <span class="essentials__name">${L(plan.essentials.name, plan.essentials.name_en || plan.essentials.name)}</span>
+          <span class="essentials__text">${plan.essentials.items.map(nm).join(L('، ', ', '))}</span>
         </span>
         <input class="switch" type="checkbox" role="switch" checked=${week.essentials} onChange=${event => set.essentials(event.target.checked)} />
       </label>` : null}
 
     ${swapFor ? html`<${SwapSheet} meal=${swapFor} options=${swaps} offers=${offers} onPick=${id => { set.swap(swapFor.id, id); setSwapFor(null); }} onClose=${() => setSwapFor(null)} />` : null}
 
-    <p class="fineprint">تتغيّر الطبخات كل أسبوع حسب أرخص ما في المتجر. «بدّل» تعرض طبخات أخرى من نفس السفرة أو من سفر أخرى، والقائمة تتحدّث فوراً.</p>`;
+    <p class="fineprint">${L(
+      'تتغيّر الطبخات كل أسبوع حسب أرخص ما في المتجر. «بدّل» تعرض طبخات أخرى من نفس السفرة أو من سفر أخرى، والقائمة تتحدّث فوراً.',
+      'Meals change every week with the cheapest products in the store. “Swap” shows other meals from this cuisine or others, and the list updates straight away.')}</p>`;
 }
 
 /* The meals that can take this one's place. */
 function SwapSheet({ meal, options, offers, onPick, onClose }) {
   return html`
-    <${Sheet} title=${'بدل «' + meal.name + '»'} onClose=${onClose}>
+    <${Sheet} title=${L('بدل «' + nm(meal) + '»', 'Instead of “' + nm(meal) + '”')} onClose=${onClose}>
       <ul class="sheet__list">
         ${options.map((option, i) => {
           const best = mealHighlight(option, offers);
           const groupStart = option.cuisine && !(options[i - 1] && options[i - 1].cuisine);
           return html`
-            ${groupStart ? html`<li class="sheet__group">من سفر أخرى</li>` : null}
+            ${groupStart ? html`<li class="sheet__group">${L('من سفر أخرى', 'From other cuisines')}</li>` : null}
             <li>
               <button type="button" class="swap-option" onClick=${() => onPick(option.id)}>
                 <span class="swap-option__tile"><${Emoji} char=${option.emoji} size=${34} /></span>
                 <span class="swap-option__body">
-                  <span class="swap-option__name">${option.name}</span>
-                  <span class="swap-option__meta">${option.cuisine ? option.cuisine + ' · ' : ''}${option.minutes} دقيقة${best ? html` · ${best.name} <b dir="ltr">${money(halalas(best.price))}</b>` : null}</span>
-                  ${option.unavailable ? html`<span class="swap-option__note">مكوّنها الأساسي غير متوفر في المتجر هذا الأسبوع</span>` : null}
+                  <span class="swap-option__name">${nm(option)}</span>
+                  <span class="swap-option__meta">${option.cuisine ? cuisineLabel(option.cuisine) + ' · ' : ''}${option.minutes}${L(' دقيقة', ' min')}${best ? html` · ${nm(best)} <b dir="ltr">${money(halalas(best.price))}</b>` : null}</span>
+                  ${option.unavailable ? html`<span class="swap-option__note">${L('مكوّنها الأساسي غير متوفر في المتجر هذا الأسبوع', 'Its main ingredient is not in the store this week')}</span>` : null}
                 </span>
               </button>
             </li>`;
@@ -678,26 +813,28 @@ function SwapSheet({ meal, options, offers, onPick, onClose }) {
 /* ---------------------------------------------------------------------
    One meal
    ------------------------------------------------------------------- */
-function MealPage({ data, plan, meal, index, persons, offers, backHref }) {
-  const scale = persons / plan.base_persons;
+function MealPage({ data, plan, meal, index, persons, kids, servings, offers, backHref }) {
+  const scale = servings / plan.base_persons;
   const bought = meal.ingredients.filter(ingredient => ingredient.offer).length;
+  const steps = LANG === 'en' && meal.steps_en ? meal.steps_en : meal.steps;
+  const tip = LANG === 'en' && meal.tip_en ? meal.tip_en : meal.tip;
   return html`
     <article class="recipe">
       <header class=${'recipe__hero tile-' + (Math.max(0, index) % 6)}>
-        <a class="recipe__back" href=${backHref} aria-label="رجوع"><${Icon} name="back" size=${20} stroke=${2.2} /></a>
+        <a class="recipe__back" href=${backHref} aria-label=${L('رجوع', 'Back')}><${Icon} name="back" size=${20} stroke=${2.2} /></a>
         <${Emoji} char=${meal.emoji} size=${132} />
       </header>
       <div class="recipe__head">
-        <h1 class="recipe__name">${meal.name}</h1>
-        <p class="recipe__summary">${meal.summary}</p>
+        <h1 class="recipe__name">${nm(meal)}</h1>
+        <p class="recipe__summary">${L(meal.summary, meal.summary_en || meal.summary)}</p>
         <div class="recipe__chips">
-          <span class="chip-soft"><${Icon} name="clock" size=${15} /> ${meal.minutes} دقيقة</span>
-          <span class="chip-soft"><${Icon} name="people" size=${15} /> تكفي ${persons} أشخاص</span>
-          <span class="chip-soft"><${Icon} name="cart" size=${15} /> ${bought} مكونات من المتجر</span>
+          <span class="chip-soft"><${Icon} name="clock" size=${15} /> ${meal.minutes}${L(' دقيقة', ' min')}</span>
+          <span class="chip-soft"><${Icon} name="people" size=${15} /> ${L('تكفي ', 'Serves ')}${familyLabel(persons, kids)}</span>
+          <span class="chip-soft"><${Icon} name="cart" size=${15} /> ${L(bought + ' مكونات من المتجر', pl(bought, 'item', 'items') + ' to buy')}</span>
         </div>
       </div>
 
-      <h2 class="section-title">المكونات</h2>
+      <h2 class="section-title">${L('المكونات', 'Ingredients')}</h2>
       <ul class="ingredients">
         ${meal.ingredients.map(ingredient => {
           const offer = ingredient.offer ? offers.get(ingredient.offer) : null;
@@ -705,20 +842,20 @@ function MealPage({ data, plan, meal, index, persons, offers, backHref }) {
             <li class="ingredient">
               ${offer ? html`<${Photo} data=${data} offer=${offer} width=${128} cls="ingredient__photo" />` : html`<span class="ingredient__photo photo--none"><${Emoji} char="🧂" size=${24} /></span>`}
               <span class="ingredient__body">
-                <span class="ingredient__name">${ingredient.name}${ingredient.pantry ? html`<small> من مطبخك</small>` : null}</span>
+                <span class="ingredient__name">${nm(ingredient)}${ingredient.pantry ? html`<small>${L(' من مطبخك', ' from your kitchen')}</small>` : null}</span>
                 <span class="ingredient__qty">${ingredientAmount(ingredient, scale)}</span>
-                ${offer ? html`<span class="ingredient__offer">${storeName(data, offer.store)}: ${offer.name} ${offerSize(offer)}</span>` : null}
+                ${offer ? html`<span class="ingredient__offer">${storeName(data, offer.store)}: ${nm(offer)} ${offerSize(offer)}</span>` : null}
               </span>
               ${offer ? html`<${OfferPrice} offer=${offer} />` : null}
             </li>`;
         })}
       </ul>
 
-      <h2 class="section-title">الطريقة</h2>
+      <h2 class="section-title">${L('الطريقة', 'Method')}</h2>
       <ol class="steps">
-        ${meal.steps.map(step => html`<li>${step}</li>`)}
+        ${steps.map(step => html`<li>${step}</li>`)}
       </ol>
-      ${meal.tip ? html`<p class="tip"><${Emoji} char="💡" size=${22} /> <span>${meal.tip}</span></p>` : null}
+      ${tip ? html`<p class="tip"><${Emoji} char="💡" size=${22} /> <span>${tip}</span></p>` : null}
     </article>`;
 }
 
@@ -728,26 +865,26 @@ function MealPage({ data, plan, meal, index, persons, offers, backHref }) {
 function lineDetail(line) {
   const offer = line.offer;
   const each = money(halalas(offer.price));
-  const unit = SOLD_BY[offer.sold_by] || 'للعبوة';
-  if (line.loose) return `${line.units} كجم × ${each} للكيلو`;
+  const unit = soldBy(offer.sold_by) || L('للعبوة', 'per pack');
+  if (line.loose) return L(`${line.units} كجم × ${each} للكيلو`, `${line.units} kg × ${each} per kg`);
   return `${line.units} × ${each} ${unit}`;
 }
 
 function shareText(data, list, period) {
   const rows = [];
-  rows.push(`🛒 مقاضي الأسبوع — ${period.text}`);
+  rows.push(L(`🛒 مقاضي الأسبوع — ${period.text}`, `🛒 This week’s groceries — ${period.text}`));
   AISLES.forEach(aisle => {
     const lines = list.lines.filter(line => aisleOf(line.offer.category) === aisle);
     if (!lines.length) return;
-    rows.push('', aisle.name + ':');
-    lines.forEach(line => rows.push(`▫️ ${line.offer.name}${offerSize(line.offer) ? ' ' + offerSize(line.offer) : ''} — ${lineDetail(line)} = ${money(line.cost)} (${storeName(data, line.offer.store)})`));
+    rows.push('', aisleName(aisle) + ':');
+    lines.forEach(line => rows.push(`▫️ ${nm(line.offer)}${offerSize(line.offer) ? ' ' + offerSize(line.offer) : ''} — ${lineDetail(line)} = ${money(line.cost)} (${storeName(data, line.offer.store)})`));
   });
   if (list.unpriced.length) {
-    rows.push('', 'بدون سعر هذا الأسبوع:');
-    list.unpriced.forEach(item => rows.push(`▫️ ${item.name}${item.need ? ' — ' + amount(item.need) : ''}`));
+    rows.push('', L('بدون سعر هذا الأسبوع:', 'No price this week:'));
+    list.unpriced.forEach(item => rows.push(`▫️ ${nm(item)}${item.need ? ' — ' + amount(item.need) : ''}`));
   }
-  rows.push('', `إجمالي الأصناف المسعّرة: ${money(list.totals.cost)} ريال`);
-  if (list.totals.saved) rows.push(`التوفير من الخصومات: ${money(list.totals.saved)} ريال`);
+  rows.push('', L(`إجمالي الأصناف المسعّرة: ${money(list.totals.cost)} ريال`, `Total of priced items: ${money(list.totals.cost)} SAR`));
+  if (list.totals.saved) rows.push(L(`التوفير من الخصومات: ${money(list.totals.saved)} ريال`, `Saved on discounts: ${money(list.totals.saved)} SAR`));
   return rows.join('\n');
 }
 
@@ -773,10 +910,10 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
   const title = html`
     <div class="head__titlerow">
       <div>
-        <h1 class="head__title">قائمة المقاضي</h1>
+        <h1 class="head__title">${L('قائمة المقاضي', 'Shopping list')}</h1>
         <p class="head__sub">${period.text}</p>
       </div>
-      ${total ? html`<button type="button" class="head__action" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? 'تم النسخ' : 'مشاركة'}</button>` : null}
+      ${total ? html`<button type="button" class="head__action" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? L('تم النسخ', 'Copied') : L('مشاركة', 'Share')}</button>` : null}
     </div>`;
 
   if (!total) {
@@ -784,36 +921,40 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
       <${Head} ...${head} small>${title}<//>
       <div class="float empty">
         <${Emoji} char="🛒" size=${72} />
-        <p class="empty__title">القائمة فارغة</p>
-        <p>يلزم اختيار طبخة واحدة على الأقل من الخطة، أو إضافة أصناف من شاشة التسوّق.</p>
-        <a class="btn" href="#/plan">العودة إلى الخطة</a>
+        <p class="empty__title">${L('القائمة فارغة', 'The list is empty')}</p>
+        <p>${L('يلزم اختيار طبخة واحدة على الأقل من الخطة، أو إضافة أصناف من شاشة التسوّق.', 'Choose at least one meal in the plan, or add items from Shop.')}</p>
+        <a class="btn" href="#/plan">${L('العودة إلى الخطة', 'Back to the plan')}</a>
       </div>`;
   }
 
   return html`
     <${Head} ...${head} small>${title}<//>
-    <section class="float panel summary" aria-label="ملخص القائمة">
+    <section class="float panel summary" aria-label=${L('ملخص القائمة', 'List summary')}>
       <div class="summary__top">
         <div>
-          <span class="summary__label">إجمالي الأصناف المسعّرة</span>
-          <span class="summary__value"><${Sum} value=${list.totals.cost} /> <small>ريال</small></span>
+          <span class="summary__label">${L('إجمالي الأصناف المسعّرة', 'Total of priced items')}</span>
+          <span class="summary__value"><${Sum} value=${list.totals.cost} /> <small>${riyal()}</small></span>
         </div>
-        ${list.totals.saved ? html`<span class="hchip hchip--gold">وفّرت <b dir="ltr">${money(list.totals.saved)}</b></span>` : null}
+        ${list.totals.saved ? html`<span class="hchip hchip--gold">${L('وفّرت', 'Saved')} <b dir="ltr">${money(list.totals.saved)}</b></span>` : null}
       </div>
       ${compare.map(other => {
         const diff = other.fair ? other.totals.cost - list.totals.cost : null;
-        const missing = other.unmatched ? (other.unmatched === 1 ? 'صنف أضفته غير موجود هناك' : other.unmatched + ' أصناف أضفتها غير موجودة هناك') : '';
-        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />نفس القائمة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? 'أغلى' : 'أرخص'} بـ <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ` · ${other.unpriced} بدون سعر هناك` : ''}</p>`;
+        const missing = other.unmatched
+          ? (other.unmatched === 1 ? L('صنف أضفته غير موجود هناك', 'an item you added is not sold there') : L(other.unmatched + ' أصناف أضفتها غير موجودة هناك', other.unmatched + ' items you added are not sold there'))
+          : '';
+        return html`<p class="summary__compare"><${StoreDot} id=${other.id} />${L('نفس القائمة في ', 'The same list at ')}${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ${riyal()}${diff ? html` <em class=${diff > 0 ? 'is-bad' : 'is-good'}>(${diff > 0 ? L('أغلى', 'more') : L('أرخص', 'less')} ${L('بـ', 'by')} <span dir="ltr">${money(Math.abs(diff))}</span>)</em>` : ''}${missing ? ' · ' + missing : ''}${other.unpriced ? ' · ' + L(other.unpriced + ' بدون سعر هناك', other.unpriced + ' without a price there') : ''}</p>`;
       })}
       ${budgetInfo.budget ? html`
         <p class=${'summary__budget' + (budgetInfo.over ? ' is-over' : '')}>
-          ميزانيتك <b dir="ltr">${budgetInfo.budget}</b> ريال ·
-          ${budgetInfo.over ? html`أغلى بـ <b dir="ltr">${money(list.totals.cost - budgetInfo.budget * 100)}</b>` : html`باقي <b dir="ltr">${money(budgetInfo.budget * 100 - list.totals.cost)}</b> ريال`}
-          <button type="button" class="link link--green" onClick=${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? budgetInfo.openFit : budgetInfo.openBudget}>${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? 'رتّبها ضمن ميزانيتي' : 'تعديل'}</button>
+          ${L('ميزانيتك', 'Budget')} <b dir="ltr">${budgetInfo.budget}</b> ${riyal()} ·
+          ${budgetInfo.over
+            ? html`${L('أغلى بـ', 'over by')} <b dir="ltr">${money(list.totals.cost - budgetInfo.budget * 100)}</b>`
+            : html`${L('باقي', 'left:')} <b dir="ltr">${money(budgetInfo.budget * 100 - list.totals.cost)}</b> ${riyal()}`}
+          <button type="button" class="link link--green" onClick=${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? budgetInfo.openFit : budgetInfo.openBudget}>${budgetInfo.over && budgetInfo.fit && budgetInfo.fit.swaps.length ? L('رتّبها ضمن ميزانيتي', 'Fit it to my budget') : L('تعديل', 'Edit')}</button>
         </p>` : null}
       <div class="summary__progress">
-        <span>تم ${ticked} من ${total}</span>
-        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax=${total} aria-valuenow=${ticked} aria-label="ما تم شراؤه"><span style=${'width:' + (total ? ticked / total * 100 : 0) + '%'}></span></div>
+        <span>${L(`تم ${ticked} من ${total}`, `${ticked} of ${total} done`)}</span>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax=${total} aria-valuenow=${ticked} aria-label=${L('ما تم شراؤه', 'Bought so far')}><span style=${'width:' + (total ? ticked / total * 100 : 0) + '%'}></span></div>
       </div>
     </section>
 
@@ -822,27 +963,27 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
       if (!lines.length) return null;
       return html`
         <section class="aisle">
-          <h2 class="aisle__name"><${Emoji} char=${aisle.emoji} size=${22} /> ${aisle.name} <small>${lines.length}</small></h2>
+          <h2 class="aisle__name"><${Emoji} char=${aisle.emoji} size=${22} /> ${aisleName(aisle)} <small>${lines.length}</small></h2>
           <ul class="lines">
             ${lines.map(line => html`
               <li class=${'line' + (done(line.key) ? ' is-done' : '')}>
                 <label class="line__check">
-                  <input type="checkbox" class="tick" checked=${done(line.key)} onChange=${() => set.toggleChecked(line.key)} aria-label=${line.offer.name} />
+                  <input type="checkbox" class="tick" checked=${done(line.key)} onChange=${() => set.toggleChecked(line.key)} aria-label=${nm(line.offer)} />
                   <${Photo} data=${data} offer=${line.offer} width=${128} cls="line__photo" />
                   <span class="line__body">
-                    <span class="line__name">${line.offer.name} <small dir="ltr">${offerSize(line.offer)}</small></span>
-                    <span class="line__sub">${lineDetail(line)} · ${storeName(data, line.offer.store)}${line.need ? ' · يلزمك ' + amount(line.need) : ''}</span>
+                    <span class="line__name">${nm(line.offer)} <small dir="ltr">${offerSize(line.offer)}</small></span>
+                    <span class="line__sub">${lineDetail(line)} · ${storeName(data, line.offer.store)}${line.need ? L(' · يلزمك ', ' · you need ') + amount(line.need) : ''}</span>
                     <span class="line__tags">
-                      ${line.saved ? html`<span class="badge badge--save">وفّرت <b dir="ltr">${money(line.saved)}</b></span>` : null}
-                      ${line.keeps ? html`<span class="badge">يكفي لأكثر من أسبوع</span>` : null}
+                      ${line.saved ? html`<span class="badge badge--save">${L('وفّرت', 'Saved')} <b dir="ltr">${money(line.saved)}</b></span>` : null}
+                      ${line.keeps ? html`<span class="badge">${L('يكفي لأكثر من أسبوع', 'Lasts more than a week')}</span>` : null}
                       ${line.offer.promo ? html`<span class="badge badge--cut" dir="ltr">${line.offer.promo}</span>` : null}
-                      ${line.offer.note ? html`<span class="badge badge--note">${NOTES[line.offer.note] || line.offer.note}</span>` : null}
+                      ${line.offer.note ? html`<span class="badge badge--note">${noteText(line.offer.note)}</span>` : null}
                     </span>
                   </span>
                 </label>
                 <span class="line__side">
                   <span class="line__cost" dir="ltr">${money(line.cost)}</span>
-                  ${line.extra ? html`<button type="button" class="link" onClick=${() => set.extra(line.offer.id, 0)}>إزالة</button>` : null}
+                  ${line.extra ? html`<button type="button" class="link" onClick=${() => set.extra(line.offer.id, 0)}>${L('إزالة', 'Remove')}</button>` : null}
                 </span>
               </li>`)}
           </ul>
@@ -851,16 +992,16 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
 
     ${list.unpriced.length ? html`
       <section class="aisle">
-        <h2 class="aisle__name"><${Emoji} char="🏷️" size=${22} /> بدون سعر هذا الأسبوع</h2>
-        <p class="aisle__note">لم نجدها في المتجر هذا الأسبوع، فهي خارج الإجمالي.</p>
+        <h2 class="aisle__name"><${Emoji} char="🏷️" size=${22} /> ${L('بدون سعر هذا الأسبوع', 'No price this week')}</h2>
+        <p class="aisle__note">${L('لم نجدها في المتجر هذا الأسبوع، فهي خارج الإجمالي.', 'Not found in the store this week, so not in the total.')}</p>
         <ul class="lines">
           ${list.unpriced.map(item => html`
             <li class=${'line' + (done('u:' + item.name) ? ' is-done' : '')}>
               <label class="line__check">
-                <input type="checkbox" class="tick" checked=${done('u:' + item.name)} onChange=${() => set.toggleChecked('u:' + item.name)} aria-label=${item.name} />
+                <input type="checkbox" class="tick" checked=${done('u:' + item.name)} onChange=${() => set.toggleChecked('u:' + item.name)} aria-label=${nm(item)} />
                 <span class="line__body">
-                  <span class="line__name">${item.name}</span>
-                  <span class="line__sub">${item.need ? 'يلزمك ' + amount(item.need) : ''}${item.sources.length ? ' · ' + item.sources.join('، ') : ''}</span>
+                  <span class="line__name">${nm(item)}</span>
+                  <span class="line__sub">${item.need ? L('يلزمك ', 'You need ') + amount(item.need) : ''}${item.sources.length ? ' · ' + item.sources.join(L('، ', ', ')) : ''}</span>
                 </span>
               </label>
             </li>`)}
@@ -869,8 +1010,8 @@ function ListTab({ data, head, list, week, set, period, compare, budgetInfo }) {
 
     ${list.pantry.length ? html`
       <details class="pantry">
-        <summary><${Emoji} char="🧂" size=${20} /> من مطبخك (${list.pantry.length})</summary>
-        <p>${list.pantry.map(item => item.name).join('، ')}</p>
+        <summary><${Emoji} char="🧂" size=${20} /> ${L('من مطبخك', 'From your kitchen')} (${list.pantry.length})</summary>
+        <p>${list.pantry.map(nm).join(L('، ', ', '))}</p>
       </details>` : null}`;
 }
 
@@ -897,7 +1038,7 @@ function ShopTab({ data, head, week, set, twin, focus }) {
   const categories = useMemo(() => {
     const counts = {};
     data.offers.offers.forEach(offer => { if (inStore(offer)) counts[offer.category] = (counts[offer.category] || 0) + 1; });
-    return Object.keys(CATEGORY_NAMES).filter(id => counts[id]);
+    return Object.keys(CATEGORIES).filter(id => counts[id]);
   }, [data, store]);
 
   // Opening the screen: this week's real discounts. A search or a section: every product, discounts first.
@@ -911,33 +1052,34 @@ function ShopTab({ data, head, week, set, twin, focus }) {
   useEffect(() => setShown(CONFIG.shopPage), [query, category, store]);
 
   const names = storeIds.map(id => storeName(data, id));
-  const heading = searching ? `${count(results.length)} نتيجة` : category !== 'all' ? CATEGORY_NAMES[category] : 'أقوى عروض الأسبوع';
+  const storeList = names.length > 1 ? names.slice(0, -1).join(L('، ', ', ')) + L(' و', ' and ') + names[names.length - 1] : names[0];
+  const heading = searching ? L(`${count(results.length)} نتيجة`, pl(results.length, 'result', 'results')) : category !== 'all' ? categoryName(category) : L('أقوى عروض الأسبوع', 'Top deals this week');
 
   return html`
     <${Head} ...${head} small>
-      <h1 class="head__title">تسوّق كل أغراضك</h1>
-      <p class="head__sub">${count(data.offers.offers.length)} منتج من ${names.slice(0, -1).join('، ')}${names.length > 1 ? ' و' : ''}${names[names.length - 1]}</p>
+      <h1 class="head__title">${L('تسوّق كل أغراضك', 'Shop everything')}</h1>
+      <p class="head__sub">${L(`${count(data.offers.offers.length)} منتج من ${storeList}`, `${count(data.offers.offers.length)} products from ${storeList}`)}</p>
     <//>
     <label class="float searchbar">
       <${Icon} name="search" size=${20} />
-      <input ref=${input} type="search" inputmode="search" placeholder="ابحث عن أي غرض: بصل، حليب، منظف…" aria-label="بحث في المنتجات" value=${query} onInput=${event => setQuery(event.target.value)} />
-      ${query ? html`<button type="button" class="searchbar__clear" aria-label="مسح البحث" onClick=${() => setQuery('')}><${Icon} name="close" size=${16} /></button>` : null}
-      <a class="searchbar__scan" href="#/scan" aria-label="امسح باركود منتج وقارن سعره"><${Icon} name="scan" size=${24} stroke=${2} /></a>
+      <input ref=${input} type="search" inputmode="search" placeholder=${L('ابحث عن أي غرض: بصل، حليب، منظف…', 'Search anything: onions, milk, cleaner…')} aria-label=${L('بحث في المنتجات', 'Search products')} value=${query} onInput=${event => setQuery(event.target.value)} />
+      ${query ? html`<button type="button" class="searchbar__clear" aria-label=${L('مسح البحث', 'Clear search')} onClick=${() => setQuery('')}><${Icon} name="close" size=${16} /></button>` : null}
+      <a class="searchbar__scan" href="#/scan" aria-label=${L('امسح باركود منتج وقارن سعره', 'Scan a barcode and compare prices')}><${Icon} name="scan" size=${24} stroke=${2} /></a>
     </label>
 
     ${storeIds.length > 1 ? html`
-      <div class="pills" role="group" aria-label="المتجر">
-        <button type="button" class="pill" aria-pressed=${store === 'all'} onClick=${() => setStore('all')}>كل المتاجر</button>
+      <div class="pills" role="group" aria-label=${L('المتجر', 'Store')}>
+        <button type="button" class="pill" aria-pressed=${store === 'all'} onClick=${() => setStore('all')}>${L('كل المتاجر', 'All stores')}</button>
         ${storeIds.map(id => html`<button type="button" class="pill" aria-pressed=${store === id} onClick=${() => setStore(id)}><${StoreDot} id=${id} />${storeName(data, id)}</button>`)}
       </div>` : null}
 
-    <div class="circles circles--cats" role="group" aria-label="القسم">
+    <div class="circles circles--cats" role="group" aria-label=${L('القسم', 'Aisle')}>
       <button type="button" class="circle" aria-pressed=${category === 'all'} onClick=${() => setCategory('all')}>
-        <span class="circle__pic"><${Emoji} char="🔥" size=${36} /></span><span class="circle__name">العروض</span>
+        <span class="circle__pic"><${Emoji} char="🔥" size=${36} /></span><span class="circle__name">${L('العروض', 'Deals')}</span>
       </button>
       ${categories.map(id => html`
         <button type="button" class="circle" aria-pressed=${category === id} onClick=${() => setCategory(id)}>
-          <span class="circle__pic"><${Emoji} char=${CATEGORY_EMOJI[id]} size=${36} /></span><span class="circle__name">${CATEGORY_NAMES[id]}</span>
+          <span class="circle__pic"><${Emoji} char=${categoryEmoji(id)} size=${36} /></span><span class="circle__name">${categoryName(id)}</span>
         </button>`)}
     </div>
 
@@ -948,8 +1090,8 @@ function ShopTab({ data, head, week, set, twin, focus }) {
           <${ProductCard} data=${data} offer=${offer} units=${week.extras[offer.id] || 0} onSet=${value => set.extra(offer.id, value)}
             twins=${storeIds.filter(id => id !== offer.store).map(id => twin(offer, id)).filter(Boolean)} />`)}
       </div>
-      ${results.length > shown ? html`<button type="button" class="btn btn--ghost btn--wide" onClick=${() => setShown(shown + CONFIG.shopPage)}>عرض المزيد (${count(results.length - shown)})</button>` : null}`
-    : html`<div class="empty"><${Emoji} char="🔍" size=${56} /><p class="empty__title">${searching ? 'لا توجد منتجات مطابقة' : 'لا توجد عروض مطابقة'}</p><p>يمكن تجربة كلمة أخرى أو قسم آخر.</p></div>`}`;
+      ${results.length > shown ? html`<button type="button" class="btn btn--ghost btn--wide" onClick=${() => setShown(shown + CONFIG.shopPage)}>${L('عرض المزيد', 'Show more')} (${count(results.length - shown)})</button>` : null}`
+    : html`<div class="empty"><${Emoji} char="🔍" size=${56} /><p class="empty__title">${searching ? L('لا توجد منتجات مطابقة', 'No matching products') : L('لا توجد عروض مطابقة', 'No matching deals')}</p><p>${L('يمكن تجربة كلمة أخرى أو قسم آخر.', 'Try another word or aisle.')}</p></div>`}`;
 }
 
 /* ---------------------------------------------------------------------
@@ -1057,30 +1199,30 @@ function ScanPage({ data, store, offers, twin, week, set, period, onClose, onSto
 
   const blocked = status === 'denied' || status === 'unavailable';
   return html`
-    <div class="scan" role="dialog" aria-modal="true" aria-label="امسح الباركود">
+    <div class="scan" role="dialog" aria-modal="true" aria-label=${L('امسح الباركود', 'Scan a barcode')}>
       <video ref=${video} class="scan__video" playsinline muted autoplay aria-hidden="true"></video>
       <div class="scan__top">
-        <button type="button" class="scan__round" aria-label="إغلاق" onClick=${onClose}><${Icon} name="close" size=${22} stroke=${2.2} /></button>
-        <span class="scan__title">امسح الباركود</span>
+        <button type="button" class="scan__round" aria-label=${L('إغلاق', 'Close')} onClick=${onClose}><${Icon} name="close" size=${22} stroke=${2.2} /></button>
+        <span class="scan__title">${L('امسح الباركود', 'Scan a barcode')}</span>
         ${torch !== null
-          ? html`<button type="button" class="scan__round" aria-pressed=${torch} aria-label="ضوء الكاميرا" onClick=${toggleTorch}><${Icon} name="flash" size=${20} stroke=${2} /></button>`
+          ? html`<button type="button" class="scan__round" aria-pressed=${torch} aria-label=${L('ضوء الكاميرا', 'Camera light')} onClick=${toggleTorch}><${Icon} name="flash" size=${20} stroke=${2} /></button>`
           : html`<span class="scan__round scan__round--empty"></span>`}
       </div>
 
       ${blocked ? html`
         <div class="scan__blocked">
           <${Emoji} char="📷" size=${64} />
-          <p class="scan__blocked-title">${status === 'denied' ? 'نحتاج إذن الكاميرا' : 'الكاميرا غير متاحة'}</p>
+          <p class="scan__blocked-title">${status === 'denied' ? L('نحتاج إذن الكاميرا', 'We need the camera') : L('الكاميرا غير متاحة', 'The camera is not available')}</p>
           <p>${status === 'denied'
-            ? 'لقراءة الباركود يلزم السماح للتطبيق باستخدام الكاميرا من إعدادات المتصفح، ثم فتح هذه الشاشة من جديد.'
-            : 'لم نتمكن من تشغيل الكاميرا على هذا الجهاز. يمكنك كتابة رقم الباركود بدلاً من ذلك.'}</p>
+            ? L('لقراءة الباركود يلزم السماح للتطبيق باستخدام الكاميرا من إعدادات المتصفح، ثم فتح هذه الشاشة من جديد.', 'To read barcodes, allow the camera in your browser settings, then open this screen again.')
+            : L('لم نتمكن من تشغيل الكاميرا على هذا الجهاز. يمكنك كتابة رقم الباركود بدلاً من ذلك.', 'We could not start the camera on this device. You can type the barcode number instead.')}</p>
         </div>` : html`
         <div class="scan__finder" aria-hidden="true"><i></i><i></i><i></i><i></i>${status === 'scanning' && !result ? html`<span class="scan__laser"></span>` : null}</div>
-        <p class="scan__hint">${status === 'starting' ? 'جاري تشغيل الكاميرا…' : index ? 'وجّه الكاميرا على باركود المنتج' : 'جاري تجهيز الماسح…'}<small>يقرأ تلقائياً، بدون ضغط أي زر</small></p>`}
+        <p class="scan__hint">${status === 'starting' ? L('جاري تشغيل الكاميرا…', 'Starting the camera…') : index ? L('وجّه الكاميرا على باركود المنتج', 'Point the camera at the barcode') : L('جاري تجهيز الماسح…', 'Getting the scanner ready…')}<small>${L('يقرأ تلقائياً، بدون ضغط أي زر', 'It reads by itself, no button needed')}</small></p>`}
 
       <div class="scan__bottom">
-        <button type="button" class="scan__store" onClick=${onStore}><${StoreDot} id=${store} />تتسوّق الآن في ${storeName(data, store)}</button>
-        <button type="button" class="scan__manual" onClick=${() => setTyping(true)}><${Icon} name="keys" size=${20} /> إدخال رقم الباركود يدوياً</button>
+        <button type="button" class="scan__store" onClick=${onStore}><${StoreDot} id=${store} />${L('تتسوّق الآن في ', 'Shopping at ')}${storeName(data, store)}</button>
+        <button type="button" class="scan__manual" onClick=${() => setTyping(true)}><${Icon} name="keys" size=${20} /> ${L('إدخال رقم الباركود يدوياً', 'Type the barcode number')}</button>
       </div>
 
       ${typing ? html`<${TypeCode} onClose=${() => setTyping(false)} onCode=${code => { setTyping(false); show(code); }} />` : null}
@@ -1097,12 +1239,12 @@ function TypeCode({ onClose, onCode }) {
     <div class="scan__backdrop" onClick=${onClose}></div>
     <form class="scan-sheet" onSubmit=${event => { event.preventDefault(); if (digits.length >= 8) onCode(digits); }}>
       <span class="sheet__grip" aria-hidden="true"></span>
-      <h2 class="sheet__title">رقم الباركود</h2>
-      <p class="sheet__sub">الأرقام المكتوبة تحت خطوط الباركود (8 أو 12 أو 13 رقماً).</p>
-      <input ref=${input} class="code-input" type="text" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="6281007074759" aria-label="رقم الباركود" value=${value} onInput=${event => setValue(event.target.value)} />
+      <h2 class="sheet__title">${L('رقم الباركود', 'Barcode number')}</h2>
+      <p class="sheet__sub">${L('الأرقام المكتوبة تحت خطوط الباركود (8 أو 12 أو 13 رقماً).', 'The digits printed under the bars (8, 12 or 13 digits).')}</p>
+      <input ref=${input} class="code-input" type="text" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="6281007074759" aria-label=${L('رقم الباركود', 'Barcode number')} value=${value} onInput=${event => setValue(event.target.value)} />
       <div class="scan-sheet__actions">
-        <button type="submit" class="btn" disabled=${digits.length < 8}>بحث</button>
-        <button type="button" class="btn btn--ghost" onClick=${onClose}>إلغاء</button>
+        <button type="submit" class="btn" disabled=${digits.length < 8}>${L('بحث', 'Search')}</button>
+        <button type="button" class="btn btn--ghost" onClick=${onClose}>${L('إلغاء', 'Cancel')}</button>
       </div>
     </form>`;
 }
@@ -1115,15 +1257,15 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
         <span class="sheet__grip" aria-hidden="true"></span>
         <div class="scan-missing">
           <${Emoji} char="🔍" size=${56} />
-          <p class="scan-missing__title">لم نجد هذا الباركود</p>
+          <p class="scan-missing__title">${L('لم نجد هذا الباركود', 'We couldn’t find this barcode')}</p>
           ${result.code ? html`<p class="scan-missing__code" dir="ltr">${result.code}</p>` : null}
           <p>${result.storeCode
-            ? 'هذا باركود خاص بالمتجر، مثل ملصقات الخضار والفواكه الموزونة، فلا يمكن مقارنته بمتجر آخر.'
-            : 'المنتج غير موجود في أسعار هذا الأسبوع لدى المتاجر في التطبيق، أو أن الرقم لم يُقرأ كاملاً.'}</p>
+            ? L('هذا باركود خاص بالمتجر، مثل ملصقات الخضار والفواكه الموزونة، فلا يمكن مقارنته بمتجر آخر.', 'This is a store’s own code, like the stickers on weighed fruit and vegetables, so it can’t be compared with another store.')
+            : L('المنتج غير موجود في أسعار هذا الأسبوع لدى المتاجر في التطبيق، أو أن الرقم لم يُقرأ كاملاً.', 'The product is not in this week’s prices from the stores in the app, or the number was not read in full.')}</p>
         </div>
         <div class="scan-sheet__actions">
-          <button type="button" class="btn" onClick=${onAgain}><${Icon} name="scan" size=${20} /> امسح منتجاً آخر</button>
-          <a class="btn btn--ghost" href="#/shop/search">ابحث بالاسم</a>
+          <button type="button" class="btn" onClick=${onAgain}><${Icon} name="scan" size=${20} /> ${L('امسح منتجاً آخر', 'Scan another')}</button>
+          <a class="btn btn--ghost" href="#/shop/search">${L('ابحث بالاسم', 'Search by name')}</a>
         </div>
       </div>`;
   }
@@ -1138,12 +1280,14 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
     <div class="scan__backdrop" onClick=${onAgain}></div>
     <div class="scan-sheet" role="status">
       <span class="sheet__grip" aria-hidden="true"></span>
-      <p class="scan-found"><span class="scan-found__ok"><${Icon} name="check" size=${14} stroke=${3} /></span>${compared > 1 ? `نفس المنتج موجود في ${compared === 2 ? 'متجرين' : compared + ' متاجر'}` : 'وجدنا المنتج'}</p>
+      <p class="scan-found"><span class="scan-found__ok"><${Icon} name="check" size=${14} stroke=${3} /></span>${compared > 1
+        ? L(`نفس المنتج موجود في ${compared === 2 ? 'متجرين' : compared + ' متاجر'}`, `The same product at ${pl(compared, 'store', 'stores')}`)
+        : L('وجدنا المنتج', 'Product found')}</p>
       <div class="scan-product">
         <${Photo} data=${data} offer=${product} width=${256} cls="scan-product__photo" />
         <div>
-          <h3 class="scan-product__name">${product.name}</h3>
-          <p class="scan-product__sub">${[offerSize(product), 'باركود ' + found.code].filter(Boolean).join(' · ')}</p>
+          <h3 class="scan-product__name">${nm(product)}</h3>
+          <p class="scan-product__sub">${[offerSize(product), L('باركود ', 'Barcode ') + found.code].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
       <div class="scan-rows">
@@ -1152,160 +1296,189 @@ function ScanResult({ data, result, week, set, period, onAgain }) {
           return html`
             <div class=${'scan-row' + (row.cheapest ? ' is-best' : '')}>
               <span class="scan-row__name"><${StoreDot} id=${row.store} />${storeName(data, row.store)}
-                ${row.cheapest ? html`<span class="badge badge--gold">الأرخص</span>` : null}
-                ${row.here ? html`<span class="badge">أنت هنا</span>` : null}
+                ${row.cheapest ? html`<span class="badge badge--gold">${L('الأرخص', 'Cheapest')}</span>` : null}
+                ${row.here ? html`<span class="badge">${L('أنت هنا', 'You’re here')}</span>` : null}
                 ${percent ? html`<span class="badge badge--cut" dir="ltr">−${percent}%</span>` : null}
-                ${row.offer && !row.same ? html`<span class="badge badge--note">حجم مختلف</span>` : null}
+                ${row.offer && !row.same ? html`<span class="badge badge--note">${L('حجم مختلف', 'Different size')}</span>` : null}
               </span>
               ${row.offer ? html`
-                <span class="scan-row__sub">${row.same ? pricePeriod(data, row.store).badge : offerSize(row.offer) + ' · لا نقارنه لاختلاف الحجم'}</span>
-                <span class="scan-row__price"><b dir="ltr">${money(halalas(row.offer.price))}</b> <small>ريال</small>${row.offer.was > row.offer.price ? html`<s dir="ltr">${money(halalas(row.offer.was))}</s>` : null}</span>`
-              : html`<span class="scan-row__missing">لم نجده في ${storeName(data, row.store)} هذا الأسبوع</span>`}
+                <span class="scan-row__sub">${row.same ? pricePeriod(data, row.store).badge : offerSize(row.offer) + L(' · لا نقارنه لاختلاف الحجم', ' · not compared, the size differs')}</span>
+                <span class="scan-row__price"><b dir="ltr">${money(halalas(row.offer.price))}</b> <small>${riyal()}</small>${row.offer.was > row.offer.price ? html`<s dir="ltr">${money(halalas(row.offer.was))}</s>` : null}</span>`
+              : html`<span class="scan-row__missing">${L(`لم نجده في ${storeName(data, row.store)} هذا الأسبوع`, `Not found at ${storeName(data, row.store)} this week`)}</span>`}
             </div>`;
         })}
       </div>
       ${found.saving > 0 ? html`
-        <p class="scan-note"><${Emoji} char="💰" size=${32} /><span>أرخص في ${storeName(data, found.best.store)} بـ <b dir="ltr">${money(halalas(found.saving))}</b> ريال</span></p>`
+        <p class="scan-note"><${Emoji} char="💰" size=${32} /><span>${L(`أرخص في ${storeName(data, found.best.store)} بـ `, `Cheaper at ${storeName(data, found.best.store)} by `)}<b dir="ltr">${money(halalas(found.saving))}</b> ${riyal()}</span></p>`
       : mine && mine.offer.was > mine.offer.price ? html`
-        <p class="scan-note scan-note--green"><${Emoji} char="🏷️" size=${32} /><span>عليه خصم في ${storeName(data, mine.store)} الآن: توفّر <b dir="ltr">${money(halalas(mine.offer.was - mine.offer.price))}</b> ريال</span></p>`
+        <p class="scan-note scan-note--green"><${Emoji} char="🏷️" size=${32} /><span>${L(`عليه خصم في ${storeName(data, mine.store)} الآن: توفّر `, `On offer at ${storeName(data, mine.store)} now: you save `)}<b dir="ltr">${money(halalas(mine.offer.was - mine.offer.price))}</b> ${riyal()}</span></p>`
       : null}
       <div class=${'scan-add' + (buyable.length > 1 ? ' scan-add--two' : '')}>
         ${buyable.map(row => {
           const units = week.extras[row.offer.id] || 0;
           const step = isLoose(row.offer) ? 0.5 : 1;
-          const label = buyable.length > 1 ? 'أضف من ' + storeName(data, row.store) : 'أضف للقائمة';
+          const label = buyable.length > 1 ? L('أضف من ', 'Add from ') + storeName(data, row.store) : L('أضف للقائمة', 'Add to the list');
           return units
-            ? html`<div class="scan-add__in"><span>في قائمتك من ${storeName(data, row.store)}</span><${Stepper} value=${units} min=${0} max=${20} step=${step} label=${'الكمية من ' + row.offer.name} onChange=${value => set.extra(row.offer.id, value)} /></div>`
+            ? html`<div class="scan-add__in"><span>${L('في قائمتك من ', 'On your list from ')}${storeName(data, row.store)}</span><${Stepper} value=${units} min=${0} max=${20} step=${step} label=${L('الكمية من ', 'Quantity of ') + nm(row.offer)} onChange=${value => set.extra(row.offer.id, value)} /></div>`
             : html`<button type="button" class=${'btn' + (row.cheapest || buyable.length === 1 ? '' : ' btn--ghost')} onClick=${() => set.extra(row.offer.id, step)}><${Icon} name="plus" size=${20} stroke=${2.4} /> ${label}</button>`;
         })}
       </div>
-      <button type="button" class="btn btn--ghost btn--wide scan-again" onClick=${onAgain}><${Icon} name="scan" size=${20} /> امسح منتجاً آخر</button>
-      ${compared > 1 ? html`<p class="scan-fine">نفس الباركود ونفس الحجم في المتجرين. الأسعار من المتاجر نفسها وقد تختلف حسب الفرع.</p>` : null}
+      <button type="button" class="btn btn--ghost btn--wide scan-again" onClick=${onAgain}><${Icon} name="scan" size=${20} /> ${L('امسح منتجاً آخر', 'Scan another')}</button>
+      ${compared > 1 ? html`<p class="scan-fine">${L('نفس الباركود ونفس الحجم في المتجرين. الأسعار من المتاجر نفسها وقد تختلف حسب الفرع.', 'Same barcode and size at both stores. Prices come from the stores and may differ by branch.')}</p>` : null}
     </div>`;
 }
 
 /* ---------------------------------------------------------------------
    Account and settings
    ------------------------------------------------------------------- */
-function MeTab({ data, head, plans, store, plan, persons, mealsPerWeek, maxMeals, set, plusOn, openStore, budgetInfo }) {
-  const stores = Object.keys(data.offers.stores).map(id => data.offers.stores[id]);
+function MeTab({ data, head, plans, store, plan, persons, kids, avoid, mealsPerWeek, maxMeals, set, plusOn, openStore, openPrefs, budgetInfo, lang }) {
+  const storeIds = Object.keys(data.offers.stores);
   return html`
     <${Head} ...${head} small>
       <div class="profile">
         <span class="profile__pic"><${Emoji} char="👨‍👩‍👧‍👦" size=${40} /></span>
         <div>
-          <h1 class="head__title">أسرتك</h1>
-          <p class="head__sub">${persons} أفراد · ${storeName(data, store)} · سفرة ${plan.name}</p>
+          <h1 class="head__title">${L('أسرتك', 'Your family')}</h1>
+          <p class="head__sub">${familyLabel(persons, kids)} · ${storeName(data, store)} · ${L('سفرة ', '')}${nm(plan)}</p>
         </div>
       </div>
     <//>
 
     <section class="float panel">
-      <div class="row"><span>عدد أفراد الأسرة</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} /></div>
+      <div class="row"><span>${L('عدد أفراد الأسرة', 'People in the family')}</span><${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} /></div>
+      <button type="button" class="row row--button" onClick=${openPrefs}>
+        <span>${L('تفضيلات العائلة', 'Family preferences')}</span>
+        <span class="row__value">${avoid.length || kids ? [avoid.length ? avoid.map(tagShort).join(L('، ', ', ')) : null, kids ? L(kids + ' أطفال', pl(kids, 'child', 'children')) : null].filter(Boolean).join(' · ') : L('لا شيء', 'None')} <${Icon} name="chevron" size=${18} /></span>
+      </button>
       <button type="button" class="row row--button" onClick=${budgetInfo.openBudget}>
-        <span>ميزانية الأسبوع</span>
-        <span class="row__value">${budgetInfo.budget ? html`<span dir="ltr">${budgetInfo.budget}</span> ريال` : 'بدون'} <${Icon} name="chevron" size=${18} /></span>
+        <span>${L('ميزانية الأسبوع', 'Weekly budget')}</span>
+        <span class="row__value">${budgetInfo.budget ? html`<span dir="ltr">${budgetInfo.budget}</span> ${riyal()}` : L('بدون', 'None')} <${Icon} name="chevron" size=${18} /></span>
       </button>
       <button type="button" class="row row--button" onClick=${openStore}>
-        <span>المتجر الذي تتسوّق منه</span>
+        <span>${L('المتجر الذي تتسوّق منه', 'Where you shop')}</span>
         <span class="row__value"><${StoreDot} id=${store} />${storeName(data, store)} <${Icon} name="chevron" size=${18} /></span>
       </button>
-      <div class="row"><span>عدد الطبخات في الأسبوع</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label="عدد الطبخات في الأسبوع" onChange=${set.mealsPerWeek} /></div>
+      <div class="row"><span>${L('عدد الطبخات في الأسبوع', 'Meals a week')}</span><${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label=${L('عدد الطبخات في الأسبوع', 'Meals a week')} onChange=${set.mealsPerWeek} /></div>
       <div class="row">
-        <label for="plan-select">نوع السفرة</label>
+        <label for="plan-select">${L('نوع السفرة', 'Cuisine')}</label>
         <select id="plan-select" value=${plan.id} onChange=${event => set.plan(event.target.value)}>
-          ${plans.map(option => html`<option value=${option.id}>${option.name}</option>`)}
+          ${plans.map(option => html`<option value=${option.id}>${nm(option)}</option>`)}
         </select>
+      </div>
+      <div class="row">
+        <span><${Icon} name="globe" size=${20} /> اللغة / Language</span>
+        <${LangSwitch} lang=${lang} onPick=${set.lang} />
       </div>
     </section>
 
     <section class="card plus">
-      <p class="plus__label"><${Emoji} char="✨" size=${20} /> مقاضي بلس ${plusOn ? html`<span class="badge">معاينة</span>` : html`<span class="badge">قريباً</span>`}</p>
-      <p class="plus__title">الخطة الكاملة كل أسبوع</p>
+      <p class="plus__label"><${Emoji} char="✨" size=${20} /> ${L('مقاضي بلس', 'Maqadi Plus')} ${plusOn ? html`<span class="badge">${L('معاينة', 'Preview')}</span>` : html`<span class="badge">${L('قريباً', 'Coming soon')}</span>`}</p>
+      <p class="plus__title">${L('الخطة الكاملة كل أسبوع', 'The full plan every week')}</p>
       <ul class="plus__list">
-        <li>كل طبخات الأسبوع بدل أول ${CONFIG.plus.freeMeals}</li>
-        <li>كل أنواع السفر، مع تعديل عدد الأفراد</li>
-        <li>قائمة مقاضي كاملة قابلة للمشاركة</li>
+        <li>${L(`كل طبخات الأسبوع بدل أول ${CONFIG.plus.freeMeals}`, `Every meal of the week, not just the first ${CONFIG.plus.freeMeals}`)}</li>
+        <li>${L('كل أنواع السفر، مع تعديل عدد الأفراد', 'Every cuisine, for any family size')}</li>
+        <li>${L('قائمة مقاضي كاملة قابلة للمشاركة', 'A full shopping list to share')}</li>
       </ul>
       ${CONFIG.plus.checkoutUrl
-        ? html`<a class="btn" href=${CONFIG.plus.checkoutUrl}>اشتراك${CONFIG.plus.priceLabel ? ' · ' + CONFIG.plus.priceLabel : ''}</a>`
-        : html`<p class="plus__note">الدفع الإلكتروني غير مفعّل بعد، والتطبيق مفتوح بالكامل حالياً.</p>`}
+        ? html`<a class="btn" href=${CONFIG.plus.checkoutUrl}>${L('اشتراك', 'Subscribe')}${CONFIG.plus.priceLabel ? ' · ' + CONFIG.plus.priceLabel : ''}</a>`
+        : html`<p class="plus__note">${L('الدفع الإلكتروني غير مفعّل بعد، والتطبيق مفتوح بالكامل حالياً.', 'Payments are not switched on yet, so the whole app is open for now.')}</p>`}
     </section>
 
     <section class="card">
-      <h2 class="card__title">مصدر الأسعار</h2>
-      ${stores.map(item => html`
-        <p class="source">
-          <${StoreDot} id=${Object.keys(data.offers.stores).find(id => data.offers.stores[id] === item)} /><b>${item.name}</b> — ${item.source}، ${item.checked ? 'كما ظهرت يوم ' + longDay(item.checked) : 'سارية من ' + longDay(item.valid_from) + ' إلى ' + longDay(item.valid_to)}.
-          ${item.source_url ? html` <a href=${item.source_url} target="_blank" rel="noopener noreferrer">المصدر</a>` : null}
-        </p>`)}
-      <p class="fineprint">الأسعار والصور منقولة من مجلات العروض الرسمية ومن المتاجر الإلكترونية للمتاجر نفسها، وقد تختلف حسب الفرع وتوفّر الكمية، لذا يُنصح بمراجعة السعر على الرف قبل الشراء. التطبيق مستقل وغير تابع لأي متجر.</p>
+      <h2 class="card__title">${L('مصدر الأسعار', 'Where prices come from')}</h2>
+      ${storeIds.map(id => {
+        const item = data.offers.stores[id];
+        return html`
+          <p class="source">
+            <${StoreDot} id=${id} /><b>${storeName(data, id)}</b> — ${LANG === 'en'
+              ? (item.checked ? `online store prices as shown on ${longDay(item.checked)}` : `official weekly offers flyer, valid ${longDay(item.valid_from)} to ${longDay(item.valid_to)}`)
+              : item.source + '، ' + (item.checked ? 'كما ظهرت يوم ' + longDay(item.checked) : 'سارية من ' + longDay(item.valid_from) + ' إلى ' + longDay(item.valid_to))}.
+            ${item.source_url ? html` <a href=${item.source_url} target="_blank" rel="noopener noreferrer">${L('المصدر', 'Source')}</a>` : null}
+          </p>`;
+      })}
+      <p class="fineprint">${L(
+        'الأسعار والصور منقولة من مجلات العروض الرسمية ومن المتاجر الإلكترونية للمتاجر نفسها، وقد تختلف حسب الفرع وتوفّر الكمية، لذا يُنصح بمراجعة السعر على الرف قبل الشراء. التطبيق مستقل وغير تابع لأي متجر.',
+        'Prices and photos come from the stores’ official offer flyers and online stores. They may differ by branch and stock, so check the shelf price before you buy. The app is independent and not owned by any store.')}</p>
     </section>
 
     <section class="card">
-      <h2 class="card__title">بياناتك</h2>
-      <p class="fineprint">اختياراتك محفوظة على هذا الجهاز فقط، ولا تُرسل إلى أي خادم.</p>
-      <button type="button" class="btn btn--ghost" onClick=${() => set.reset()}>مسح اختياراتي من هذا الجهاز</button>
+      <h2 class="card__title">${L('بياناتك', 'Your data')}</h2>
+      <p class="fineprint">${L('اختياراتك محفوظة على هذا الجهاز فقط، ولا تُرسل إلى أي خادم.', 'Your choices are kept on this device only and are not sent to any server.')}</p>
+      <button type="button" class="btn btn--ghost" onClick=${() => set.reset()}>${L('مسح اختياراتي من هذا الجهاز', 'Clear my choices from this device')}</button>
     </section>
-    <p class="about"><${Logo} size=${22} /> ${CONFIG.name} · نسخة تجريبية</p>`;
+    <p class="about"><${Logo} size=${22} /> ${appName()} · ${L('نسخة تجريبية', 'Preview version')}</p>`;
 }
 
 /* ---------------------------------------------------------------------
    Welcome (first visit)
    ------------------------------------------------------------------- */
-function Welcome({ data, rows, persons, budget, set, onDone }) {
+function Welcome({ rows, persons, kids, avoid, budget, lang, set, onDone }) {
   const [step, setStep] = useState(0);
   if (step === 0) {
     return html`
-      <div class="welcome" role="dialog" aria-modal="true" aria-label="أهلاً في مقاضي">
+      <div class="welcome" role="dialog" aria-modal="true" aria-label=${L('أهلاً في مقاضي', 'Welcome to Maqadi')}>
+        <${LangSwitch} lang=${lang} onPick=${set.lang} cls="lang-switch--welcome" />
         <div class="welcome__top">
           <${Logo} size=${84} glass />
-          <h1 class="welcome__title">مقاضي الأسبوع بأرخص سعر</h1>
-          <p class="welcome__sub">اعرف كم ستدفع قبل أن تذهب إلى السوق.</p>
+          <h1 class="welcome__title">${L('مقاضي الأسبوع بأرخص سعر', 'Your weekly groceries at the lowest price')}</h1>
+          <p class="welcome__sub">${L('اعرف كم ستدفع قبل أن تذهب إلى السوق.', 'Know what you’ll pay before you go shopping.')}</p>
         </div>
         <ul class="welcome__points">
-          <li><${Emoji} char="🍽️" size=${48} /><span><b>خطة طبخ جاهزة كل أسبوع</b>طبخات مبنية على عروض هذا الأسبوع، ويمكنك تبديل أي طبخة.</span></li>
-          <li><${Emoji} char="🛒" size=${48} /><span><b>قائمة مقاضي بالأسعار الحقيقية</b>أكل وخضار ومنظفات وكل أغراض البيت، مع المجموع بالريال.</span></li>
-          <li><${Emoji} char="💰" size=${48} /><span><b>قارن بين المتاجر</b>نفس القائمة في كل متجر، لتعرف أين الأرخص.</span></li>
+          <li><${Emoji} char="🍽️" size=${48} /><span><b>${L('خطة طبخ جاهزة كل أسبوع', 'A ready meal plan every week')}</b>${L('طبخات مبنية على عروض هذا الأسبوع، ويمكنك تبديل أي طبخة.', 'Meals built on this week’s offers, and you can swap any of them.')}</span></li>
+          <li><${Emoji} char="🛒" size=${48} /><span><b>${L('قائمة مقاضي بالأسعار الحقيقية', 'A shopping list with real prices')}</b>${L('أكل وخضار ومنظفات وكل أغراض البيت، مع المجموع بالريال.', 'Food, vegetables, cleaning and everything for the home, with the total in riyals.')}</span></li>
+          <li><${Emoji} char="💰" size=${48} /><span><b>${L('قارن بين المتاجر', 'Compare stores')}</b>${L('نفس القائمة في كل متجر، لتعرف أين الأرخص.', 'The same list at each store, so you know where it’s cheapest.')}</span></li>
         </ul>
         <div class="welcome__actions">
-          <button type="button" class="btn btn--wide btn--light" onClick=${() => setStep(1)}>ابدأ</button>
-          <button type="button" class="welcome__skip" onClick=${onDone}>تخطي</button>
+          <button type="button" class="btn btn--wide btn--light" onClick=${() => setStep(1)}>${L('ابدأ', 'Start')}</button>
+          <button type="button" class="welcome__skip" onClick=${onDone}>${L('تخطي', 'Skip')}</button>
         </div>
       </div>`;
   }
   return html`
-    <div class="welcome welcome--setup" role="dialog" aria-modal="true" aria-label="جهّز سفرتك">
+    <div class="welcome welcome--setup" role="dialog" aria-modal="true" aria-label=${L('جهّز سفرتك', 'Set up your week')}>
       <div class="welcome__top welcome__top--small">
-        <h1 class="welcome__title">جهّز سفرتك</h1>
-        <p class="welcome__sub">يمكنك تغيير هذا لاحقاً من «حسابي».</p>
+        <h1 class="welcome__title">${L('جهّز سفرتك', 'Set up your week')}</h1>
+        <p class="welcome__sub">${L('يمكنك تغيير هذا لاحقاً من «حسابي».', 'You can change this later in “Account”.')}</p>
       </div>
       <div class="welcome__body">
-        <div class="welcome__q">
-          <span>كم شخصاً في أسرتك؟</span>
-          <${Stepper} cls="stepper--big" value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${set.persons} />
+        <div class="welcome__q welcome__q--family">
+          <div class="welcome__qrow">
+            <span>${L('كم شخصاً في أسرتك؟', 'How many people in your family?')}</span>
+            <${Stepper} cls="stepper--big" value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label=${L('عدد أفراد الأسرة', 'People in the family')} onChange=${set.persons} />
+          </div>
+          <div class="welcome__qrow welcome__qrow--small">
+            <span>${L('منهم أطفال تحت 12 سنة', 'Children under 12')}<small>${L('الطفل يُحسب نصف حصة', 'A child counts as half a portion')}</small></span>
+            <${Stepper} value=${kids} min=${0} max=${Math.max(0, persons - 1)} label=${L('عدد الأطفال', 'Children')} onChange=${set.kids} />
+          </div>
         </div>
         <div class="welcome__q welcome__q--budget">
-          <span>كم ميزانيتك للمقاضي في الأسبوع؟</span>
-          <div class="pills pills--wrap" role="group" aria-label="ميزانية الأسبوع">
-            <button type="button" class="pill" aria-pressed=${!budget} onClick=${() => set.budget(null)}>بدون ميزانية</button>
-            ${BUDGET_PRESETS.map(amount => html`<button type="button" class="pill" aria-pressed=${budget === amount} onClick=${() => set.budget(amount)}>${amount} ريال</button>`)}
-          </div>
-          ${budget ? html`<${Stepper} cls="stepper--budget stepper--compact" value=${budget} min=${50} max=${3000} step=${10} label="ميزانية الأسبوع بالريال" onChange=${set.budget} format=${v => html`<b dir="ltr">${v}</b><small>ريال</small>`} />` : null}
-          <small class="welcome__hint">تشمل كل ما في قائمتك: الطبخات والأساسيات وما تضيفه.</small>
+          <span>${L('ما لا تأكله العائلة أو تتحسس منه', 'Foods your family avoids or is allergic to')}</span>
+          <small class="welcome__hint">${L('لا نأكل', 'We don’t eat')}</small>
+          <${TagChips} tags=${AVOID_FOODS} chosen=${avoid} onToggle=${set.toggleAvoid} />
+          <small class="welcome__hint">${L('حساسية', 'Allergies')}</small>
+          <${TagChips} tags=${ALLERGIES} chosen=${avoid} onToggle=${set.toggleAvoid} allergy />
         </div>
-        <p class="welcome__label">من أين تتسوّق عادة؟</p>
+        <div class="welcome__q welcome__q--budget">
+          <span>${L('كم ميزانيتك للمقاضي في الأسبوع؟', 'What’s your weekly grocery budget?')}</span>
+          <div class="pills pills--wrap" role="group" aria-label=${L('ميزانية الأسبوع', 'Weekly budget')}>
+            <button type="button" class="pill" aria-pressed=${!budget} onClick=${() => set.budget(null)}>${L('بدون ميزانية', 'No budget')}</button>
+            ${BUDGET_PRESETS.map(preset => html`<button type="button" class="pill" aria-pressed=${budget === preset} onClick=${() => set.budget(preset)}>${preset} ${riyal()}</button>`)}
+          </div>
+          ${budget ? html`<${Stepper} cls="stepper--budget stepper--compact" value=${budget} min=${50} max=${3000} step=${10} label=${L('ميزانية الأسبوع بالريال', 'Weekly budget in riyals')} onChange=${set.budget} format=${v => html`<b dir="ltr">${v}</b><small>${riyal()}</small>`} />` : null}
+          <small class="welcome__hint">${L('تشمل كل ما في قائمتك: الطبخات والأساسيات وما تضيفه.', 'It covers everything on your list: meals, basics and what you add.')}</small>
+        </div>
+        <p class="welcome__label">${L('من أين تتسوّق عادة؟', 'Where do you usually shop?')}</p>
         <div class="welcome__stores">
           ${rows.map(row => html`
             <button type="button" class=${'store-option' + (row.current ? ' is-current' : '')} aria-pressed=${row.current} onClick=${() => set.store(row.id)}>
-              <span class="store-option__name"><${StoreDot} id=${row.id} />${row.name}${row.cheapest ? html`<span class="badge badge--gold">الأرخص هذا الأسبوع</span>` : null}</span>
-              <span class="store-option__sub">سفرة أسبوع لأسرتك: <b dir="ltr">${money(row.cost)}</b> ريال</span>
+              <span class="store-option__name"><${StoreDot} id=${row.id} />${row.name}${row.cheapest ? html`<span class="badge badge--gold">${L('الأرخص هذا الأسبوع', 'Cheapest this week')}</span>` : null}</span>
+              <span class="store-option__sub">${L('سفرة أسبوع لأسرتك: ', 'A week for your family: ')}<b dir="ltr">${money(row.cost)}</b> ${riyal()}</span>
               ${row.current ? html`<span class="store-option__check"><${Icon} name="check" size=${16} stroke=${2.6} /></span>` : null}
             </button>`)}
         </div>
       </div>
       <div class="welcome__actions">
-        <button type="button" class="btn btn--wide" onClick=${onDone}>جهّز سفرتي</button>
+        <button type="button" class="btn btn--wide" onClick=${onDone}>${L('جهّز سفرتي', 'Plan my week')}</button>
       </div>
     </div>`;
 }
@@ -1314,12 +1487,24 @@ function Welcome({ data, rows, persons, budget, set, onDone }) {
    Shell
    ------------------------------------------------------------------- */
 const NAV = [
-  { id: 'home', label: 'الرئيسية' },
-  { id: 'shop', label: 'تسوّق' },
-  { id: 'list', label: 'قائمتي', center: true },
-  { id: 'plan', label: 'الخطة' },
-  { id: 'me', label: 'حسابي' }
+  { id: 'home', label: ['الرئيسية', 'Home'] },
+  { id: 'shop', label: ['تسوّق', 'Shop'] },
+  { id: 'list', label: ['قائمتي', 'My list'], center: true },
+  { id: 'plan', label: ['الخطة', 'Plan'] },
+  { id: 'me', label: ['حسابي', 'Account'] }
 ];
+
+/* The page follows the language: direction, lang, title. */
+function applyLanguage(lang) {
+  LANG = lang;
+  setPlanLang(lang);
+  const root = document.documentElement;
+  if (root.lang !== lang) {
+    root.lang = lang;
+    root.dir = lang === 'en' ? 'ltr' : 'rtl';
+    document.title = L('مقاضي — مقاضي الأسبوع بأرخص سعر', 'Maqadi — weekly groceries at the lowest price');
+  }
+}
 
 function App() {
   const [data, setData] = useState(null);
@@ -1328,6 +1513,9 @@ function App() {
   const [route, setRoute] = useState(parseRoute);
   const [sheet, setSheet] = useState(null);
   const lastTab = useRef('home');
+
+  const lang = prefs.lang === 'en' || prefs.lang === 'ar' ? prefs.lang : phoneLanguage();
+  applyLanguage(lang);
 
   const load = useCallback(() => {
     setFailed(false);
@@ -1367,12 +1555,12 @@ function App() {
     return html`
       <div class="boot">
         <${Logo} size=${88} glass />
-        <span class="boot__text">تعذّر تحميل أسعار الأسبوع. يُرجى التحقق من الاتصال ثم إعادة المحاولة.</span>
-        <button type="button" class="btn btn--light" onClick=${load}>إعادة المحاولة</button>
+        <span class="boot__text">${L('تعذّر تحميل أسعار الأسبوع. يُرجى التحقق من الاتصال ثم إعادة المحاولة.', 'We couldn’t load this week’s prices. Check your connection and try again.')}</span>
+        <button type="button" class="btn btn--light" onClick=${load}>${L('إعادة المحاولة', 'Try again')}</button>
       </div>`;
   }
   if (!data) {
-    return html`<div class="boot" role="status"><${Logo} size=${88} glass /><span class="boot__mark">${CONFIG.name}</span><span class="boot__text">جاري تحميل أسعار الأسبوع…</span></div>`;
+    return html`<div class="boot" role="status"><${Logo} size=${88} glass /><span class="boot__mark">${appName()}</span><span class="boot__text">${L('جاري تحميل أسعار الأسبوع…', 'Loading this week’s prices…')}</span></div>`;
   }
 
   const weekId = data.current.week;
@@ -1386,6 +1574,8 @@ function App() {
     fresh: stored.fresh || [],
     budgetFit: stored.budgetFit || null
   };
+  const avoid = Array.isArray(prefs.avoid) ? prefs.avoid.filter(tag => TAG_INFO[tag]) : [];
+
   // Plans are published per store, for the same meals; the family picks where they shop.
   const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
   const setsBy = data.plans.by_store || { [planStores[0]]: data.plans };
@@ -1393,19 +1583,21 @@ function App() {
   const plans = setsBy[store].plans;
   const basePlan = plans.find(option => option.id === prefs.plan) || plans[0];
   const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
-  const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek);
-  const maxMeals = Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length);
+  const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek, avoid);
+  const maxMeals = Math.max(CONFIG.minMeals, Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length));
   const persons = clamp(prefs.persons || plan.base_persons, CONFIG.minPersons, CONFIG.maxPersons);
+  const kids = clamp(prefs.kids || 0, 0, persons - 1);
+  const servings = portions(persons, kids);
   const plusOn = CONFIG.plus.enabled || plusPreview();
   const locked = new Set(plusOn ? plan.meals.slice(CONFIG.plus.freeMeals).map(meal => meal.id) : []);
   const skipped = new Set(week.skipped.concat(Array.from(locked)));
-  const list = buildList({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras });
+  const list = buildList({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras });
 
   // The week's budget covers the whole list; swaps are worked out only when it is over.
   const budget = prefs.budget > 0 ? prefs.budget : null;
   const over = budget !== null && list.totals.cost > budget * 100;
-  const fitKey = [store, plan.id, plan.meals.map(m => m.id).join(','), persons, Array.from(skipped).join(','), week.essentials, JSON.stringify(week.extras), budget].join('|');
-  const fit = over ? memoFit(fitKey, () => fitBudget({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras, budget: budget * 100 })) : null;
+  const fitKey = [store, plan.id, plan.meals.map(m => m.id).join(','), servings, Array.from(skipped).join(','), week.essentials, JSON.stringify(week.extras), budget, avoid.join(',')].join('|');
+  const fit = over ? memoFit(fitKey, () => fitBudget({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras, budget: budget * 100 })) : null;
 
   // The same week at the other stores: same meals, each store's own products;
   // hand-added products follow when the other store sells the same one.
@@ -1413,14 +1605,14 @@ function App() {
   const compare = planStores.filter(id => id !== store).map(id => {
     const otherBase = setsBy[id].plans.find(option => option.id === basePlan.id);
     if (!otherBase) return null;
-    const otherPlan = activePlan(otherBase, plan.meals.map(meal => meal.id), mealsPerWeek);
+    const otherPlan = activePlan(otherBase, plan.meals.map(meal => meal.id), mealsPerWeek, avoid);
     const extras = {};
     let unmatched = 0;
     Object.keys(week.extras).forEach(extraId => {
       const match = twin(offers.get(extraId), id);
       if (match) extras[match.id] = week.extras[extraId]; else unmatched += 1;
     });
-    const other = buildList({ plan: otherPlan, offers, persons, skipped, essentials: week.essentials, extras });
+    const other = buildList({ plan: otherPlan, offers, persons: servings, skipped, essentials: week.essentials, extras });
     // Only a like-for-like basket gives a fair difference: same items priced, every added product found.
     const fair = other.unpriced.length === list.unpriced.length && unmatched === 0;
     return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length, unmatched, fair };
@@ -1435,7 +1627,9 @@ function App() {
   storeRows.forEach(row => {
     row.cheapest = fair && storeRows.length > 1 && row.cost === lowest;
     row.diff = row.current ? 0 : row.fair ? row.cost - list.totals.cost : null;
-    row.caveat = row.unmatched ? `${row.unmatched === 1 ? 'صنف أضفته غير موجود' : row.unmatched + ' أصناف أضفتها غير موجودة'} هنا` : row.unpriced ? `${row.unpriced} بدون سعر` : '';
+    row.caveat = row.unmatched
+      ? (row.unmatched === 1 ? L('صنف أضفته غير موجود هنا', 'an item you added is not sold here') : L(row.unmatched + ' أصناف أضفتها غير موجودة هنا', row.unmatched + ' items you added are not sold here'))
+      : row.unpriced ? L(row.unpriced + ' بدون سعر', row.unpriced + ' without a price') : '';
   });
 
   const setWeek = change => patch(previous => {
@@ -1444,7 +1638,11 @@ function App() {
   });
   const toggleIn = (array, value) => (array.includes(value) ? array.filter(item => item !== value) : array.concat(value));
   const set = {
-    persons: value => patch({ persons: value }),
+    persons: value => patch(previous => ({ persons: value, kids: Math.min(previous.kids || 0, value - 1) })),
+    kids: value => patch({ kids: value }),
+    prefs: (chosen, children) => patch({ avoid: chosen, kids: children }),
+    toggleAvoid: tag => patch(previous => ({ avoid: toggleIn(Array.isArray(previous.avoid) ? previous.avoid : [], tag) })),
+    lang: value => patch({ lang: value }),
     plan: id => patch({ plan: id }),
     store: id => patch({ store: id }),
     essentials: on => setWeek(() => ({ essentials: on })),
@@ -1476,6 +1674,7 @@ function App() {
 
   const period = pricePeriod(data, store);
   const openStore = () => setSheet('store');
+  const openPrefs = () => setSheet('prefs');
   const head = { data, store, period, onStore: openStore };
   const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
@@ -1485,35 +1684,36 @@ function App() {
   return html`
     <div class="shell">
       <main class="main" id="main">
-        ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} offers=${offers} backHref=${'#/' + lastTab.current} />`
+        ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
           : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} compare=${compare} budgetInfo=${budgetInfo} />`
           : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
-          : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} budgetInfo=${budgetInfo} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} />`}
+          : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
+          : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} />`
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} />`}
       </main>
 
-      <nav class="tabbar" aria-label="الأقسام">
+      <nav class="tabbar" aria-label=${L('الأقسام', 'Sections')}>
         ${NAV.map(item => item.center
           ? html`
             <a class="tabbar__center" href="#/list" aria-current=${tab === 'list' && !meal ? 'page' : null}>
               <span class="tabbar__fab"><${Icon} name="cart" size=${26} stroke=${2} />${list.totals.items ? html`<em>${list.totals.items}</em>` : null}</span>
-              <span>${item.label}</span>
+              <span>${L(item.label[0], item.label[1])}</span>
             </a>`
           : html`
             <a class="tabbar__item" href=${'#/' + item.id} aria-current=${tab === item.id && !meal ? 'page' : null}>
               <span class="tabbar__icon"><${Icon} name=${item.id} size=${23} /></span>
-              <span>${item.label}</span>
+              <span>${L(item.label[0], item.label[1])}</span>
             </a>`)}
       </nav>
 
       ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
-      ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} />` : null}
+      ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} openPrefs=${openPrefs} />` : null}
+      ${sheet === 'prefs' ? html`<${PrefsSheet} avoid=${avoid} kids=${kids} persons=${persons} set=${set} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'budget' ? html`<${BudgetSheet} budget=${budget} total=${list.totals.cost} set=${set} onClose=${() => setSheet(null)}
-          breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(item => item.name).join('، ') : '' })} />` : null}
+          breakdown=${Object.assign(budgetBreakdown({ plan, offers, persons: servings, skipped, essentials: week.essentials, extras: week.extras }), { basicsNames: week.essentials && plan.essentials ? plan.essentials.items.map(nm).join(L('، ', ', ')) : '' })} />` : null}
       ${sheet === 'fit' && fit ? html`<${FitSheet} fit=${fit} budget=${budget} onApply=${() => { set.applyFit(); setSheet(null); window.scrollTo(0, 0); }} onClose=${() => setSheet(null)} />` : null}
-      ${prefs.welcomed ? null : html`<${Welcome} data=${data} rows=${storeRows} persons=${persons} budget=${budget} set=${set} onDone=${set.welcomed} />`}
+      ${prefs.welcomed ? null : html`<${Welcome} rows=${storeRows} persons=${persons} kids=${kids} avoid=${avoid} budget=${budget} lang=${lang} set=${set} onDone=${set.welcomed} />`}
     </div>`;
 }
 

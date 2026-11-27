@@ -17,6 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildList, toBase, packContent, isLoose, money } from '../../maqadi/lib/plan.js';
 import { autoPlans } from './plan-week.mjs';
+import { withExtras } from './recipe-extras.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CATEGORIES = ['produce_fruit', 'produce_veg', 'meat', 'poultry', 'fish', 'eggs', 'dairy_milk', 'dairy_cheese', 'dairy_yogurt_labneh', 'butter_cream', 'bakery', 'rice_grains', 'pasta_noodles', 'flour_baking', 'oil_ghee', 'canned', 'sauces_condiments', 'spices', 'legumes_nuts', 'frozen_chicken', 'frozen_veg', 'frozen_other', 'breakfast_spreads', 'drinks_water', 'drinks_juice', 'tea_coffee', 'dates_sweets', 'snacks', 'household', 'personal_care', 'baby', 'other'];
@@ -296,7 +297,7 @@ function main() {
     const planStores = (meta.plan_stores || [meta.plan_store]).filter(id => meta.stores[id]);
     console.log(`plans: chosen automatically at ${planStores[0]}, priced at ${planStores.join(' and ')}`);
     const auto = autoPlans({
-      recipes: readJSON(join(ROOT, 'tools/maqadi/recipes.json')),
+      recipes: withExtras(readJSON(join(ROOT, 'tools/maqadi/recipes.json')), readJSON(join(ROOT, 'tools/maqadi/recipes.en.json'))),
       ingredients: readJSON(join(ROOT, 'tools/maqadi/ingredients.json')).ingredients,
       offers,
       stores: planStores,

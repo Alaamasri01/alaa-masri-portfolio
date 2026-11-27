@@ -245,9 +245,22 @@ async function main() {
       all.push(...readPage(await get(`${BASE}/ar/c/${slug}?page=${n}`, join(cache, `${slug}-${n}.html`))).products);
       requests++;
     }
+    // The same aisle in English, for the app's English names. A page that fails costs only its names.
+    const english = new Map();
+    for (let n = 1; n <= pages; n++) {
+      try {
+        const page = readPage(await get(`${BASE}/en/c/${slug}${n > 1 ? `?page=${n}` : ''}`, join(cache, `en-${slug}-${n}.html`)));
+        requests++;
+        page.products.forEach(product => (product.varieties || []).forEach(variety => {
+          const name = String(product.name || '').trim();
+          if (name && !/[\u0600-\u06FF]/.test(name)) english.set(String(variety.id), name);
+        }));
+      } catch (error) { console.log(`  no English names for ${slug} page ${n}: ${error.message}`); }
+    }
     toOffers(all, slug).forEach(offer => {
       if (seen.has(offer.source_id)) return;
       seen.add(offer.source_id);
+      offer.name_en = english.get(offer.source_id) || null;
       offers.push(offer);
     });
     if (leaves % 10 === 0) console.log(`  ${leaves} aisles, ${offers.length} products so far`);
@@ -258,7 +271,8 @@ async function main() {
   writeFileSync(out, JSON.stringify(offers, null, 1) + '\n');
   const discounted = offers.filter(offer => offer.was).length;
   const barcoded = offers.filter(offer => offer.barcode).length;
-  console.log(`panda: ${categories.length} categories, ${leaves} aisles read in ${requests} pages → ${offers.length} products, ${discounted} discounted, ${barcoded} with a barcode → ${out}`);
+  const named = offers.filter(offer => offer.name_en).length;
+  console.log(`panda: ${categories.length} categories, ${leaves} aisles read in ${requests} pages → ${offers.length} products, ${discounted} discounted, ${barcoded} with a barcode, ${named} with an English name → ${out}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

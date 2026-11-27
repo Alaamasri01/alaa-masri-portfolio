@@ -173,6 +173,7 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
         const out = { name: item.name, qty: item.qty, unit: item.unit };
         if (chosen[item.key]) out.offer = chosen[item.key].id;
         if (item.display) out.display = item.display;
+        ['name_en', 'display_en', 'tags'].forEach(field => { if (item[field]) out[field] = item[field]; });
         return out;
       };
       const toPlanMeal = ({ meal, ready, foreign }) => {
@@ -188,10 +189,12 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
         id: cuisine.id,
         name: cuisine.name,
         tagline: cuisine.tagline,
+        name_en: cuisine.name_en,
+        tagline_en: cuisine.tagline_en,
         base_persons: recipes.base_persons,
         meals: picked.map(toPlanMeal),
         alternatives: others.map(toPlanMeal),
-        essentials: { name: recipes.essentials.name, items: recipes.essentials.items.map(toPlanItem) }
+        essentials: { name: recipes.essentials.name, name_en: recipes.essentials.name_en, items: recipes.essentials.items.map(toPlanItem) }
       };
     });
     byStore[storeId] = { base_persons: recipes.base_persons, plans };

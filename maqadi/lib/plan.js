@@ -206,12 +206,17 @@ export function money(h) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+/* The app's language for the words below. The data tools leave it Arabic. */
+let LANG = 'ar';
+export const setLang = lang => { LANG = lang === 'en' ? 'en' : 'ar'; };
+
 /* A base quantity in the unit a shopper thinks in. */
 export function amount(base) {
   if (!base) return '';
-  if (base.family === 'count') return trim(roundHalf(base.qty)) + ' حبة';
-  const big = base.family === 'mass' ? 'كجم' : 'لتر';
-  const small = base.family === 'mass' ? 'جم' : 'مل';
+  const en = LANG === 'en';
+  if (base.family === 'count') return trim(roundHalf(base.qty)) + (en ? ' pcs' : ' حبة');
+  const big = base.family === 'mass' ? (en ? 'kg' : 'كجم') : (en ? 'L' : 'لتر');
+  const small = base.family === 'mass' ? (en ? 'g' : 'جم') : (en ? 'ml' : 'مل');
   if (base.qty >= 1000) return trim(Math.round(base.qty / 50) * 50 / 1000) + ' ' + big;
   return trim(base.qty >= 100 ? Math.round(base.qty / 10) * 10 : Math.round(base.qty)) + ' ' + small;
 }
@@ -219,22 +224,51 @@ export function amount(base) {
 const roundHalf = n => Math.max(0.5, Math.round(n * 2) / 2);
 
 const KITCHEN = { tbsp: 'ملعقة كبيرة', tsp: 'ملعقة صغيرة', cup: 'كوب', pinch: 'رشة', bunch: 'حزمة', clove: 'فص', can: 'علبة', pack: 'كيس', taste: 'حسب الرغبة' };
+const KITCHEN_EN = { tbsp: 'tbsp', tsp: 'tsp', cup: 'cups', pinch: 'pinch', bunch: 'bunches', clove: 'cloves', can: 'cans', pack: 'packs', taste: 'to taste' };
+const KITCHEN_EN_ONE = { cup: 'cup', bunch: 'bunch', clove: 'clove', can: 'can', pack: 'pack' };
 
 /* An ingredient line for a recipe, scaled to the family. */
 export function ingredientAmount(ingredient, scale) {
   // `display` is the cook's wording ("2 حبة متوسطة") for the plan's own family size.
-  if (ingredient.display && scale === 1) return ingredient.display;
-  if (ingredient.unit === 'taste') return KITCHEN.taste;
+  const en = LANG === 'en';
+  const display = en ? ingredient.display_en : ingredient.display;
+  if (display && scale === 1) return display;
+  if (ingredient.unit === 'taste') return en ? KITCHEN_EN.taste : KITCHEN.taste;
   const base = toBase(ingredient.qty * scale, ingredient.unit);
   if (base) return amount(base);
-  const label = KITCHEN[ingredient.unit];
+  const qty = roundHalf(ingredient.qty * scale);
+  const label = en ? (qty === 1 && KITCHEN_EN_ONE[ingredient.unit]) || KITCHEN_EN[ingredient.unit] : KITCHEN[ingredient.unit];
   if (!label || !(ingredient.qty > 0)) return '';
-  return trim(roundHalf(ingredient.qty * scale)) + ' ' + label;
+  return trim(qty) + ' ' + label;
 }
 
-/* "1100 جم" for an offer, as the flyer prints it. */
+/* "1100 جم" for an offer, as the flyer prints it; in English, its units translated. */
 export function offerSize(offer) {
+  if (LANG === 'en') {
+    if (offer.size_text) return englishSize(offer.size_text);
+    return isLoose(offer) ? 'per kg' : '';
+  }
   if (offer.size_text) return offer.size_text;
   if (isLoose(offer)) return 'للكيلو';
   return '';
+}
+
+const AR = '\u0600-\u06FF';
+const SIZE_WORDS = [
+  ['للكيلو', 'per kg'],
+  ['كيلو ?جرام|كيلوجرام|كيلو غرام|كيلو|كجم|كغم|كغ', 'kg'],
+  ['جرام|غرام|جم|غم|غ', 'g'],
+  ['مليلتر|ملل|مل', 'ml'],
+  ['لترات|لتر|ل', 'L'],
+  ['قطعة|قطع|حبات|حبة|حبه', 'pcs'],
+  ['أكياس|اكياس|كيس', 'bags'],
+  ['عبوات|عبوة', 'packs'],
+  ['لفات|لفة|رول', 'rolls'],
+  ['مناديل|منديل', 'sheets']
+].map(([words, en]) => [new RegExp(`(?<![${AR}])(?:${words})(?![${AR}])`, 'g'), en]);
+/* "6×170 جرام" → "6×170 g". Words it does not know stay as they are. */
+export function englishSize(text) {
+  let out = String(text || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.');
+  SIZE_WORDS.forEach(([pattern, en]) => { out = out.replace(pattern, en); });
+  return out.replace(/\b(\d+(?:\.\d+)?)\s*gm\b/gi, '$1 g').replace(/\s+/g, ' ').trim();
 }
