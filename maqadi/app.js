@@ -8,7 +8,7 @@
 import { html, render, useState, useEffect, useMemo, useCallback, useRef } from './lib/htm-preact.js';
 import {
   buildList, mealHighlight, discountPercent, unitPrice, normalizeAr, money, amount,
-  ingredientAmount, offerSize, isLoose, halalas, setLang as setPlanLang
+  ingredientAmount, offerSize, isLoose, halalas, purchase, toBase, setLang as setPlanLang
 } from './lib/plan.js';
 import { scannedGtin } from './lib/barcode.js';
 import { lookupScan } from './lib/scan.js';
@@ -16,6 +16,7 @@ import { fitBudget, budgetBreakdown } from './lib/budget.js';
 import { activePlan, portions, AVOID_FOODS, ALLERGIES } from './lib/prefs.js';
 import { receiptRows, receiptVerdict } from './lib/receipt.js';
 import { tripRecord, saveTrip, savingsSummary } from './lib/savings.js';
+import { ramadanOn, ramadanPreview } from './lib/season.js';
 
 /* ---------------------------------------------------------------------
    Language
@@ -72,7 +73,7 @@ const CATEGORIES = {
 };
 const categoryName = id => (CATEGORIES[id] ? L(CATEGORIES[id][0], CATEGORIES[id][1]) : id);
 const categoryEmoji = id => (CATEGORIES[id] ? CATEGORIES[id][2] : '🛒');
-const CUISINE_EMOJI = { khaliji: '🍛', shami: '🥙', quick: '🍳', healthy: '🥗', budget: '💰' };
+const CUISINE_EMOJI = { khaliji: '🍛', shami: '🥙', quick: '🍳', healthy: '🥗', budget: '💰', ramadan: '🌙' };
 const STORE_COLORS = { panda: '#e2231a', tamimi: '#f28c28', othaim: '#1f5fae' };
 const STORE_EN = { panda: 'Panda', tamimi: 'Tamimi', othaim: 'Othaim' };
 
@@ -136,7 +137,7 @@ const TABS = ['home', 'shop', 'list', 'plan', 'me'];
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const first = parts[0] === 'deals' ? 'shop' : parts[0];
-  const tab = TABS.concat('meal', 'scan', 'story', 'instore', 'savings').includes(first) ? first : 'home';
+  const tab = TABS.concat('meal', 'scan', 'story', 'instore', 'savings', 'ramadan').includes(first) ? first : 'home';
   return { tab, id: parts[1] || null };
 }
 
@@ -576,13 +577,13 @@ function FitSheet({ fit, budget, onApply, onClose }) {
 }
 
 /* A meal borrowed from another cuisine says which ("شامية" is stored in Arabic). */
-const CUISINE_NAMES = { 'خليجية': 'Gulf', 'شامية': 'Levantine', 'سريعة': 'Quick', 'صحية': 'Healthy', 'اقتصادية': 'Budget' };
+const CUISINE_NAMES = { 'خليجية': 'Gulf', 'شامية': 'Levantine', 'سريعة': 'Quick', 'صحية': 'Healthy', 'اقتصادية': 'Budget', 'رمضانية': 'Ramadan' };
 const cuisineLabel = name => L(name, CUISINE_NAMES[name] || name);
 
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, week, list, offers, locked, set, openFamily, scanTip, budgetInfo, stories, season }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -592,7 +593,7 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
   return html`
     <${Head} ...${head}>
       <p class="head__greet">
-        ${L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
+        ${season && season.phase === 'during' ? L('رمضان كريم · اليوم ' + season.day, 'Ramadan Kareem · day ' + season.day) : L('سفرة أسبوعك جاهزة', 'Your week’s meals are ready')}
         <button type="button" class="head__family" onClick=${openFamily} aria-label=${L('عدد أفراد الأسرة ' + persons + '. تغيير', 'Family of ' + persons + '. Change')}><${Emoji} char="👨‍👩‍👧‍👦" size=${20} /> ${familyLabel(persons, kids)}</button>
       </p>
       <p class="head__total"><${Sum} value=${list.totals.cost} /><span>${L('ريال للأسبوع', 'SAR this week')}</span></p>
@@ -613,6 +614,8 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, kids, wee
         <b>${L('جديد: امسح وقارن', 'New: scan and compare')}</b>
         ${L('وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.', 'In the shop, scan any product’s barcode to see its price at the other stores.')}
       </button>` : null}
+    ${season && season.phase === 'during' && plan.daily ? html`<${RamadanToday} plan=${plan} season=${season} meals=${plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id))} />` : null}
+    ${season && season.phase === 'before' ? html`<${RamadanBanner} season=${season} />` : null}
     ${stories.length ? html`<${StoryRings} items=${stories} seen=${week.seen} />` : null}
 
     <${BudgetCard} budget=${budgetInfo.budget} over=${budgetInfo.over} fit=${budgetInfo.fit} done=${week.budgetFit}
@@ -1730,6 +1733,127 @@ function SavingsPage({ data, head, summary, onShare }) {
       'Only what you ticked as bought in shop mode counts: what the offers took off it, and how much more the same items would have cost at the next-cheapest store. All of it stays on your phone.')}</p>`;
 }
 
+/* ---------------------------------------------------------------------
+   Ramadan: the night dress, today's iftar and suhoor, and the big shop
+   before the month. The dates are in lib/season.js.
+   ------------------------------------------------------------------- */
+// A dish that changes from day to day (lentil soup, then oat soup) names each in turn.
+const dishName = (dish, day) => {
+  const names = L(dish.name, dish.name_en || dish.name);
+  return Array.isArray(names) ? names[(day - 1) % names.length] : names;
+};
+
+function RamadanToday({ plan, season, meals }) {
+  const [part, setPart] = useState('iftar');
+  const main = meals.length ? meals[(season.day - 1) % meals.length] : null;
+  const dishes = (plan.daily && plan.daily[part]) || [];
+  const tab = (id, emoji, label) => html`
+    <button type="button" role="tab" aria-selected=${part === id} class=${part === id ? 'is-on' : ''} onClick=${() => setPart(id)}><${Emoji} char=${emoji} size=${20} /> ${label}</button>`;
+  return html`
+    <section class="ramadan-today" aria-label=${L('فطور اليوم وسحوره', 'Today’s iftar and suhoor')}>
+      <div class="ramadan-today__tabs" role="tablist">
+        ${tab('iftar', '🌙', L('الفطور', 'Iftar'))}
+        ${tab('suhoor', '🌅', L('السحور', 'Suhoor'))}
+      </div>
+      <p class="ramadan-today__title">
+        ${part === 'iftar' ? L('فطور اليوم', 'Today’s iftar') : L('سحور اليوم', 'Today’s suhoor')}
+        <small>${part === 'iftar' ? L('على أذان المغرب', 'At the sunset call to prayer') : L('قبل الفجر', 'Before dawn')}</small>
+      </p>
+      <div class="plates" role="tabpanel">
+        ${dishes.map((dish, at) => html`
+          <div class="plate-card">
+            <span class=${'plate-card__pic tile-' + (at % 6)}><${Emoji} char=${dish.emoji} size=${34} /></span>
+            <b>${dishName(dish, season.day)}</b>
+          </div>`)}
+        ${part === 'iftar' && main ? html`
+          <a class="plate-card plate-card--main" href=${'#/meal/' + main.id}>
+            <span class="plate-card__pic tile-4"><${Emoji} char=${main.emoji} size=${34} /></span>
+            <span><b>${nm(main)}</b><small>${L('الطبق الرئيسي · ', 'Main dish · ')}${main.minutes}${L(' دقيقة', ' min')}</small></span>
+          </a>` : null}
+      </div>
+      <a class="ramadan-today__shop" href="#/ramadan"><${Emoji} char="🛒" size=${22} /> ${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')} <${Icon} name="chevron" size=${16} /></a>
+    </section>`;
+}
+
+const RamadanBanner = ({ season }) => html`
+  <a class="ramadan-banner" href="#/ramadan">
+    <span class="ramadan-banner__moon"><${Emoji} char="🌙" size=${44} /></span>
+    <span class="ramadan-banner__body">
+      <b>${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</b>
+      <small>${L(`باقي ${season.daysLeft} ${season.daysLeft <= 10 ? 'أيام' : 'يوماً'} على رمضان · تُشترى مرة وتكفي الشهر`, `${pl(season.daysLeft, 'day', 'days')} to Ramadan · buy once for the month`)}</small>
+    </span>
+    <${Icon} name="chevron" size=${18} />
+  </a>`;
+
+/* The big shop at one store: each item bought for its own amount. */
+function stockupLines(plan, offers) {
+  if (!plan || !plan.stockup) return [];
+  return plan.stockup.items.map(item => {
+    const offer = item.offer ? offers.get(item.offer) : null;
+    const base = toBase(item.qty, item.unit);
+    return { item, offer, bought: offer && base ? purchase(offer, base) : null };
+  });
+}
+const linesTotal = lines => lines.reduce((sum, line) => sum + (line.bought ? line.bought.cost : 0), 0);
+
+function StockupPage({ data, head, store, plan, others, offers, season, week, set }) {
+  const [added, setAdded] = useState(false);
+  const lines = stockupLines(plan, offers);
+  if (!lines.length) {
+    return html`
+      <div class="night-page">
+        <${Head} ...${head} small><h1 class="head__title">${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</h1><//>
+        <div class="float empty"><${Emoji} char="🌙" size=${64} /><p class="empty__title">${L('ستظهر قريباً', 'Coming soon')}</p><p>${L('تظهر هنا قبل رمضان بأسبوعين، بأسعار ذلك الأسبوع.', 'It shows here two weeks before Ramadan, at that week’s prices.')}</p></div>
+      </div>`;
+  }
+  const priced = lines.filter(line => line.bought);
+  const total = linesTotal(lines);
+  const saved = priced.reduce((sum, line) => sum + line.bought.saved, 0);
+  const addAll = () => {
+    priced.forEach(line => set.extra(line.offer.id, Math.max(week.extras[line.offer.id] || 0, line.bought.units)));
+    setAdded(true);
+  };
+  return html`
+    <div class="night-page">
+      <${Head} ...${head} small>
+        <h1 class="head__title">${L('مقاضي رمضان الكبيرة', 'The big Ramadan shop')}</h1>
+        <p class="head__sub">${L('أغراض تُشترى مرة واحدة وتكفي الشهر، لأسرة من 4 أفراد', 'Bought once, they last the month, for a family of 4')}</p>
+        <div class="night-counts">
+          ${season && season.phase === 'before' ? html`<div><b dir="ltr">${season.daysLeft}</b><small>${L('يوماً لرمضان', 'days to Ramadan')}</small></div>` : season && season.phase === 'during' ? html`<div><b dir="ltr">${season.day}</b><small>${L('من رمضان', 'of Ramadan')}</small></div>` : null}
+          <div><b dir="ltr">${priced.length}</b><small>${L('صنفاً', 'items')}</small></div>
+          ${saved ? html`<div><b dir="ltr">${money(saved)}</b><small>${L('ريال من العروض', 'SAR off')}</small></div>` : null}
+        </div>
+      <//>
+      <ul class="float lines stockup">
+        ${lines.map(line => html`
+          <li class="line">
+            ${line.offer ? html`<${Photo} data=${data} offer=${line.offer} width=${128} cls="line__photo" />` : html`<span class="line__photo photo--none"><${Emoji} char=${line.item.emoji} size=${26} /></span>`}
+            <span class="line__body">
+              <span class="line__name">${nm(line.item)} <small>${LANG === 'en' || !line.item.display ? amount(toBase(line.item.qty, line.item.unit)) : line.item.display}</small></span>
+              <span class="line__sub">${line.offer ? html`<${StoreDot} id=${line.offer.store} />${nm(line.offer)} · ${lineDetail(Object.assign({ offer: line.offer }, line.bought))}` : L('غير متوفر في ' + storeName(data, store) + ' هذا الأسبوع', 'Not at ' + storeName(data, store) + ' this week')}</span>
+              ${line.bought && line.bought.saved ? html`<span class="line__tags"><span class="badge badge--save">${L('وفّرت', 'Saved')} <b dir="ltr">${money(line.bought.saved)}</b></span></span>` : null}
+            </span>
+            <span class="line__side">${line.bought ? html`<span class="line__cost" dir="ltr">${money(line.bought.cost)}</span>` : null}</span>
+          </li>`)}
+      </ul>
+      ${others.map(other => {
+        const theirs = stockupLines(other.plan, offers);
+        const missing = theirs.filter(line => !line.bought).length;
+        return theirs.length ? html`<p class="stockup__compare"><${StoreDot} id=${other.id} />${L('نفس المقاضي في ' + other.name + ': ', 'The same shop at ' + other.name + ': ')}<b dir="ltr">${money(linesTotal(theirs))}</b> ${riyal()}${missing ? L(` (${missing} غير متوفرة هناك)`, ` (${missing} not sold there)`) : ''}</p>` : null;
+      })}
+      <p class="fineprint">${L(
+        `يبدأ رمضان مع رؤية الهلال؛ التاريخ المتوقّع ${season ? longDay(season.start) : ''}. الأسعار أسعار هذا الأسبوع وقد تتغيّر.`,
+        `Ramadan begins with the sighting of the crescent; it is expected on ${season ? longDay(season.start) : ''}. Prices are this week’s and may change.`)}</p>
+      <div class="stockup-space" aria-hidden="true"></div>
+      <div class="stockup-bar">
+        <span><small>${L('المجموع', 'Total')}</small><b dir="ltr">${money(total)}</b> ${riyal()}</span>
+        ${added
+          ? html`<a class="stockup-bar__go" href="#/list"><${Icon} name="check" size=${18} stroke=${2.6} /> ${L('في قائمتك · افتحها', 'In your list · open it')}</a>`
+          : html`<button type="button" class="stockup-bar__go" onClick=${addAll}>${L('أضفها لقائمتي', 'Add to my list')}</button>`}
+      </div>
+    </div>`;
+}
+
 /* Shop and the scanner before the whole catalogue has arrived. */
 function CatalogueWait({ head, failed, onRetry }) {
   return html`
@@ -2277,7 +2401,7 @@ function App() {
   const retryFull = () => setFullTry(n => n + 1);
   useEffect(() => {
     const onHash = () => {
-      setRoute(previous => { if (!['meal', 'scan', 'story', 'instore', 'savings'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
+      setRoute(previous => { if (!['meal', 'scan', 'story', 'instore', 'savings', 'ramadan'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
       setSheet(null);
       setShopDone(false);
       window.scrollTo(0, 0);
@@ -2345,8 +2469,19 @@ function App() {
   const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
   const setsBy = data.plans.by_store || { [planStores[0]]: data.plans };
   const store = planStores.includes(prefs.store) ? prefs.store : planStores[0];
-  const plans = setsBy[store].plans;
-  const basePlan = plans.find(option => option.id === prefs.plan) || plans[0];
+  // Ramadan: the night dress and the Ramadan cuisine during the month; its big shop from two weeks before.
+  const today = riyadhToday();
+  const season = ramadanPreview(new URLSearchParams(window.location.search).get('ramadan'), today) || ramadanOn(today);
+  const during = Boolean(season && season.phase === 'during');
+  const allPlans = setsBy[store].plans;
+  const seasonal = allPlans.find(option => option.season === 'ramadan') || null;
+  const plans = allPlans.filter(option => !option.season || (during && option.season === 'ramadan'))
+    .sort((a, b) => Boolean(b.season) - Boolean(a.season)); // in Ramadan its cuisine comes first
+  // A cuisine picked during Ramadan is kept apart, so the family's usual one comes back after Eid.
+  const basePlan = (during && (plans.find(option => option.id === prefs.ramadanPlan) || seasonal)) || plans.find(option => option.id === prefs.plan) || plans[0];
+  document.documentElement.classList.toggle('is-ramadan', during);
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.setAttribute('content', during ? '#24235e' : '#0b6e45');
   const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
   const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek, avoid);
   const maxMeals = Math.max(CONFIG.minMeals, Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length));
@@ -2425,7 +2560,7 @@ function App() {
     prefs: (chosen, children) => patch({ avoid: chosen, kids: children }),
     toggleAvoid: tag => patch(previous => ({ avoid: toggleIn(Array.isArray(previous.avoid) ? previous.avoid : [], tag) })),
     lang: value => patch({ lang: value }),
-    plan: id => patch({ plan: id }),
+    plan: id => patch(during ? { ramadanPlan: id } : { plan: id }),
     store: id => patch({ store: id }),
     essentials: on => setWeek(() => ({ essentials: on })),
     toggleMeal: id => setWeek(current => ({ skipped: toggleIn(current.skipped, id) })),
@@ -2468,7 +2603,7 @@ function App() {
   const budgetInfo = { budget, over, fit, openBudget: () => setSheet('budget'), openFit: () => setSheet('fit') };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
-  const tab = route.tab === 'savings' ? 'me' : ['meal', 'scan', 'story', 'instore'].includes(route.tab) ? lastTab.current : route.tab;
+  const tab = route.tab === 'savings' ? 'me' : route.tab === 'ramadan' ? 'home' : ['meal', 'scan', 'story', 'instore'].includes(route.tab) ? lastTab.current : route.tab;
   const history = Array.isArray(prefs.history) ? prefs.history : [];
   const savings = savingsSummary(history, riyadhToday().slice(0, 7));
   const openShare = () => setSheet('share');
@@ -2479,12 +2614,14 @@ function App() {
     <div class="shell">
       <main class="main" id="main">
         ${route.tab === 'savings' ? html`<${SavingsPage} data=${data} head=${head} summary=${savings} onShare=${() => setSheet('savings')} />`
+          : route.tab === 'ramadan' ? html`<${StockupPage} data=${data} head=${head} store=${store} plan=${seasonal} offers=${offers} season=${season} week=${week} set=${set}
+              others=${planStores.filter(id => id !== store).map(id => ({ id, name: storeName(data, id), plan: setsBy[id].plans.find(option => option.season === 'ramadan') })).filter(other => other.plan)} />`
           : meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
           : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
           : tab === 'shop' ? (data.full ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />` : html`<${CatalogueWait} head=${head} failed=${fullFailed} onRetry=${retryFull} />`)
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
           : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} savings=${savings} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} />`}
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} season=${season} />`}
       </main>
 
       <nav class="tabbar" aria-label=${L('الأقسام', 'Sections')}>

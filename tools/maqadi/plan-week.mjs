@@ -90,7 +90,8 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
   const keyed = item => item && item.key && !item.pantry;
   const everyMeal = [];
   const homeOf = {};
-  recipes.cuisines.filter(cuisine => cuisine.from !== 'all').forEach(cuisine => cuisine.meals.forEach(meal => {
+  // A season's own meals (Ramadan's harees and jareesh) stay in its season.
+  recipes.cuisines.filter(cuisine => cuisine.from !== 'all' && !cuisine.season).forEach(cuisine => cuisine.meals.forEach(meal => {
     if (everyMeal.some(other => other.id === meal.id)) return;
     everyMeal.push(meal);
     homeOf[meal.id] = cuisine.name;
@@ -112,7 +113,9 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
   // 1–2. Choose each cuisine's week at the first store.
   const weeks = [];
   recipes.cuisines.forEach(cuisine => {
-    const meals = cuisine.from === 'all' ? everyMeal : cuisine.meals;
+    // "include" borrows other cuisines' meals; "prefer" picks some first whenever they can be bought.
+    const meals = cuisine.from === 'all' ? everyMeal
+      : cuisine.meals.concat((cuisine.include || []).map(id => everyMeal.find(meal => meal.id === id)).filter(Boolean));
     const byCost = cuisine.rank === 'cost';
     const scored = meals.map(score);
     const rankReady = byCost ? (a, b) => a.cost - b.cost || a.order - b.order : (a, b) => b.saved - a.saved || a.order - b.order;
@@ -127,6 +130,7 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
     };
     // Variety first; then a third meal on the same main ingredient beats a meal that cannot be bought.
     const ready = scored.filter(entry => entry.ready).sort(rankReady);
+    ready.filter(entry => (cuisine.prefer || []).includes(entry.meal.id)).forEach(take(true));
     ready.forEach(take(true));
     ready.forEach(take(false));
     scored.filter(entry => !entry.ready && entry.found > 0).sort((a, b) => b.found - a.found || a.order - b.order).forEach(take(true));
@@ -153,9 +157,10 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
   storeIds.forEach(storeId => {
     const pool = keysFor[storeId];
     const plans = weeks.map(({ cuisine, picked, others }) => {
+      const essentials = cuisine.essentials || recipes.essentials;
       const need = new Map();
       picked.forEach(entry => entry.meal.ingredients.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit))));
-      recipes.essentials.items.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit)));
+      essentials.items.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit)));
       const chosen = {};
       need.forEach((total, key) => {
         const best = bestOffer(pool[key] || [], total);
@@ -173,7 +178,15 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
         const out = { name: item.name, qty: item.qty, unit: item.unit };
         if (chosen[item.key]) out.offer = chosen[item.key].id;
         if (item.display) out.display = item.display;
-        ['name_en', 'display_en', 'tags'].forEach(field => { if (item[field]) out[field] = item[field]; });
+        ['name_en', 'display_en', 'tags', 'part', 'emoji'].forEach(field => { if (item[field]) out[field] = item[field]; });
+        return out;
+      };
+      // The big shop before a season: each item bought for its own amount.
+      const stockItem = item => {
+        const out = { name: item.name, qty: item.qty, unit: item.unit };
+        const best = bestOffer(pool[item.key] || [], toBase(item.qty, item.unit));
+        if (best) out.offer = best.offer.id;
+        ['display', 'name_en', 'display_en', 'tags', 'emoji'].forEach(field => { if (item[field]) out[field] = item[field]; });
         return out;
       };
       const toPlanMeal = ({ meal, ready, foreign }) => {
@@ -185,7 +198,7 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
       };
       const missing = [...need.keys()].filter(key => !chosen[key]);
       if (missing.length) log(`  ${storeId} ${cuisine.id}: no price for ${missing.join(', ')}`);
-      return {
+      const plan = {
         id: cuisine.id,
         name: cuisine.name,
         tagline: cuisine.tagline,
@@ -194,8 +207,12 @@ export function autoPlans({ recipes, ingredients, offers, store, stores, log = (
         base_persons: recipes.base_persons,
         meals: picked.map(toPlanMeal),
         alternatives: others.map(toPlanMeal),
-        essentials: { name: recipes.essentials.name, name_en: recipes.essentials.name_en, items: recipes.essentials.items.map(toPlanItem) }
+        essentials: { name: essentials.name, name_en: essentials.name_en, items: essentials.items.map(toPlanItem) }
       };
+      if (cuisine.season) plan.season = cuisine.season;
+      if (cuisine.daily) plan.daily = cuisine.daily;
+      if (cuisine.stockup) plan.stockup = { name: cuisine.stockup.name, name_en: cuisine.stockup.name_en, items: cuisine.stockup.items.map(stockItem) };
+      return plan;
     });
     byStore[storeId] = { base_persons: recipes.base_persons, plans };
   });

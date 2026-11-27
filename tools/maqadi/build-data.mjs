@@ -238,6 +238,7 @@ export function checkPlans(plans, offers) {
       (meal.ingredients || []).forEach(ingredient => checkIngredient(ingredient, where));
     });
     if (plan.essentials) (plan.essentials.items || []).forEach(item => checkIngredient(item, `${at} › essentials`));
+    if (plan.stockup) (plan.stockup.items || []).forEach(item => checkIngredient(item, `${at} › stockup`));
   });
   return problems;
 }
@@ -341,7 +342,8 @@ function main() {
     process.exit(1);
   }
   const used = new Set();
-  storePlans.forEach(set => set.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
+  storePlans.forEach(set => set.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients)
+    .concat(plan.essentials ? plan.essentials.items : [], plan.stockup ? plan.stockup.items : [])
     .forEach(item => { if (item.offer) used.add(item.offer); })));
   console.log(`published ${publish(used)} of ${offers.length} products${meta.publish_all ? '' : ' (discounts and the ones the plans buy)'}`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));

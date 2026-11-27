@@ -2448,6 +2448,388 @@
    "from": "all",
    "rank": "cost",
    "meals": []
+  },
+  {
+   "id": "ramadan",
+   "name": "رمضانية",
+   "tagline": "فطور وسحور كل يوم، على عروض رمضان.",
+   "season": "ramadan",
+   "include": [
+    "k1",
+    "k7",
+    "k8",
+    "k2",
+    "s1",
+    "s6",
+    "s3"
+   ],
+   "prefer": [
+    "r1",
+    "r2"
+   ],
+   "meals": [
+    {
+     "id": "r1",
+     "name": "هريس بالدجاج",
+     "emoji": "🌾",
+     "minutes": 150,
+     "summary": "حبّ الهريس مطبوخ مع الدجاج حتى يصير ناعماً، طبق رمضان الأول.",
+     "main": [
+      "harees",
+      "chicken_pieces"
+     ],
+     "ingredients": [
+      {
+       "key": "harees",
+       "name": "هريس",
+       "qty": 500,
+       "unit": "g",
+       "display": "كوبان ونصف"
+      },
+      {
+       "key": "chicken_pieces",
+       "name": "قطع دجاج",
+       "qty": 900,
+       "unit": "g"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 150,
+       "unit": "g",
+       "display": "حبة متوسطة"
+      },
+      {
+       "key": "butter",
+       "name": "زبدة",
+       "qty": 50,
+       "unit": "g",
+       "display": "ملعقتان كبيرتان"
+      },
+      {
+       "name": "هيل مطحون",
+       "qty": 0.5,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "قرفة",
+       "qty": 0.5,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُغسل الهريس ويُنقع في الماء 4 ساعات على الأقل، أو من الليل.",
+      "يُسلق الدجاج مع البصل والهيل والقرفة والملح في 8 أكواب ماء 30 دقيقة، ثم يُرفع ويُنزع منه العظم.",
+      "يُصفّى الهريس ويُضاف إلى المرق، ويُترك على نار هادئة ساعة ونصفاً مع التحريك كل ربع ساعة حتى ينضج ويتفتّت.",
+      "يُعاد الدجاج ويُضرب الخليط بالمضرب الخشبي أو الخلاط اليدوي حتى يصبح ناعماً متماسكاً.",
+      "يُقدَّم ساخناً وعلى وجهه الزبدة الذائبة ورشّة قرفة."
+     ],
+     "tip": "انقع الهريس من الليل ليختصر الطبخ ساعة كاملة."
+    },
+    {
+     "id": "r2",
+     "name": "جريش بالدجاج",
+     "emoji": "🍲",
+     "minutes": 100,
+     "summary": "جريش مطبوخ بمرق الدجاج ومخلوط باللبن، وعلى وجهه بصل محمّر.",
+     "main": [
+      "jareesh"
+     ],
+     "ingredients": [
+      {
+       "key": "jareesh",
+       "name": "جريش",
+       "qty": 500,
+       "unit": "g",
+       "display": "كوبان ونصف"
+      },
+      {
+       "key": "chicken_pieces",
+       "name": "قطع دجاج",
+       "qty": 700,
+       "unit": "g"
+      },
+      {
+       "key": "laban",
+       "name": "لبن",
+       "qty": 500,
+       "unit": "ml",
+       "display": "كوبان"
+      },
+      {
+       "key": "onion",
+       "name": "بصل",
+       "qty": 300,
+       "unit": "g",
+       "display": "حبتان"
+      },
+      {
+       "key": "butter",
+       "name": "زبدة",
+       "qty": 30,
+       "unit": "g",
+       "display": "ملعقة كبيرة"
+      },
+      {
+       "name": "كمون",
+       "qty": 1,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "فلفل أسود",
+       "qty": 0.5,
+       "unit": "tsp",
+       "pantry": true
+      },
+      {
+       "name": "زيت نباتي",
+       "qty": 3,
+       "unit": "tbsp",
+       "pantry": true
+      },
+      {
+       "name": "ملح",
+       "qty": 0,
+       "unit": "taste",
+       "pantry": true
+      }
+     ],
+     "steps": [
+      "يُغسل الجريش ويُنقع ساعة.",
+      "يُسلق الدجاج مع نصف البصل والملح والفلفل الأسود في 7 أكواب ماء 30 دقيقة، ثم يُرفع ويُنزع منه العظم ويُقطّع.",
+      "يُضاف الجريش المصفّى إلى المرق ويُطبخ على نار هادئة 45 دقيقة مع التحريك حتى يتشرّب المرق.",
+      "يُعاد الدجاج مع اللبن والكمون والزبدة، ويُقلّب 5 دقائق على نار هادئة دون أن يغلي اللبن.",
+      "يُحمَّر باقي البصل شرائح في الزيت حتى يصير ذهبياً، ويُوزَّع على وجه الجريش."
+     ],
+     "tip": "اللبن يُضاف في الآخر وعلى نار هادئة حتى لا يتكتّل."
+    }
+   ],
+   "essentials": {
+    "name": "أساسيات الفطور والسحور",
+    "items": [
+     {
+      "key": "dates",
+      "name": "تمر",
+      "qty": 1000,
+      "unit": "g",
+      "display": "كيلو",
+      "part": "iftar",
+      "emoji": "🌴"
+     },
+     {
+      "key": "laban",
+      "name": "لبن",
+      "qty": 4000,
+      "unit": "ml",
+      "display": "4 لترات",
+      "part": "iftar",
+      "emoji": "🥛"
+     },
+     {
+      "key": "lentils",
+      "name": "عدس لشوربة العدس",
+      "qty": 500,
+      "unit": "g",
+      "display": "نصف كيلو",
+      "part": "iftar",
+      "emoji": "🥣"
+     },
+     {
+      "key": "oats",
+      "name": "شوفان لشوربة الشوفان",
+      "qty": 400,
+      "unit": "g",
+      "part": "iftar",
+      "emoji": "🥣"
+     },
+     {
+      "key": "sambousa_sheets",
+      "name": "رقائق سمبوسة",
+      "qty": 500,
+      "unit": "g",
+      "part": "iftar",
+      "emoji": "🥟"
+     },
+     {
+      "key": "mozzarella",
+      "name": "جبنة لحشوة السمبوسة",
+      "qty": 400,
+      "unit": "g",
+      "part": "iftar",
+      "emoji": "🧀"
+     },
+     {
+      "key": "vimto",
+      "name": "شراب فيمتو",
+      "qty": 710,
+      "unit": "ml",
+      "display": "قنينة",
+      "part": "iftar",
+      "emoji": "🧃"
+     },
+     {
+      "key": "foul",
+      "name": "فول مدمس",
+      "qty": 1600,
+      "unit": "g",
+      "display": "4 علب",
+      "part": "suhoor",
+      "emoji": "🫘"
+     },
+     {
+      "key": "eggs",
+      "name": "بيض",
+      "qty": 20,
+      "unit": "pcs",
+      "part": "suhoor",
+      "emoji": "🥚"
+     },
+     {
+      "key": "labneh",
+      "name": "لبنة",
+      "qty": 500,
+      "unit": "g",
+      "part": "suhoor",
+      "emoji": "🫙"
+     },
+     {
+      "key": "bread_toast",
+      "name": "خبز توست",
+      "qty": 1200,
+      "unit": "g",
+      "part": "suhoor",
+      "emoji": "🍞"
+     }
+    ]
+   },
+   "daily": {
+    "iftar": [
+     {
+      "name": "تمر ولبن",
+      "emoji": "🌴"
+     },
+     {
+      "name": [
+       "شوربة عدس",
+       "شوربة شوفان"
+      ],
+      "emoji": "🥣"
+     },
+     {
+      "name": "سمبوسة بالجبن",
+      "emoji": "🥟"
+     }
+    ],
+    "suhoor": [
+     {
+      "name": "فول مدمس",
+      "emoji": "🫘"
+     },
+     {
+      "name": "بيض",
+      "emoji": "🥚"
+     },
+     {
+      "name": "لبنة",
+      "emoji": "🫙"
+     },
+     {
+      "name": "خبز توست",
+      "emoji": "🍞"
+     }
+    ]
+   },
+   "stockup": {
+    "name": "مقاضي رمضان الكبيرة",
+    "items": [
+     {
+      "key": "dates",
+      "name": "تمر",
+      "qty": 3000,
+      "unit": "g",
+      "display": "3 كيلو",
+      "emoji": "🌴"
+     },
+     {
+      "key": "vimto",
+      "name": "شراب فيمتو",
+      "qty": 2130,
+      "unit": "ml",
+      "display": "3 قناني",
+      "emoji": "🧃"
+     },
+     {
+      "key": "rice_basmati",
+      "name": "أرز بسمتي",
+      "qty": 5000,
+      "unit": "g",
+      "display": "5 كيلو",
+      "emoji": "🍚"
+     },
+     {
+      "key": "jareesh",
+      "name": "جريش",
+      "qty": 1600,
+      "unit": "g",
+      "emoji": "🌾"
+     },
+     {
+      "key": "harees",
+      "name": "هريس",
+      "qty": 1600,
+      "unit": "g",
+      "emoji": "🌾"
+     },
+     {
+      "key": "lentils",
+      "name": "عدس",
+      "qty": 2000,
+      "unit": "g",
+      "display": "2 كيلو",
+      "emoji": "🥣"
+     },
+     {
+      "key": "oats",
+      "name": "شوفان",
+      "qty": 800,
+      "unit": "g",
+      "emoji": "🥣"
+     },
+     {
+      "key": "foul",
+      "name": "فول مدمس",
+      "qty": 3200,
+      "unit": "g",
+      "display": "8 علب",
+      "emoji": "🫘"
+     },
+     {
+      "key": "sambousa_sheets",
+      "name": "رقائق سمبوسة",
+      "qty": 2000,
+      "unit": "g",
+      "display": "2 كيلو",
+      "emoji": "🥟"
+     },
+     {
+      "key": "qamar_aldin",
+      "name": "قمر الدين",
+      "qty": 1200,
+      "unit": "g",
+      "display": "4 لفّات",
+      "emoji": "🍑"
+     }
+    ]
+   }
   }
  ]
 }
