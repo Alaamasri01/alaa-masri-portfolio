@@ -161,15 +161,14 @@ export function buildList({ plan, offers, persons, skipped = new Set(), essentia
   };
 }
 
-/* The single best saving a meal rests on, for its card. */
+/* The saving a meal's card shows: its main ingredient's, and ingredients are
+   listed main first. */
 export function mealHighlight(meal, offers) {
-  let best = null;
-  meal.ingredients.forEach(ingredient => {
+  for (const ingredient of meal.ingredients) {
     const offer = ingredient.offer ? offers.get(ingredient.offer) : null;
-    if (!offer || !(offer.was > offer.price)) return;
-    if (!best || discountPercent(offer) > discountPercent(best)) best = offer;
-  });
-  return best;
+    if (offer && offer.was > offer.price) return offer;
+  }
+  return null;
 }
 
 /* ---------------------------------------------------------------------

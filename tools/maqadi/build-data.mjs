@@ -29,6 +29,18 @@ const pad = n => String(n).padStart(2, '0');
 const clean = text => (typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : null);
 const isPrice = n => typeof n === 'number' && Number.isFinite(n) && n > 0 && n < 5000;
 
+/* The app shows two printed restrictions; everything else in a reader's note
+   (pack wording, reading remarks) is already carried by the other fields. */
+function restriction(note) {
+  const text = String(note || '');
+  if (/iktissab|اكتساب/i.test(text)) return 'Iktissab members';
+  if (/selected branches|فروع مختارة/i.test(text)) return 'selected branches';
+  return null;
+}
+/* A regional offer that does not name the store's own region is not sold there. */
+const REGIONS = /الشمالية|الغربية|الجنوبية|الشرقية|الوسطى/;
+const outsideRegion = (note, region) => REGIONS.test(String(note || '')) && !String(note).includes(region);
+
 export function buildOffers(week, log = console.log) {
   const dir = join(ROOT, 'tools/maqadi/weeks', week);
   const meta = readJSON(join(dir, 'meta.json'));
@@ -54,6 +66,7 @@ export function buildOffers(week, log = console.log) {
         if (!name) { report.dropped.push([id, 'no name']); return; }
         if (!isPrice(item.price)) { report.dropped.push([id, 'no readable price: ' + name]); return; }
         if (item.confidence === 'low' && !(meta.corrections || {})[id]) { report.dropped.push([id, 'low confidence: ' + name]); return; }
+        if (store.region && outsideRegion(item.note, store.region)) { report.dropped.push([id, 'offered in other regions only: ' + name]); return; }
 
         let was = isPrice(item.was) ? item.was : null;
         if (was !== null && was <= item.price) { report.fixed.push([id, `old price ${was} not above ${item.price}; removed`]); was = null; }
@@ -76,7 +89,7 @@ export function buildOffers(week, log = console.log) {
           price: item.price,
           was,
           promo: clean(item.promo),
-          note: clean(item.note)
+          note: restriction(item.note)
         };
         // The two halves of a page overlap; the same product read twice is one offer.
         const key = [storeId, page, offer.name, offer.size_text, offer.price].join('|');

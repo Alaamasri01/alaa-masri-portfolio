@@ -8,10 +8,28 @@
       "name": "العثيم",
       "valid_from": "2026-11-25",
       "valid_to": "2026-12-01",
-      "source": "مجلة العروض الأسبوعية الرسمية (72 صفحة)",
-      "source_url": "https://www.othaimmarkets.com/ar/offers/weekly-promotions"
+      "source": "مجلة العروض الأسبوعية الرسمية (41 صفحة من 72 حتى الآن)",
+      "source_url": "https://www.othaimmarkets.com/ar/offers/weekly-promotions",
+      "region": "الوسطى"
     }
   },
-  "corrections": {},
+  "corrections": {
+    "ot-01-14": {
+      "name_ar": "تفاح رويال جالا",
+      "name_en": "Apples Royal Gala"
+    },
+    "ot-01-15": {
+      "name_ar": "موز",
+      "name_en": "Banana"
+    },
+    "ot-04-01": {
+      "size_qty": 1400,
+      "size_unit": "g"
+    },
+    "ot-15-09": {
+      "size_qty": 1,
+      "size_unit": "pcs"
+    }
+  },
   "drop": []
 }

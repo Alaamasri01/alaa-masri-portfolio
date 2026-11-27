@@ -158,7 +158,7 @@ test('items added by hand from the deals are costed too', () => {
   assert.equal(list.lines.filter(line => line.extra).length, 1);
 });
 
-test('a meal card highlights its biggest printed saving', () => {
+test('a meal card highlights the saving on its main ingredient', () => {
   assert.equal(mealHighlight(plan.meals[0], offers).id, 'chicken');
   assert.equal(mealHighlight({ ingredients: [{ name: 'بصل', qty: 1, unit: 'kg', offer: 'onion' }] }, offers), null);
 });
