@@ -1,0 +1,58 @@
+{
+  "week": "2026-W48",
+  "city": "riyadh",
+  "updated": "2026-11-27",
+  "plan_stores": [
+    "panda",
+    "tamimi"
+  ],
+  "publish_all": true,
+  "stores": {
+    "othaim": {
+      "prefix": "ot",
+      "name": "العثيم",
+      "valid_from": "2026-11-25",
+      "valid_to": "2026-12-01",
+      "source": "مجلة العروض الأسبوعية الرسمية، 37 صفحة من 72 (صفحات الأكل الأساسية)",
+      "source_url": "https://www.othaimmarkets.com/ar/offers/weekly-promotions",
+      "region": "الوسطى"
+    },
+    "tamimi": {
+      "prefix": "tm",
+      "name": "التميمي",
+      "source": "متجر التميمي الإلكتروني: العروض الأسبوعية والخضار والفواكه",
+      "source_url": "https://www.tamimimarkets.com/tag/Weekly%20Offers",
+      "checked": "2026-11-27"
+    },
+    "panda": {
+      "prefix": "pd",
+      "name": "بنده",
+      "source": "متجر بنده الإلكتروني (كل الأقسام)",
+      "source_url": "https://panda.sa/ar",
+      "checked": "2026-11-27"
+    }
+  },
+  "corrections": {
+    "ot-01-14": {
+      "name_ar": "تفاح رويال جالا",
+      "name_en": "Apples Royal Gala"
+    },
+    "ot-01-15": {
+      "name_ar": "موز",
+      "name_en": "Banana"
+    },
+    "ot-04-01": {
+      "size_qty": 1400,
+      "size_unit": "g"
+    },
+    "ot-15-09": {
+      "size_qty": 1,
+      "size_unit": "pcs"
+    },
+    "ot-32-11": {
+      "was": null,
+      "confidence": "medium"
+    }
+  },
+  "drop": []
+}

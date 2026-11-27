@@ -1,0 +1,676 @@
+{
+  "_note": "English for tools/maqadi/recipes.json, by id. Each meal lists its ingredients in the same order as the Arabic, with `display` only where the Arabic has one. A test checks that every meal, step and ingredient has its English.",
+  "cuisines": {
+    "khaliji": { "name": "Gulf", "tagline": "Kabsa, stews and oven trays, built on this week's offers." },
+    "shami": { "name": "Levantine", "tagline": "Maqluba, molokhia and mujaddara, the Levantine way." },
+    "quick": { "name": "Quick", "tagline": "Meals in about half an hour, for working days." },
+    "healthy": { "name": "Healthy", "tagline": "Light meals with protein and vegetables, mostly oven-baked or pan-cooked without frying." },
+    "budget": { "name": "Budget", "tagline": "The week's cheapest meals from every cuisine, priced on this week's offers." }
+  },
+  "essentials": {
+    "name": "Breakfast and dinner basics",
+    "items": { "eggs": "Eggs", "labneh": "Labneh", "bread_toast": "Toast bread", "cheese_slices": "Cheese slices" }
+  },
+  "meals": {
+    "k1": {
+      "name": "Chicken Kabsa",
+      "summary": "A whole chicken with spiced basmati rice, the home favourite.",
+      "ingredients": [
+        { "name": "Whole chicken", "display": "1 chicken (1100 g)" },
+        { "name": "Basmati rice", "display": "3 cups" },
+        { "name": "Onion", "display": "2 medium onions" },
+        { "name": "Tomato paste", "display": "2 tablespoons" },
+        { "name": "Garlic", "display": "4 cloves" },
+        { "name": "Kabsa spices" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Cut the chicken into four pieces. Wash the rice and soak it for 20 minutes.",
+        "Soften the chopped onion in the oil, then add the garlic, tomato paste and kabsa spices and stir for a minute.",
+        "Add the chicken and stir, then cover with five cups of hot water and the salt and cook on medium heat for 35 minutes.",
+        "Lift out the chicken and brown it in the oven for 10 minutes. Make the stock up to four and a half cups and add the drained rice.",
+        "Cook the rice covered on low heat for 20 minutes, then serve with the chicken on top."
+      ]
+    },
+    "k2": {
+      "name": "Okra Stew with Chicken",
+      "summary": "Chicken pieces with okra in tomato sauce, served with white rice.",
+      "ingredients": [
+        { "name": "Chicken pieces" },
+        { "name": "Frozen okra" },
+        { "name": "Basmati rice", "display": "2½ cups" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Tomato paste", "display": "2 tablespoons" },
+        { "name": "Garlic", "display": "4 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Ground coriander" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Brown the chicken pieces in the oil on both sides, then set aside.",
+        "In the same pot, soften the onion and garlic, then add the tomato paste and coriander and stir.",
+        "Return the chicken with 3 cups of hot water and salt, and cook on medium heat for 25 minutes.",
+        "Add the okra while still frozen, with the lemon juice, and cook for 12 minutes without stirring much.",
+        "Boil the rice separately and serve it with the stew."
+      ]
+    },
+    "k3": {
+      "name": "Pasta with Minced Meat",
+      "summary": "Pasta in a red sauce of minced meat and peppers, a favourite with children.",
+      "ingredients": [
+        { "name": "Pasta" },
+        { "name": "Minced beef" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Green pepper", "display": "1 pepper" },
+        { "name": "Tomato paste", "display": "3 tablespoons" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Mixed spices" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the pasta in salted water for the time on the pack and drain it, keeping a cup of the cooking water.",
+        "Brown the minced meat in the oil until its liquid has gone, then add the onion, garlic and chopped pepper.",
+        "Add the tomato paste, spices and the cup of cooking water, and simmer the sauce for 10 minutes.",
+        "Toss the pasta with the sauce over the heat for two minutes and serve."
+      ]
+    },
+    "k4": {
+      "name": "Chicken Thigh and Potato Tray",
+      "summary": "Chicken thighs with potatoes, lemon and garlic in one oven tray.",
+      "ingredients": [
+        { "name": "Chicken thighs" },
+        { "name": "Potatoes" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Garlic", "display": "6 cloves" },
+        { "name": "Paprika" },
+        { "name": "Cumin" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Heat the oven to 200°C. Cut the potatoes and onion into thick slices and spread them in the tray.",
+        "Mix the oil with the lemon juice, crushed garlic, paprika, cumin and salt, and brush it over the chicken and potatoes.",
+        "Lay the thighs on the potatoes, add half a cup of water and cover the tray with foil for 30 minutes.",
+        "Remove the foil and bake for another 20 minutes until golden on top."
+      ]
+    },
+    "k5": {
+      "name": "Eggplant Musaqqa'a with Minced Meat",
+      "summary": "Oven-roasted eggplant with minced meat and tomato sauce, with white rice.",
+      "ingredients": [
+        { "name": "Eggplant" },
+        { "name": "Minced beef" },
+        { "name": "Canned chopped tomatoes", "display": "1 can" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Green pepper", "display": "1 pepper" },
+        { "name": "Garlic", "display": "4 cloves" },
+        { "name": "Basmati rice", "display": "2 cups" },
+        { "name": "Mixed spices" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Slice the eggplant into rounds, brush with a little oil and roast at 220°C for 20 minutes until soft.",
+        "Brown the minced meat with the onion and garlic, then add the pepper, chopped tomatoes, spices and half a cup of water, and cook for 10 minutes.",
+        "Arrange the eggplant in a tray, spread the meat sauce over it and bake for 15 minutes.",
+        "Serve hot with white rice."
+      ]
+    },
+    "k6": {
+      "name": "Fish Sayadiyah",
+      "summary": "Fish fillet with rice cooked with browned onions and cumin.",
+      "ingredients": [
+        { "name": "Fish fillet" },
+        { "name": "Basmati rice", "display": "2½ cups" },
+        { "name": "Onion", "display": "3 large onions" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Cumin" },
+        { "name": "Turmeric" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Season the fish with salt, cumin and lemon juice and leave for 15 minutes.",
+        "Fry the sliced onion in the oil until dark brown, and set half aside for the top.",
+        "Add 4 cups of hot water, salt and turmeric to the remaining onion and boil for 5 minutes, then add the washed rice and cook on low heat for 20 minutes.",
+        "Fry the fish, or bake it at 200°C for 15 minutes.",
+        "Serve the rice with the fish on top and the browned onion."
+      ]
+    },
+    "k7": {
+      "name": "Chicken Mandi",
+      "summary": "Spiced chicken cooked over basmati rice with cardamom and cumin.",
+      "ingredients": [
+        { "name": "Whole chicken", "display": "1 chicken (1100 g)" },
+        { "name": "Basmati rice", "display": "3 cups" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Mandi spices" },
+        { "name": "Cardamom" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Season the halved chicken with the spices, garlic, lemon, salt and oil, and leave for an hour if you can.",
+        "Soften the onion in a pot, then add the washed rice, cardamom, 5 cups of boiling water and salt.",
+        "Set the chicken on a rack over the rice inside the pot, cover tightly and cook on very low heat for 60 minutes.",
+        "Brown the chicken skin in the oven for 10 minutes, then serve on the rice."
+      ],
+      "tip": "Marinating time is not included in the cooking time."
+    },
+    "k8": {
+      "name": "Chicken and Vegetable Saloona",
+      "summary": "Chicken stew with potatoes, vegetables and tomato, served with white rice.",
+      "ingredients": [
+        { "name": "Chicken pieces" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Potatoes", "display": "3 medium potatoes" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Tomato paste", "display": "2 tablespoons" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Basmati rice", "display": "2½ cups" },
+        { "name": "Mixed spices" },
+        { "name": "Dried lime (loomi)" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Brown the chicken in the oil and set aside. Soften the onion and garlic in the same pot.",
+        "Add the tomato paste, spices and dried lime, then return the chicken with 4 cups of hot water.",
+        "After 20 minutes add the diced potatoes, after 10 more the frozen vegetables, and cook for another 10 minutes.",
+        "Boil the rice separately and serve it with the saloona."
+      ]
+    },
+    "s1": {
+      "name": "Chicken and Eggplant Maqluba",
+      "summary": "Chicken, eggplant and rice, turned upside down onto one platter.",
+      "ingredients": [
+        { "name": "Whole chicken", "display": "1 chicken (1100 g)" },
+        { "name": "Basmati rice", "display": "2½ cups" },
+        { "name": "Eggplant" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Mixed spices" },
+        { "name": "Turmeric" },
+        { "name": "Oil for frying" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the cut chicken with the onion, salt and half the spices for 35 minutes, and keep the stock.",
+        "Slice the eggplant lengthways and fry it, or roast it in the oven, until golden.",
+        "In an oiled pot, layer the chicken, then the eggplant, then the washed rice seasoned with the rest of the spices and the turmeric.",
+        "Pour in stock to one centimetre above the rice and cook on low heat for 35 minutes.",
+        "Rest for 10 minutes, then turn it out onto the serving platter."
+      ]
+    },
+    "s2": {
+      "name": "Molokhia with Chicken",
+      "summary": "Molokhia with fried garlic and coriander, with chicken and white rice.",
+      "ingredients": [
+        { "name": "Frozen molokhia", "display": "2 bags" },
+        { "name": "Chicken breasts" },
+        { "name": "Garlic", "display": "8 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Basmati rice", "display": "2 cups" },
+        { "name": "Ground coriander" },
+        { "name": "Ghee or oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the chicken in 5 cups of water with salt for 25 minutes, then shred it and keep the stock.",
+        "Add the frozen molokhia to 4 cups of the boiling stock and stir until it melts, then boil for only 5 minutes.",
+        "Fry the crushed garlic with the coriander in the ghee until golden, and pour it over the molokhia.",
+        "Add the shredded chicken, and serve with white rice and lemon juice."
+      ]
+    },
+    "s3": {
+      "name": "Kofta and Potato Tray",
+      "summary": "Kofta fingers over potatoes in tomato sauce, baked in the oven.",
+      "ingredients": [
+        { "name": "Minced beef" },
+        { "name": "Potatoes" },
+        { "name": "Onion", "display": "1 large onion" },
+        { "name": "Green pepper", "display": "1 pepper" },
+        { "name": "Tomato paste", "display": "2 tablespoons" },
+        { "name": "Parsley", "display": "1 small bunch" },
+        { "name": "Mixed spices" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Knead the meat with half the finely chopped onion, the parsley, spices and salt, and shape it into fingers.",
+        "Slice the potatoes thinly and spread them in an oiled tray with the rest of the onion and the pepper.",
+        "Lay the kofta on top. Dissolve the tomato paste in one and a half cups of hot water with salt and pour it into the tray.",
+        "Cover and bake at 200°C for 30 minutes, then uncover for 15 minutes to brown."
+      ]
+    },
+    "s4": {
+      "name": "Oven Shish Tawook",
+      "summary": "Chicken cubes marinated in yoghurt and lemon, with roast potatoes.",
+      "ingredients": [
+        { "name": "Chicken breasts" },
+        { "name": "Yoghurt", "display": "1 pot" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Garlic", "display": "5 cloves" },
+        { "name": "Tomato paste", "display": "1 tablespoon" },
+        { "name": "Potatoes" },
+        { "name": "Paprika" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Cut the chicken into cubes and marinate it with the yoghurt, lemon juice, garlic, tomato paste, paprika and salt, for an hour if you can.",
+        "Cut the potatoes into wedges, toss with oil and salt and bake at 220°C for 15 minutes.",
+        "Spread the chicken on a second tray and bake for 18 to 20 minutes, turning once.",
+        "Serve the chicken with the potatoes."
+      ],
+      "tip": "Marinating time is not included in the cooking time."
+    },
+    "s5": {
+      "name": "Mujaddara",
+      "summary": "Lentils and rice with crispy onions, served with yoghurt.",
+      "ingredients": [
+        { "name": "Lentils", "display": "1½ cups" },
+        { "name": "Basmati rice", "display": "1¼ cups" },
+        { "name": "Onion", "display": "4 medium onions" },
+        { "name": "Yoghurt", "display": "3 pots" },
+        { "name": "Cumin" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the lentils in 5 cups of water for 20 minutes until half cooked.",
+        "Fry the onion, cut in slivers, in the oil until brown and crisp, and set half aside for the top.",
+        "Add the washed rice, cumin, salt and the rest of the onion with its oil to the lentils, and adjust the water to one centimetre above.",
+        "Cook on low heat for 20 minutes, and serve with the crispy onion and yoghurt."
+      ]
+    },
+    "s6": {
+      "name": "Pasta Béchamel",
+      "summary": "Layers of pasta, minced meat and béchamel under a mozzarella top.",
+      "ingredients": [
+        { "name": "Pasta" },
+        { "name": "Minced beef" },
+        { "name": "Milk", "display": "4 cups" },
+        { "name": "Butter" },
+        { "name": "Grated mozzarella" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Tomato paste", "display": "1 tablespoon" },
+        { "name": "Flour" },
+        { "name": "Black pepper and nutmeg" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil and drain the pasta. Brown the meat with the onion and add the tomato paste, salt and pepper.",
+        "For the béchamel: melt the butter and stir the flour into it for a minute, then add the milk gradually, stirring until thick, and season.",
+        "In a tray: half the pasta mixed with a little béchamel, then the meat, then the rest of the pasta, then the béchamel and cheese.",
+        "Bake at 200°C for 25 minutes until golden on top."
+      ]
+    },
+    "s7": {
+      "name": "Peas and Rice with Minced Meat",
+      "summary": "A pea, tomato and minced meat stew with white rice.",
+      "ingredients": [
+        { "name": "Frozen peas", "display": "2 bags" },
+        { "name": "Minced beef" },
+        { "name": "Basmati rice", "display": "2½ cups" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Tomato paste", "display": "3 tablespoons" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Mixed spices" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Brown the minced meat with the onion until its liquid has gone, then add the garlic and spices.",
+        "Add the tomato paste and two cups of hot water, then the frozen peas, and cook for 20 minutes.",
+        "Cook the rice separately and serve it with the stew."
+      ]
+    },
+    "s8": {
+      "name": "Chicken Fatteh",
+      "summary": "Toasted bread, rice and chicken under a garlic yoghurt sauce.",
+      "ingredients": [
+        { "name": "Chicken breasts" },
+        { "name": "Yoghurt", "display": "4 pots" },
+        { "name": "Basmati rice", "display": "2 cups" },
+        { "name": "Toast bread", "display": "half a bag" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Tahini" },
+        { "name": "Pine nuts or almonds" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the chicken with salt for 25 minutes, then shred it and keep the stock.",
+        "Cook the rice with a cup of the chicken stock and water.",
+        "Cut the bread into cubes and toast it in the oven until crisp.",
+        "Mix the yoghurt with the crushed garlic, tahini, lemon juice and salt.",
+        "In a deep dish: the bread, a little stock, the rice, then the chicken, with the yoghurt poured over."
+      ]
+    },
+    "q1": {
+      "name": "Creamy Chicken Fettuccine",
+      "summary": "Fettuccine in a cream sauce with chicken and mushrooms.",
+      "ingredients": [
+        { "name": "Fettuccine" },
+        { "name": "Chicken breasts" },
+        { "name": "Cooking cream", "display": "1 cup" },
+        { "name": "Mushrooms" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Black pepper" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil and drain the pasta, keeping half a cup of the cooking water.",
+        "Slice the chicken and brown it in the oil with salt and pepper for 6 minutes.",
+        "Add the garlic and sliced mushrooms for 3 minutes, then the cream and cooking water, and simmer for 3 minutes.",
+        "Add the pasta and toss until the sauce coats it."
+      ]
+    },
+    "q2": {
+      "name": "Chicken and Vegetable Fried Rice",
+      "summary": "Rice tossed with chicken, mixed vegetables and egg in one pan.",
+      "ingredients": [
+        { "name": "Basmati rice", "display": "2 cups" },
+        { "name": "Chicken breasts" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Eggs" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Soy sauce" },
+        { "name": "Vegetable oil" }
+      ],
+      "steps": [
+        "Boil the rice and let it cool; day-old rice is best.",
+        "Brown the chicken, in small cubes, in a wide pan and set aside.",
+        "Beat the eggs and stir them in the pan until set, then add the frozen vegetables and garlic for 4 minutes.",
+        "Add the rice, chicken and soy sauce and toss everything on high heat for 3 minutes."
+      ]
+    },
+    "q3": {
+      "name": "Chicken Fajitas with Peppers",
+      "summary": "Strips of chicken and colourful peppers in tortilla wraps.",
+      "ingredients": [
+        { "name": "Chicken breasts" },
+        { "name": "Red and yellow peppers", "display": "2 peppers" },
+        { "name": "Green pepper", "display": "1 pepper" },
+        { "name": "Onion", "display": "1 large onion" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Tortilla wraps" },
+        { "name": "Paprika" },
+        { "name": "Cumin" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Cut the chicken into thin strips and season with paprika, cumin, salt and lemon juice.",
+        "Brown the chicken in a hot pan for 6 minutes and set aside.",
+        "Toss the sliced onion and peppers in the same pan for 5 minutes, keeping them crisp.",
+        "Return the chicken for a minute and fill the warm tortillas."
+      ]
+    },
+    "q4": {
+      "name": "Shakshuka",
+      "summary": "Eggs cooked in a tomato and pepper sauce, with toasted bread.",
+      "ingredients": [
+        { "name": "Eggs" },
+        { "name": "Canned chopped tomatoes", "display": "1 can" },
+        { "name": "Green pepper", "display": "1 large pepper" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Toast bread", "display": "1 bag" },
+        { "name": "Cumin" },
+        { "name": "Paprika" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Soften the chopped onion and pepper in the oil for 5 minutes, then add the garlic.",
+        "Add the chopped tomatoes, cumin, paprika and salt, and cook for 8 minutes until thick.",
+        "Make small wells in the sauce, crack the eggs into them and cover the pan for 4 to 5 minutes.",
+        "Serve straight away with the toasted bread."
+      ]
+    },
+    "q5": {
+      "name": "Tuna and Sweetcorn Pasta Salad",
+      "summary": "A quick cold meal of pasta, tuna and sweetcorn.",
+      "ingredients": [
+        { "name": "Pasta" },
+        { "name": "Tuna", "display": "2 cans" },
+        { "name": "Canned sweetcorn", "display": "1 can" },
+        { "name": "Red and yellow pepper", "display": "1 pepper" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Mayonnaise" },
+        { "name": "Black pepper" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the pasta, drain it and rinse it in cold water.",
+        "Drain the tuna and sweetcorn and dice the pepper small.",
+        "Mix everything with the mayonnaise, lemon juice, salt and pepper.",
+        "Serve cold."
+      ]
+    },
+    "q6": {
+      "name": "Lentil Soup",
+      "summary": "Lentil soup with potato and lemon, with cheese toast.",
+      "ingredients": [
+        { "name": "Lentils", "display": "1½ cups" },
+        { "name": "Potatoes", "display": "2 potatoes" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Toast bread", "display": "1 bag" },
+        { "name": "Cheese slices" },
+        { "name": "Cumin" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Soften the onion and garlic in the oil, then add the washed lentils, chopped potatoes and cumin.",
+        "Cover with 6 cups of hot water and cook for 25 minutes until the lentils break down.",
+        "Blend the soup with a hand blender, adjust the salt and add the lemon juice.",
+        "Toast the bread slices with the cheese in a pan and serve with the soup."
+      ]
+    },
+    "q7": {
+      "name": "Minced Meat Tortillas",
+      "summary": "Minced meat with peppers and spices, rolled in tortilla wraps.",
+      "ingredients": [
+        { "name": "Minced beef" },
+        { "name": "Tortilla wraps" },
+        { "name": "Bell peppers", "display": "2 peppers" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Cheese slices" },
+        { "name": "Paprika" },
+        { "name": "Cumin" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Brown the minced meat with the onion until its liquid has gone.",
+        "Add the sliced peppers, spices and salt, and stir for 5 minutes.",
+        "Spread the mixture with a cheese slice on each wrap, roll up and toast in a pan for a minute on each side."
+      ]
+    },
+    "q8": {
+      "name": "Tuna and Tomato Pasta",
+      "summary": "Pasta in a quick tomato sauce with tuna.",
+      "ingredients": [
+        { "name": "Pasta" },
+        { "name": "Tuna", "display": "2 cans" },
+        { "name": "Canned chopped tomatoes", "display": "1 can" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Oregano" },
+        { "name": "Vegetable oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil and drain the pasta.",
+        "Soften the onion and garlic in the oil, then add the tomatoes, oregano and salt and cook for 8 minutes.",
+        "Add the drained tuna, then the pasta, and toss over the heat for two minutes."
+      ]
+    },
+    "h1": {
+      "name": "Grilled Chicken Breast with Sautéed Vegetables",
+      "summary": "Chicken in lemon and garlic, grilled in the pan with colourful vegetables.",
+      "ingredients": [
+        { "name": "Chicken breasts" },
+        { "name": "Bell peppers", "display": "2 peppers" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Paprika" },
+        { "name": "Olive oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Season the chicken with lemon juice, crushed garlic, paprika, salt and a spoon of oil, and leave for 15 minutes.",
+        "Grill the chicken in a hot cast-iron pan for 5 to 6 minutes a side, then rest it for 5 minutes before slicing.",
+        "In the same pan, toss the frozen vegetables and sliced pepper with a spoon of oil and salt for 6 minutes.",
+        "Serve the chicken sliced over the vegetables."
+      ]
+    },
+    "h2": {
+      "name": "Tuna and Vegetable Salad",
+      "summary": "A filling salad of tuna, sweetcorn and cucumber with a lemon dressing.",
+      "ingredients": [
+        { "name": "Tuna", "display": "2 cans" },
+        { "name": "Canned sweetcorn", "display": "1 can" },
+        { "name": "Cucumber", "display": "4 cucumbers" },
+        { "name": "Bell pepper", "display": "1 pepper" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Olive oil" },
+        { "name": "Black pepper" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Drain the tuna and sweetcorn.",
+        "Dice the cucumber and pepper small.",
+        "Mix the lemon juice with the olive oil, salt and pepper.",
+        "Toss everything together and serve cold."
+      ]
+    },
+    "h3": {
+      "name": "Lentil and Vegetable Soup",
+      "summary": "Red lentils with mixed vegetables and lemon, light and filling.",
+      "ingredients": [
+        { "name": "Lentils", "display": "1½ cups" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Onion", "display": "1 medium onion" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Cumin" },
+        { "name": "Olive oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Soften the onion and garlic in a spoon of oil, then add the washed lentils and cumin.",
+        "Cover with 6 cups of hot water and cook for 20 minutes until soft.",
+        "Add the frozen vegetables for 8 minutes, then adjust the salt.",
+        "Serve with lemon juice."
+      ]
+    },
+    "h4": {
+      "name": "Vegetable Omelette with Labneh",
+      "summary": "Eggs with bell pepper, served with labneh and cucumber.",
+      "ingredients": [
+        { "name": "Eggs" },
+        { "name": "Bell pepper", "display": "1 large pepper" },
+        { "name": "Labneh" },
+        { "name": "Cucumber", "display": "2 cucumbers" },
+        { "name": "Olive oil" },
+        { "name": "Zaatar" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Dice the pepper small and toss it in a spoon of oil for two minutes.",
+        "Beat the eggs with salt, pour over the pepper and cook covered on low heat for 5 minutes.",
+        "Serve with the labneh topped with zaatar, and sliced cucumber."
+      ]
+    },
+    "h5": {
+      "name": "Oven-Baked Yoghurt Chicken Thighs",
+      "summary": "Chicken marinated in yoghurt, lemon and garlic, roasted, with a cucumber salad.",
+      "ingredients": [
+        { "name": "Chicken thighs" },
+        { "name": "Yoghurt", "display": "2 pots" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Garlic", "display": "4 cloves" },
+        { "name": "Cucumber", "display": "2 cucumbers" },
+        { "name": "Thyme or oregano" },
+        { "name": "Olive oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Marinate the chicken with half the yoghurt, the lemon juice, garlic, thyme and salt, for an hour if you can.",
+        "Roast at 210°C for 35 minutes until browned.",
+        "Mix the rest of the yoghurt with grated cucumber and salt, and serve with the chicken."
+      ],
+      "tip": "Marinating time is not included in the cooking time."
+    },
+    "h6": {
+      "name": "Chicken and Vegetable Soup",
+      "summary": "A clear chicken broth with vegetables and potato, warm and light.",
+      "ingredients": [
+        { "name": "Chicken breasts" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Potatoes", "display": "2 potatoes" },
+        { "name": "Lemon", "display": "1 lemon" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Black pepper" },
+        { "name": "Bay leaves" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Boil the chicken in 7 cups of water with the garlic, bay leaves and salt for 20 minutes, then lift it out and shred it.",
+        "Add the diced potatoes to the broth for 10 minutes, then the frozen vegetables for 8 minutes.",
+        "Return the chicken to the soup, and serve with lemon juice and pepper."
+      ]
+    },
+    "h7": {
+      "name": "Grilled Kofta with Yoghurt Salad",
+      "summary": "Parsley kofta fingers grilled in the oven, with cucumber yoghurt.",
+      "ingredients": [
+        { "name": "Minced beef" },
+        { "name": "Onion", "display": "half a large onion" },
+        { "name": "Parsley", "display": "1 small bunch" },
+        { "name": "Yoghurt", "display": "2 pots" },
+        { "name": "Cucumber", "display": "2 cucumbers" },
+        { "name": "Garlic", "display": "2 cloves" },
+        { "name": "Mixed spices" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Knead the meat with the grated onion, chopped parsley, spices and salt, and shape it into fingers.",
+        "Grill the kofta in the oven at 220°C for 15 minutes, turning once.",
+        "Mix the yoghurt with grated cucumber, garlic and salt, and serve with the kofta."
+      ]
+    },
+    "h8": {
+      "name": "Baked Fish with Lemon and Vegetables",
+      "summary": "White fish fillet on vegetables, with lemon and cumin.",
+      "ingredients": [
+        { "name": "Fish fillet" },
+        { "name": "Frozen mixed vegetables", "display": "1 bag" },
+        { "name": "Lemon", "display": "2 lemons" },
+        { "name": "Garlic", "display": "3 cloves" },
+        { "name": "Cumin" },
+        { "name": "Olive oil" },
+        { "name": "Salt" }
+      ],
+      "steps": [
+        "Spread the vegetables in a tray with a spoon of oil and salt.",
+        "Season the fish with lemon juice, garlic, cumin and salt, and lay it on the vegetables.",
+        "Bake at 200°C for 18 to 20 minutes until the fish flakes easily."
+      ]
+    }
+  }
+}

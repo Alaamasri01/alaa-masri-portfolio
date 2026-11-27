@@ -51,3 +51,6 @@ $RECYCLE.BIN/
 *~
 *.tmp
 *.bak
+
+# --- Maqadi data tooling cache ---
+tools/maqadi/.cache/

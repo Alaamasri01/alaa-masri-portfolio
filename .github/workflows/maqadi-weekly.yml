@@ -1,0 +1,46 @@
+# مقاضي — weekly prices from Tamimi and Panda, and the week's plans.
+# Scheduled workflows only run from the repository's default branch, so this
+# starts working once the app is merged into it. It can also be started by
+# hand from the Actions tab ("Run workflow").
+name: Maqadi weekly update
+
+on:
+  schedule:
+    - cron: '0 6 * * 3'   # Wednesday 06:00 UTC = 09:00 Riyadh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maqadi-weekly
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read the stores' prices and choose the week's plans
+        run: node tools/maqadi/weekly.mjs
+
+      - name: Test the published data
+        run: node --test tests/maqadi/*.test.mjs
+
+      - name: Commit the new week
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A maqadi/data tools/maqadi/weeks
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+          git commit -m "Maqadi: weekly prices and plans ($(date -u +%F))"
+          git push
