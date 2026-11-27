@@ -36,3 +36,13 @@ test('every emoji the app shows has its 3D picture', async () => {
   const missing = [...used].filter(char => !existsSync(file(char)));
   assert.deepEqual(missing, []);
 });
+
+test('every meal has its photo, and every photo belongs to a meal', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const recipes = JSON.parse(readFileSync('tools/maqadi/recipes.json', 'utf8'));
+  const meals = recipes.cuisines.flatMap(cuisine => cuisine.meals || []);
+  const files = new Set(readdirSync('maqadi/meals'));
+  assert.deepEqual(meals.filter(meal => !meal.photo || !files.has(meal.photo)).map(meal => meal.id), []);
+  const used = new Set(meals.map(meal => meal.photo));
+  assert.deepEqual([...files].filter(file => !used.has(file)), []);
+});
