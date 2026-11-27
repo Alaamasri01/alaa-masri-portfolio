@@ -6,7 +6,8 @@
  * Reads   tools/maqadi/weeks/<week>/meta.json          stores, dates, corrections
  *         tools/maqadi/weeks/<week>/<store>/*.json     offers as read from each flyer
  *         tools/maqadi/weeks/<week>/plans.json         the week's meal plans
- * Writes  maqadi/data/<week>/offers.json, plans.json and maqadi/data/current.json
+ * Writes  maqadi/data/<week>/offers.json, core.json, plans.json, barcodes.json
+ *         and maqadi/data/current.json
  *
  * The build refuses to publish anything it cannot stand behind: an offer with
  * an unreadable price is dropped, and a plan that points at a missing offer or
@@ -15,7 +16,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildList, toBase, packContent, isLoose, money } from '../../maqadi/lib/plan.js';
+import { buildList, toBase, packContent, isLoose, money, discountPercent } from '../../maqadi/lib/plan.js';
 import { autoPlans } from './plan-week.mjs';
 import { withExtras } from './recipe-extras.mjs';
 
@@ -241,6 +242,22 @@ export function checkPlans(plans, offers) {
   return problems;
 }
 
+/* What the app needs to open: every product a plan buys, and each store's
+   best food discounts for the home screen, picked as the home screen picks
+   them. The rest of offers.json loads after the first screen. Products keep
+   offers.json's order. */
+const NOT_FOOD = new Set(['household', 'personal_care', 'baby', 'other']);
+export const CORE_DEALS = 24;
+export function coreOffers(published, used, perStore = CORE_DEALS) {
+  const keep = new Set(used);
+  Array.from(new Set(published.map(offer => offer.store))).forEach(store => published
+    .filter(offer => offer.store === store && offer.was > offer.price && offer.img && !NOT_FOOD.has(offer.category))
+    .sort((a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price)
+    .slice(0, perStore)
+    .forEach(offer => keep.add(offer.id)));
+  return published.filter(offer => keep.has(offer.id));
+}
+
 function main() {
   const week = (process.argv[2] || '').toLowerCase();
   if (!/^\d{4}-w\d{2}$/.test(week)) { console.error('usage: node tools/maqadi/build-data.mjs 2026-w48'); process.exit(2); }
@@ -275,6 +292,9 @@ function main() {
     const kept = offers.filter(offer => meta.publish_all || offer.was > offer.price || used.has(offer.id)).map(slim);
     Object.keys(stores).forEach(id => { stores[id].offers = kept.filter(offer => offer.store === id).length; });
     writeJSON(join(out, 'offers.json'), { week: meta.week, city: meta.city, stores, offers: kept });
+    const core = coreOffers(kept, used);
+    writeJSON(join(out, 'core.json'), { week: meta.week, city: meta.city, stores, offers: core });
+    console.log(`core: ${core.length} products to open the app with`);
     // The scanner's lookup: barcode → products, loaded only when the camera opens.
     const published = new Set(kept.map(offer => offer.id));
     const codes = {};
@@ -325,7 +345,7 @@ function main() {
     .forEach(item => { if (item.offer) used.add(item.offer); })));
   console.log(`published ${publish(used)} of ${offers.length} products${meta.publish_all ? '' : ' (discounts and the ones the plans buy)'}`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));
-  writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, plans: `${week}/plans.json`, barcodes: `${week}/barcodes.json`, updated: meta.updated });
+  writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, core: `${week}/core.json`, plans: `${week}/plans.json`, barcodes: `${week}/barcodes.json`, updated: meta.updated });
 
   const byId = new Map(offers.map(offer => [offer.id, offer]));
   Object.entries(plans.by_store).forEach(([storeId, set]) => set.plans.forEach(plan => {

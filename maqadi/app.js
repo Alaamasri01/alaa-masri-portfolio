@@ -123,10 +123,12 @@ async function getJSON(path) {
   if (!response.ok) throw new Error(path + ' → ' + response.status);
   return response.json();
 }
+/* The app opens with a small file (core.json: what the plans buy and the home
+   screen's deals); the whole catalogue (offers.json) follows in the background. */
 async function loadData() {
   const current = await getJSON('data/current.json');
-  const [offers, plans] = await Promise.all([getJSON('data/' + current.offers), getJSON('data/' + current.plans)]);
-  return { current, offers, plans };
+  const [offers, plans] = await Promise.all([getJSON('data/' + (current.core || current.offers)), getJSON('data/' + current.plans)]);
+  return { current, offers, plans, full: !current.core };
 }
 
 const TABS = ['home', 'shop', 'list', 'plan', 'me'];
@@ -1458,6 +1460,30 @@ function ListTab({ data, head, list, week, set, period, receipt, plan, persons, 
 /* ---------------------------------------------------------------------
    Shop
    ------------------------------------------------------------------- */
+/* Shop and the scanner before the whole catalogue has arrived. */
+function CatalogueWait({ head, failed, onRetry }) {
+  return html`
+    <${Head} ...${head} small><h1 class="head__title">${L('تسوّق', 'Shop')}</h1><//>
+    <div class="float empty" role="status">
+      <${Emoji} char="🛒" size=${64} />
+      <p class="empty__title">${failed ? L('تعذّر تحميل كل المنتجات', 'The products couldn’t load') : L('جاري تحميل كل المنتجات…', 'Loading every product…')}</p>
+      ${failed ? html`<button type="button" class="btn" onClick=${onRetry}>${L('إعادة المحاولة', 'Try again')}</button>` : html`<p>${L('لحظات، ثم يمكنك البحث في كل منتجات المتاجر.', 'A moment, then you can search every product.')}</p>`}
+    </div>`;
+}
+
+const ScanWait = ({ failed, onRetry, onClose }) => html`
+  <div class="scan" role="dialog" aria-modal="true" aria-label=${L('امسح الباركود', 'Scan a barcode')}>
+    <div class="scan__top">
+      <button type="button" class="scan__round" aria-label=${L('إغلاق', 'Close')} onClick=${onClose}><${Icon} name="close" size=${22} stroke=${2.2} /></button>
+      <span class="scan__title">${L('امسح الباركود', 'Scan a barcode')}</span>
+      <span class="scan__round scan__round--empty"></span>
+    </div>
+    <div class="scan__blocked" role="status">
+      <p class="scan__blocked-title">${failed ? L('تعذّر تحميل المنتجات', 'The products couldn’t load') : L('جاري تجهيز الماسح…', 'Getting the scanner ready…')}</p>
+      ${failed ? html`<button type="button" class="btn btn--light" onClick=${onRetry}>${L('إعادة المحاولة', 'Try again')}</button>` : null}
+    </div>
+  </div>`;
+
 function ShopTab({ data, head, week, set, twin, focus }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -1962,6 +1988,21 @@ function App() {
     loadData().then(setData).catch(() => setFailed(true));
   }, []);
   useEffect(load, [load]);
+
+  // The whole catalogue, after the first screen. Shop, search and the scanner wait for it.
+  const [fullFailed, setFullFailed] = useState(false);
+  const [fullTry, setFullTry] = useState(0);
+  const fullPath = data && !data.full ? data.current.offers : null;
+  useEffect(() => {
+    if (!fullPath) return undefined;
+    let alive = true;
+    setFullFailed(false);
+    getJSON('data/' + fullPath)
+      .then(full => { if (alive) setData(previous => (previous && !previous.full ? Object.assign({}, previous, { offers: full, full: true }) : previous)); })
+      .catch(() => { if (alive) setFullFailed(true); });
+    return () => { alive = false; };
+  }, [fullPath, fullTry]);
+  const retryFull = () => setFullTry(n => n + 1);
   useEffect(() => {
     const onHash = () => {
       setRoute(previous => { if (!['meal', 'scan', 'story'].includes(previous.tab)) lastTab.current = previous.tab; return parseRoute(); });
@@ -2016,6 +2057,16 @@ function App() {
     seen: stored.seen || []
   };
   const avoid = Array.isArray(prefs.avoid) ? prefs.avoid.filter(tag => TAG_INFO[tag]) : [];
+
+  // Products added by hand may only be in the whole catalogue; the totals wait for it rather than show a wrong sum.
+  if (!data.full && Object.keys(week.extras).some(id => !offers.has(id))) {
+    return html`
+      <div class="boot" role="status">
+        <${Logo} size=${88} glass />
+        <span class="boot__text">${fullFailed ? L('تعذّر تحميل المنتجات. يُرجى التحقق من الاتصال ثم إعادة المحاولة.', 'We couldn’t load the products. Check your connection and try again.') : L('جاري تحميل أسعار الأسبوع…', 'Loading this week’s prices…')}</span>
+        ${fullFailed ? html`<button type="button" class="btn btn--light" onClick=${retryFull}>${L('إعادة المحاولة', 'Try again')}</button>` : null}
+      </div>`;
+  }
 
   // Plans are published per store, for the same meals; the family picks where they shop.
   const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
@@ -2148,7 +2199,7 @@ function App() {
       <main class="main" id="main">
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} index=${mealIndex} persons=${persons} kids=${kids} servings=${servings} offers=${offers} backHref=${'#/' + lastTab.current} />`
           : tab === 'list' ? html`<${ListTab} data=${data} head=${head} list=${list} week=${week} set=${set} period=${period} receipt=${receipt} plan=${plan} persons=${persons} kids=${kids} budgetInfo=${budgetInfo} onShare=${openShare} />`
-          : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
+          : tab === 'shop' ? (data.full ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />` : html`<${CatalogueWait} head=${head} failed=${fullFailed} onRetry=${retryFull} />`)
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} openPrefs=${openPrefs} />`
           : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} kids=${kids} avoid=${avoid} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} openPrefs=${openPrefs} budgetInfo=${budgetInfo} lang=${lang} />`
           : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} kids=${kids} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} budgetInfo=${budgetInfo} stories=${stories} />`}
@@ -2171,7 +2222,8 @@ function App() {
       ${route.tab === 'story' && stories.length ? html`<${Stories} data=${data} items=${stories} start=${route.id} offers=${offers} list=${list} storeRows=${storeRows} verdict=${receipt.verdict}
           cooked=${cookedMeals.length} essentials=${week.essentials && Boolean(plan.essentials)} swaps=${swapOptions} seen=${week.seen} set=${set}
           onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onShare=${openShare} />` : null}
-      ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
+      ${route.tab === 'scan' && !data.full ? html`<${ScanWait} failed=${fullFailed} onRetry=${retryFull} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} />` : null}
+      ${route.tab === 'scan' && data.full ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} openPrefs=${openPrefs} />` : null}
       ${sheet === 'prefs' ? html`<${PrefsSheet} avoid=${avoid} kids=${kids} persons=${persons} set=${set} onClose=${() => setSheet(null)} />` : null}
