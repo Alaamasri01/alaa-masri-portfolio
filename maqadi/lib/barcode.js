@@ -1,6 +1,6 @@
 /*
  * Barcodes (GTINs) in one spelling, so the same product can be found at
- * every store.
+ * every store. Shared by the data tools and the app's scanner.
  *
  *   canonicalGtin('012000055775') → '0012000055775'   (UPC-A gains a 0: 13 digits)
  *   pandaGtin('6281007074750')    → '6281007074759'   (Panda writes 0 for the check digit)
@@ -38,4 +38,26 @@ export function pandaGtin(raw) {
     return canonicalGtin(body + checkDigit(body));
   }
   return null;
+}
+
+/* A UPC-E code (8 digits, small packs) written out as the UPC-A it stands
+   for, so it meets the same product's 12/13-digit code elsewhere. */
+export function upcEtoA(raw) {
+  const code = String(raw || '').replace(/\D/g, '');
+  if (!/^[01]\d{7}$/.test(code)) return null;
+  const [ns, d1, d2, d3, d4, d5, d6, check] = code;
+  let body;
+  if ('012'.includes(d6)) body = ns + d1 + d2 + d6 + '0000' + d3 + d4 + d5;
+  else if (d6 === '3') body = ns + d1 + d2 + d3 + '00000' + d4 + d5;
+  else if (d6 === '4') body = ns + d1 + d2 + d3 + d4 + '00000' + d5;
+  else body = ns + d1 + d2 + d3 + d4 + d5 + '0000' + d6;
+  const upcA = body + check;
+  return validGtin(upcA) ? upcA : null;
+}
+
+/* What a camera or a typed number gives, in the spelling the data uses. */
+export function scannedGtin(raw, format) {
+  const code = String(raw || '').replace(/\D/g, '');
+  if (format === 'upc_e' || (code.length === 8 && !validGtin(code) && upcEtoA(code))) return canonicalGtin(upcEtoA(code));
+  return canonicalGtin(code);
 }

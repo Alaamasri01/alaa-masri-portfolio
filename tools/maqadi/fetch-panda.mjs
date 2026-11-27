@@ -15,7 +15,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pandaGtin } from './barcode.mjs';
+import { pandaGtin } from '../../maqadi/lib/barcode.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const BASE = 'https://panda.sa';

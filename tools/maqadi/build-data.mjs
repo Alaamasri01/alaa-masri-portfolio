@@ -274,6 +274,16 @@ function main() {
     const kept = offers.filter(offer => meta.publish_all || offer.was > offer.price || used.has(offer.id)).map(slim);
     Object.keys(stores).forEach(id => { stores[id].offers = kept.filter(offer => offer.store === id).length; });
     writeJSON(join(out, 'offers.json'), { week: meta.week, city: meta.city, stores, offers: kept });
+    // The scanner's lookup: barcode → products, loaded only when the camera opens.
+    const published = new Set(kept.map(offer => offer.id));
+    const codes = {};
+    offers.forEach(offer => {
+      if (!published.has(offer.id)) return;
+      (offer.barcodes || []).forEach(code => { (codes[code] = codes[code] || []).push(offer.id); });
+    });
+    const scanStores = Object.keys(stores).filter(id => offers.some(offer => offer.store === id && offer.barcodes && offer.barcodes.length));
+    writeJSON(join(out, 'barcodes.json'), { week: meta.week, stores: scanStores, codes });
+    console.log(`barcodes: ${Object.keys(codes).length} codes for the scanner, at ${scanStores.join(' and ')}`);
     return kept.length;
   };
 
@@ -314,7 +324,7 @@ function main() {
     .forEach(item => { if (item.offer) used.add(item.offer); })));
   console.log(`published ${publish(used)} of ${offers.length} products${meta.publish_all ? '' : ' (discounts and the ones the plans buy)'}`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));
-  writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, plans: `${week}/plans.json`, updated: meta.updated });
+  writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, plans: `${week}/plans.json`, barcodes: `${week}/barcodes.json`, updated: meta.updated });
 
   const byId = new Map(offers.map(offer => [offer.id, offer]));
   Object.entries(plans.by_store).forEach(([storeId, set]) => set.plans.forEach(plan => {

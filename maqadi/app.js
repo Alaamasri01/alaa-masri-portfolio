@@ -8,6 +8,8 @@ import {
   buildList, mealHighlight, discountPercent, unitPrice, normalizeAr, money, amount,
   ingredientAmount, offerSize, isLoose, halalas
 } from './lib/plan.js';
+import { scannedGtin } from './lib/barcode.js';
+import { lookupScan } from './lib/scan.js';
 
 const CONFIG = {
   name: 'مقاضي',
@@ -95,7 +97,7 @@ const TABS = ['home', 'shop', 'list', 'plan', 'me'];
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const first = parts[0] === 'deals' ? 'shop' : parts[0];
-  const tab = TABS.concat('meal').includes(first) ? first : 'home';
+  const tab = TABS.concat('meal', 'scan').includes(first) ? first : 'home';
   return { tab, id: parts[1] || null };
 }
 
@@ -180,7 +182,11 @@ const ICONS = {
   close: 'M6 6l12 12M18 6 6 18',
   down: 'M6 9l6 6 6-6',
   people: 'M16 19c-.5-2.6-2.4-4-5-4s-4.5 1.4-5 4M11 12a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM17.5 12.5c1.9.3 3.1 1.6 3.5 3.5M15.5 5.8a3 3 0 0 1 0 5.6',
-  chevron: 'M15 6l-6 6 6 6'
+  chevron: 'M15 6l-6 6 6 6',
+  scan: 'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 9v6M10 9v6M13 9v6M16.5 9v6',
+  flash: 'M13 3 5 14h6l-1 7 8-11h-6l1-7Z',
+  keys: 'M4 7h16v10H4zM7 10h.01M10 10h.01M13 10h.01M16 10h.01M8 14h8',
+  plus: 'M12 5v14M5 12h14'
 };
 const Icon = ({ name, size = 22, stroke = 1.9 }) => html`
   <svg class="icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=${stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -328,7 +334,7 @@ const SectionTitle = ({ title, emoji, href, more }) => html`
 /* ---------------------------------------------------------------------
    Home
    ------------------------------------------------------------------- */
-function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, list, offers, locked, set, openFamily }) {
+function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, list, offers, locked, set, openFamily, scanTip }) {
   const cooked = plan.meals.filter(meal => !week.skipped.includes(meal.id) && !locked.has(meal.id)).length;
   const rail = useMemo(() => data.offers.offers
     .filter(offer => offer.store === store && offer.was > offer.price && offer.img && isFood(offer))
@@ -348,7 +354,15 @@ function HomeTab({ data, store, head, storeRows, plans, plan, persons, week, lis
         ${list.unpriced.length ? html`<span class="hchip">${list.unpriced.length} بدون سعر</span>` : null}
       </div>
     <//>
-    <a class="float searchbar" href="#/shop/search"><${Icon} name="search" size=${20} /><span>ابحث عن أي غرض: بصل، حليب، منظف…</span></a>
+    <div class="float searchbar">
+      <a class="searchbar__link" href="#/shop/search"><${Icon} name="search" size=${20} /><span>ابحث عن أي غرض: بصل، حليب، منظف…</span></a>
+      <a class="searchbar__scan" href="#/scan" aria-label="امسح باركود منتج وقارن سعره"><${Icon} name="scan" size=${24} stroke=${2} /></a>
+    </div>
+    ${scanTip ? html`
+      <button type="button" class="scan-tip" onClick=${set.scanTipSeen}>
+        <b>جديد: امسح وقارن</b>
+        وأنت في السوق، امسح باركود أي منتج واعرف سعره في المتاجر الأخرى.
+      </button>` : null}
 
     ${storeRows.length > 1 ? html`<${StoreCards} data=${data} rows=${storeRows} onPick=${set.store} />` : null}
 
@@ -775,6 +789,7 @@ function ShopTab({ data, head, week, set, twin, focus }) {
       <${Icon} name="search" size=${20} />
       <input ref=${input} type="search" inputmode="search" placeholder="ابحث عن أي غرض: بصل، حليب، منظف…" aria-label="بحث في المنتجات" value=${query} onInput=${event => setQuery(event.target.value)} />
       ${query ? html`<button type="button" class="searchbar__clear" aria-label="مسح البحث" onClick=${() => setQuery('')}><${Icon} name="close" size=${16} /></button>` : null}
+      <a class="searchbar__scan" href="#/scan" aria-label="امسح باركود منتج وقارن سعره"><${Icon} name="scan" size=${24} stroke=${2} /></a>
     </label>
 
     ${storeIds.length > 1 ? html`
@@ -802,6 +817,238 @@ function ShopTab({ data, head, week, set, twin, focus }) {
       </div>
       ${results.length > shown ? html`<button type="button" class="btn btn--ghost btn--wide" onClick=${() => setShown(shown + CONFIG.shopPage)}>عرض المزيد (${count(results.length - shown)})</button>` : null}`
     : html`<div class="empty"><${Emoji} char="🔍" size=${56} /><p class="empty__title">${searching ? 'لا توجد منتجات مطابقة' : 'لا توجد عروض مطابقة'}</p><p>يمكن تجربة كلمة أخرى أو قسم آخر.</p></div>`}`;
+}
+
+/* ---------------------------------------------------------------------
+   Scan and compare
+   ------------------------------------------------------------------- */
+const SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+let barcodeIndex = null;   // loaded once, the first time the camera opens
+let detectorPromise = null;
+
+/* The phone's own barcode reader where it has one (Android); elsewhere
+   (iPhone) the bundled reader in lib/barcode-detector, fetched on first use. */
+function getDetector() {
+  if (!detectorPromise) {
+    detectorPromise = (async () => {
+      if ('BarcodeDetector' in window) {
+        try {
+          const supported = await window.BarcodeDetector.getSupportedFormats();
+          const formats = SCAN_FORMATS.filter(format => supported.includes(format));
+          if (formats.includes('ean_13')) return new window.BarcodeDetector({ formats });
+        } catch (error) { /* fall through to the bundled reader */ }
+      }
+      const reader = await import('./lib/barcode-detector/ponyfill.js');
+      const wasm = new URL('./lib/barcode-detector/zxing_reader.wasm', import.meta.url).href;
+      reader.setZXingModuleOverrides({ locateFile: (path, prefix) => (path.endsWith('.wasm') ? wasm : prefix + path) });
+      return new reader.BarcodeDetector({ formats: SCAN_FORMATS });
+    })();
+    detectorPromise.catch(() => { detectorPromise = null; });
+  }
+  return detectorPromise;
+}
+
+function ScanPage({ data, store, offers, twin, week, set, period, onClose, onStore }) {
+  const video = useRef(null);
+  const stream = useRef(null);
+  const [status, setStatus] = useState('starting');   // starting | scanning | denied | unavailable
+  const [result, setResult] = useState(null);          // { found } | { missing, code, storeCode }
+  const [torch, setTorch] = useState(null);            // null when the camera has no light
+  const [typing, setTyping] = useState(false);
+  const [index, setIndex] = useState(barcodeIndex);
+
+  useEffect(() => {
+    set.scanTipSeen();
+    if (barcodeIndex) return;
+    getJSON('data/' + data.current.barcodes).then(file => { barcodeIndex = file; setIndex(file); }).catch(() => setIndex({ stores: [], codes: {} }));
+  }, []);
+
+  // The camera runs while the page is open and stops when it closes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setStatus('unavailable'); return; }
+      try {
+        const media = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+        if (cancelled) { media.getTracks().forEach(track => track.stop()); return; }
+        stream.current = media;
+        video.current.srcObject = media;
+        await video.current.play().catch(() => {});
+        const track = media.getVideoTracks()[0];
+        const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+        if (caps.torch) setTorch(false);
+        setStatus('scanning');
+      } catch (error) {
+        setStatus(error && (error.name === 'NotAllowedError' || error.name === 'SecurityError') ? 'denied' : 'unavailable');
+      }
+    })();
+    return () => { cancelled = true; if (stream.current) stream.current.getTracks().forEach(track => track.stop()); };
+  }, []);
+
+  const show = useCallback((raw, format) => {
+    const code = scannedGtin(raw, format);
+    const found = code && barcodeIndex ? lookupScan({ code, index: barcodeIndex.codes, offers, stores: barcodeIndex.stores, here: store, twin }) : null;
+    if (navigator.vibrate) navigator.vibrate(40);
+    setResult(found ? { found } : { missing: true, code: code || String(raw || '').replace(/\D/g, ''), storeCode: !code && /^0?2/.test(String(raw || '').replace(/\D/g, '')) });
+  }, [offers, store, twin]);
+
+  // Read frames a few times a second until something is found.
+  useEffect(() => {
+    if (status !== 'scanning' || result || typing || !index) return;
+    let stopped = false;
+    let timer = null;
+    (async () => {
+      let detector;
+      try { detector = await getDetector(); } catch (error) { if (!stopped) setStatus('unavailable'); return; }
+      const tick = async () => {
+        if (stopped) return;
+        try {
+          if (video.current && video.current.readyState >= 2) {
+            const codes = await detector.detect(video.current);
+            const hit = codes.find(item => item.rawValue && /^\d{6,14}$/.test(item.rawValue));
+            if (hit && !stopped) { show(hit.rawValue, hit.format); return; }
+          }
+        } catch (error) { /* a frame that cannot be read: try the next */ }
+        timer = setTimeout(tick, 180);
+      };
+      tick();
+    })();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [status, result, typing, index, show]);
+
+  const toggleTorch = async () => {
+    const track = stream.current && stream.current.getVideoTracks()[0];
+    if (!track) return;
+    try { await track.applyConstraints({ advanced: [{ torch: !torch }] }); setTorch(!torch); } catch (error) { setTorch(null); }
+  };
+
+  const blocked = status === 'denied' || status === 'unavailable';
+  return html`
+    <div class="scan" role="dialog" aria-modal="true" aria-label="امسح الباركود">
+      <video ref=${video} class="scan__video" playsinline muted autoplay aria-hidden="true"></video>
+      <div class="scan__top">
+        <button type="button" class="scan__round" aria-label="إغلاق" onClick=${onClose}><${Icon} name="close" size=${22} stroke=${2.2} /></button>
+        <span class="scan__title">امسح الباركود</span>
+        ${torch !== null
+          ? html`<button type="button" class="scan__round" aria-pressed=${torch} aria-label="ضوء الكاميرا" onClick=${toggleTorch}><${Icon} name="flash" size=${20} stroke=${2} /></button>`
+          : html`<span class="scan__round scan__round--empty"></span>`}
+      </div>
+
+      ${blocked ? html`
+        <div class="scan__blocked">
+          <${Emoji} char="📷" size=${64} />
+          <p class="scan__blocked-title">${status === 'denied' ? 'نحتاج إذن الكاميرا' : 'الكاميرا غير متاحة'}</p>
+          <p>${status === 'denied'
+            ? 'لقراءة الباركود يلزم السماح للتطبيق باستخدام الكاميرا من إعدادات المتصفح، ثم فتح هذه الشاشة من جديد.'
+            : 'لم نتمكن من تشغيل الكاميرا على هذا الجهاز. يمكنك كتابة رقم الباركود بدلاً من ذلك.'}</p>
+        </div>` : html`
+        <div class="scan__finder" aria-hidden="true"><i></i><i></i><i></i><i></i>${status === 'scanning' && !result ? html`<span class="scan__laser"></span>` : null}</div>
+        <p class="scan__hint">${status === 'starting' ? 'جاري تشغيل الكاميرا…' : index ? 'وجّه الكاميرا على باركود المنتج' : 'جاري تجهيز الماسح…'}<small>يقرأ تلقائياً، بدون ضغط أي زر</small></p>`}
+
+      <div class="scan__bottom">
+        <button type="button" class="scan__store" onClick=${onStore}><${StoreDot} id=${store} />تتسوّق الآن في ${storeName(data, store)}</button>
+        <button type="button" class="scan__manual" onClick=${() => setTyping(true)}><${Icon} name="keys" size=${20} /> إدخال رقم الباركود يدوياً</button>
+      </div>
+
+      ${typing ? html`<${TypeCode} onClose=${() => setTyping(false)} onCode=${code => { setTyping(false); show(code); }} />` : null}
+      ${result ? html`<${ScanResult} data=${data} result=${result} week=${week} set=${set} period=${period} onAgain=${() => setResult(null)} />` : null}
+    </div>`;
+}
+
+function TypeCode({ onClose, onCode }) {
+  const [value, setValue] = useState('');
+  const digits = value.replace(/\D/g, '');
+  const input = useRef(null);
+  useEffect(() => { if (input.current) input.current.focus(); }, []);
+  return html`
+    <div class="scan__backdrop" onClick=${onClose}></div>
+    <form class="scan-sheet" onSubmit=${event => { event.preventDefault(); if (digits.length >= 8) onCode(digits); }}>
+      <span class="sheet__grip" aria-hidden="true"></span>
+      <h2 class="sheet__title">رقم الباركود</h2>
+      <p class="sheet__sub">الأرقام المكتوبة تحت خطوط الباركود (8 أو 12 أو 13 رقماً).</p>
+      <input ref=${input} class="code-input" type="text" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="6281007074759" aria-label="رقم الباركود" value=${value} onInput=${event => setValue(event.target.value)} />
+      <div class="scan-sheet__actions">
+        <button type="submit" class="btn" disabled=${digits.length < 8}>بحث</button>
+        <button type="button" class="btn btn--ghost" onClick=${onClose}>إلغاء</button>
+      </div>
+    </form>`;
+}
+
+function ScanResult({ data, result, week, set, period, onAgain }) {
+  if (result.missing) {
+    return html`
+      <div class="scan__backdrop" onClick=${onAgain}></div>
+      <div class="scan-sheet" role="status">
+        <span class="sheet__grip" aria-hidden="true"></span>
+        <div class="scan-missing">
+          <${Emoji} char="🔍" size=${56} />
+          <p class="scan-missing__title">لم نجد هذا الباركود</p>
+          ${result.code ? html`<p class="scan-missing__code" dir="ltr">${result.code}</p>` : null}
+          <p>${result.storeCode
+            ? 'هذا باركود خاص بالمتجر، مثل ملصقات الخضار والفواكه الموزونة، فلا يمكن مقارنته بمتجر آخر.'
+            : 'المنتج غير موجود في أسعار هذا الأسبوع لدى المتاجر في التطبيق، أو أن الرقم لم يُقرأ كاملاً.'}</p>
+        </div>
+        <div class="scan-sheet__actions">
+          <button type="button" class="btn" onClick=${onAgain}><${Icon} name="scan" size=${20} /> امسح منتجاً آخر</button>
+          <a class="btn btn--ghost" href="#/shop/search">ابحث بالاسم</a>
+        </div>
+      </div>`;
+  }
+  const { found } = result;
+  const compared = found.rows.filter(row => row.offer && row.same).length;
+  const order = row => (row.cheapest ? 0 : row.here ? 1 : row.offer ? 2 : 3);
+  const rows = found.rows.slice().sort((a, b) => order(a) - order(b));
+  const product = found.product;
+  const mine = found.rows.find(row => row.here && row.offer);
+  const buyable = rows.filter(row => row.offer);
+  return html`
+    <div class="scan__backdrop" onClick=${onAgain}></div>
+    <div class="scan-sheet" role="status">
+      <span class="sheet__grip" aria-hidden="true"></span>
+      <p class="scan-found"><span class="scan-found__ok"><${Icon} name="check" size=${14} stroke=${3} /></span>${compared > 1 ? `نفس المنتج موجود في ${compared === 2 ? 'متجرين' : compared + ' متاجر'}` : 'وجدنا المنتج'}</p>
+      <div class="scan-product">
+        <${Photo} data=${data} offer=${product} width=${256} cls="scan-product__photo" />
+        <div>
+          <h3 class="scan-product__name">${product.name}</h3>
+          <p class="scan-product__sub">${[offerSize(product), 'باركود ' + found.code].filter(Boolean).join(' · ')}</p>
+        </div>
+      </div>
+      <div class="scan-rows">
+        ${rows.map(row => {
+          const percent = row.offer ? discountPercent(row.offer) : 0;
+          return html`
+            <div class=${'scan-row' + (row.cheapest ? ' is-best' : '')}>
+              <span class="scan-row__name"><${StoreDot} id=${row.store} />${storeName(data, row.store)}
+                ${row.cheapest ? html`<span class="badge badge--gold">الأرخص</span>` : null}
+                ${row.here ? html`<span class="badge">أنت هنا</span>` : null}
+                ${percent ? html`<span class="badge badge--cut" dir="ltr">−${percent}%</span>` : null}
+                ${row.offer && !row.same ? html`<span class="badge badge--note">حجم مختلف</span>` : null}
+              </span>
+              ${row.offer ? html`
+                <span class="scan-row__sub">${row.same ? pricePeriod(data, row.store).badge : offerSize(row.offer) + ' · لا نقارنه لاختلاف الحجم'}</span>
+                <span class="scan-row__price"><b dir="ltr">${money(halalas(row.offer.price))}</b> <small>ريال</small>${row.offer.was > row.offer.price ? html`<s dir="ltr">${money(halalas(row.offer.was))}</s>` : null}</span>`
+              : html`<span class="scan-row__missing">لم نجده في ${storeName(data, row.store)} هذا الأسبوع</span>`}
+            </div>`;
+        })}
+      </div>
+      ${found.saving > 0 ? html`
+        <p class="scan-note"><${Emoji} char="💰" size=${32} /><span>أرخص في ${storeName(data, found.best.store)} بـ <b dir="ltr">${money(halalas(found.saving))}</b> ريال</span></p>`
+      : mine && mine.offer.was > mine.offer.price ? html`
+        <p class="scan-note scan-note--green"><${Emoji} char="🏷️" size=${32} /><span>عليه خصم في ${storeName(data, mine.store)} الآن: توفّر <b dir="ltr">${money(halalas(mine.offer.was - mine.offer.price))}</b> ريال</span></p>`
+      : null}
+      <div class=${'scan-add' + (buyable.length > 1 ? ' scan-add--two' : '')}>
+        ${buyable.map(row => {
+          const units = week.extras[row.offer.id] || 0;
+          const step = isLoose(row.offer) ? 0.5 : 1;
+          const label = buyable.length > 1 ? 'أضف من ' + storeName(data, row.store) : 'أضف للقائمة';
+          return units
+            ? html`<div class="scan-add__in"><span>في قائمتك من ${storeName(data, row.store)}</span><${Stepper} value=${units} min=${0} max=${20} step=${step} label=${'الكمية من ' + row.offer.name} onChange=${value => set.extra(row.offer.id, value)} /></div>`
+            : html`<button type="button" class=${'btn' + (row.cheapest || buyable.length === 1 ? '' : ' btn--ghost')} onClick=${() => set.extra(row.offer.id, step)}><${Icon} name="plus" size=${20} stroke=${2.4} /> ${label}</button>`;
+        })}
+      </div>
+      <button type="button" class="btn btn--ghost btn--wide scan-again" onClick=${onAgain}><${Icon} name="scan" size=${20} /> امسح منتجاً آخر</button>
+      ${compared > 1 ? html`<p class="scan-fine">نفس الباركود ونفس الحجم في المتجرين. الأسعار من المتاجر نفسها وقد تختلف حسب الفرع.</p>` : null}
+    </div>`;
 }
 
 /* ---------------------------------------------------------------------
@@ -943,7 +1190,7 @@ function App() {
   useEffect(load, [load]);
   useEffect(() => {
     const onHash = () => {
-      setRoute(previous => { if (previous.tab !== 'meal') lastTab.current = previous.tab; return parseRoute(); });
+      setRoute(previous => { if (previous.tab !== 'meal' && previous.tab !== 'scan') lastTab.current = previous.tab; return parseRoute(); });
       setSheet(null);
       window.scrollTo(0, 0);
     };
@@ -1061,6 +1308,7 @@ function App() {
       return { extras };
     }),
     welcomed: () => patch({ welcomed: true }),
+    scanTipSeen: () => { if (!prefs.scanTipSeen) patch({ scanTipSeen: true }); },
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
 
@@ -1069,7 +1317,7 @@ function App() {
   const head = { data, store, period, onStore: openStore };
   const mealIndex = route.tab === 'meal' ? plan.meals.findIndex(item => item.id === route.id) : -1;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
-  const tab = route.tab === 'meal' ? lastTab.current : route.tab;
+  const tab = route.tab === 'meal' || route.tab === 'scan' ? lastTab.current : route.tab;
 
   return html`
     <div class="shell">
@@ -1079,7 +1327,7 @@ function App() {
           : tab === 'shop' ? html`<${ShopTab} data=${data} head=${head} week=${week} set=${set} twin=${twin} focus=${route.id === 'search'} />`
           : tab === 'plan' ? html`<${PlanTab} data=${data} head=${head} plans=${plans} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} week=${week} offers=${offers} locked=${locked} set=${set} />`
           : tab === 'me' ? html`<${MeTab} data=${data} head=${head} plans=${plans} store=${store} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} plusOn=${plusOn} openStore=${openStore} />`
-          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} />`}
+          : html`<${HomeTab} data=${data} store=${store} head=${head} storeRows=${storeRows} plans=${plans} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} openFamily=${() => setSheet('family')} scanTip=${prefs.welcomed && !prefs.scanTipSeen} />`}
       </main>
 
       <nav class="tabbar" aria-label="الأقسام">
@@ -1096,6 +1344,7 @@ function App() {
             </a>`)}
       </nav>
 
+      ${route.tab === 'scan' ? html`<${ScanPage} data=${data} store=${store} offers=${offers} twin=${twin} week=${week} set=${set} period=${period} onClose=${() => { window.location.hash = '#/' + lastTab.current; }} onStore=${openStore} />` : null}
       ${sheet === 'store' ? html`<${StoreSheet} data=${data} rows=${storeRows} onPick=${set.store} onClose=${() => setSheet(null)} />` : null}
       ${sheet === 'family' ? html`<${FamilySheet} persons=${persons} mealsPerWeek=${mealsPerWeek} maxMeals=${maxMeals} set=${set} onClose=${() => setSheet(null)} />` : null}
       ${prefs.welcomed ? null : html`<${Welcome} data=${data} rows=${storeRows} persons=${persons} set=${set} onDone=${set.welcomed} />`}

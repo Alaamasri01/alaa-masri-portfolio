@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkDigit, validGtin, canonicalGtin, pandaGtin } from '../../tools/maqadi/barcode.mjs';
+import { checkDigit, validGtin, canonicalGtin, pandaGtin } from '../../maqadi/lib/barcode.js';
 import { sameSize, sameProducts } from '../../tools/maqadi/build-data.mjs';
 
 test('the GS1 check digit', () => {
