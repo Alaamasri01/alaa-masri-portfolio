@@ -67,22 +67,27 @@ function shareCost(offer, need) {
 /*
  * recipes      recipes.json
  * ingredients  ingredients.json → ingredients
- * offers       every offer of the week (all stores)
- * store        the store the plans are costed at
+ * offers       every product of the week (all stores)
+ * stores       the stores the plans are costed at; the first one chooses the meals
  *
- * A cuisine with "from": "all" draws on every other cuisine's meals; with
- * "rank": "cost" it prefers the cheapest meals instead of the biggest savings.
- * Each plan lists the week's picks in `meals` and every other meal that can
- * be costed in `alternatives`, so a family can swap one for another.
+ * The meals are chosen once, at the first store, so that every store prices
+ * the same week and the totals can be compared. A cuisine with "from": "all"
+ * draws on every other cuisine's meals; with "rank": "cost" it prefers the
+ * cheapest meals instead of the biggest savings. Each plan lists the week's
+ * picks in `meals` and every other meal that can be costed in
+ * `alternatives`, so a family can swap one for another.
  */
-export function autoPlans({ recipes, ingredients, offers, store, log = () => {} }) {
-  const pool = offers.filter(offer => offer.store === store);
-  const byKey = {};
-  Object.keys(ingredients).forEach(key => { byKey[key] = candidates(ingredients[key], pool); });
+export function autoPlans({ recipes, ingredients, offers, store, stores, log = () => {} }) {
+  const storeIds = stores && stores.length ? stores : [store];
+  const keysFor = {};
+  storeIds.forEach(id => {
+    const pool = offers.filter(offer => offer.store === id);
+    keysFor[id] = {};
+    Object.keys(ingredients).forEach(key => { keysFor[id][key] = candidates(ingredients[key], pool); });
+  });
+  const byKey = keysFor[storeIds[0]];
 
   const keyed = item => item && item.key && !item.pantry;
-  const plans = [];
-  const choices = {};
   const everyMeal = [];
   const homeOf = {};
   recipes.cuisines.filter(cuisine => cuisine.from !== 'all').forEach(cuisine => cuisine.meals.forEach(meal => {
@@ -104,15 +109,14 @@ export function autoPlans({ recipes, ingredients, offers, store, log = () => {} 
   };
   const everyScored = everyMeal.map(score);
 
+  // 1–2. Choose each cuisine's week at the first store.
+  const weeks = [];
   recipes.cuisines.forEach(cuisine => {
     const meals = cuisine.from === 'all' ? everyMeal : cuisine.meals;
     const byCost = cuisine.rank === 'cost';
-
-    // 1. Each meal on its own: can its main ingredients be bought, what does it save and cost?
     const scored = meals.map(score);
     const rankReady = byCost ? (a, b) => a.cost - b.cost || a.order - b.order : (a, b) => b.saved - a.saved || a.order - b.order;
 
-    // 2. Pick: available meals ranked, then fill if short.
     const picked = [];
     const perMain = {};
     const take = capped => entry => {
@@ -136,51 +140,62 @@ export function autoPlans({ recipes, ingredients, offers, store, log = () => {} 
     const others = scored.filter(entry => !picked.includes(entry) && entry.found > 0)
       .sort((a, b) => (b.ready - a.ready) || rankReady(a, b))
       .concat(everyScored.filter(entry => !own.has(entry.meal.id) && entry.ready).sort(rankReady).map(entry => Object.assign({ foreign: true }, entry)));
+    weeks.push({ cuisine, picked, others });
+    log(`  ${cuisine.id}: ${picked.map(entry => entry.meal.id).join(' ')} (+${others.length} alternatives)`);
+  });
+  if (!weeks.length) throw new Error(`no cuisine could be planned from ${storeIds[0]}'s products this week`);
 
-    // 3. One product per ingredient for the whole week, chosen for the week's total need;
-    //    ingredients only the alternatives use are chosen for one meal's need.
-    const need = new Map();
-    picked.forEach(entry => entry.meal.ingredients.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit))));
-    recipes.essentials.items.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit)));
-    const chosen = {};
-    need.forEach((total, key) => {
-      const best = bestOffer(byKey[key] || [], total);
-      if (best) chosen[key] = best.offer;
-    });
-    others.forEach(entry => entry.meal.ingredients.filter(keyed).forEach(item => {
-      if (chosen[item.key] || need.has(item.key)) return;
-      const best = bestOffer(byKey[item.key] || [], toBase(item.qty, item.unit));
-      if (best) chosen[item.key] = best.offer;
-    }));
-    choices[cuisine.id] = { chosen, need };
+  // 3. At every store, one product per ingredient for the whole week, chosen
+  //    for the week's total need; ingredients only the alternatives use are
+  //    chosen for one meal's need.
+  const byStore = {};
+  const choices = {};
+  storeIds.forEach(storeId => {
+    const pool = keysFor[storeId];
+    const plans = weeks.map(({ cuisine, picked, others }) => {
+      const need = new Map();
+      picked.forEach(entry => entry.meal.ingredients.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit))));
+      recipes.essentials.items.filter(keyed).forEach(item => add(need, item.key, toBase(item.qty, item.unit)));
+      const chosen = {};
+      need.forEach((total, key) => {
+        const best = bestOffer(pool[key] || [], total);
+        if (best) chosen[key] = best.offer;
+      });
+      others.forEach(entry => entry.meal.ingredients.filter(keyed).forEach(item => {
+        if (chosen[item.key] || need.has(item.key)) return;
+        const best = bestOffer(pool[item.key] || [], toBase(item.qty, item.unit));
+        if (best) chosen[item.key] = best.offer;
+      }));
+      choices[storeId + ':' + cuisine.id] = { chosen, need };
 
-    const toPlanItem = item => {
-      if (!keyed(item)) return item;
-      const out = { name: item.name, qty: item.qty, unit: item.unit };
-      if (chosen[item.key]) out.offer = chosen[item.key].id;
-      if (item.display) out.display = item.display;
-      return out;
-    };
-    const toPlanMeal = ({ meal, ready, foreign }) => {
-      const { main, ingredients: items, ...rest } = meal;
-      const out = Object.assign({}, rest, { ingredients: items.map(toPlanItem) });
-      if (!ready) out.unavailable = true;
-      if (foreign) out.cuisine = homeOf[meal.id];
-      return out;
-    };
-    plans.push({
-      id: cuisine.id,
-      name: cuisine.name,
-      tagline: cuisine.tagline,
-      base_persons: recipes.base_persons,
-      meals: picked.map(toPlanMeal),
-      alternatives: others.map(toPlanMeal),
-      essentials: { name: recipes.essentials.name, items: recipes.essentials.items.map(toPlanItem) }
+      const toPlanItem = item => {
+        if (!keyed(item)) return item;
+        const out = { name: item.name, qty: item.qty, unit: item.unit };
+        if (chosen[item.key]) out.offer = chosen[item.key].id;
+        if (item.display) out.display = item.display;
+        return out;
+      };
+      const toPlanMeal = ({ meal, ready, foreign }) => {
+        const { main, ingredients: items, ...rest } = meal;
+        const out = Object.assign({}, rest, { ingredients: items.map(toPlanItem) });
+        if (!ready) out.unavailable = true;
+        if (foreign) out.cuisine = homeOf[meal.id];
+        return out;
+      };
+      const missing = [...need.keys()].filter(key => !chosen[key]);
+      if (missing.length) log(`  ${storeId} ${cuisine.id}: no price for ${missing.join(', ')}`);
+      return {
+        id: cuisine.id,
+        name: cuisine.name,
+        tagline: cuisine.tagline,
+        base_persons: recipes.base_persons,
+        meals: picked.map(toPlanMeal),
+        alternatives: others.map(toPlanMeal),
+        essentials: { name: recipes.essentials.name, items: recipes.essentials.items.map(toPlanItem) }
+      };
     });
-    const missing = [...need.keys()].filter(key => !chosen[key]);
-    log(`  ${cuisine.id}: ${picked.map(entry => entry.meal.id).join(' ')} (+${others.length} alternatives)${missing.length ? ' — no price for: ' + missing.join(', ') : ''}`);
+    byStore[storeId] = { base_persons: recipes.base_persons, plans };
   });
 
-  if (!plans.length) throw new Error(`no cuisine could be planned from ${store}'s products this week`);
-  return { plans: { base_persons: recipes.base_persons, plans }, choices };
+  return { plans: byStore[storeIds[0]], byStore, choices };
 }

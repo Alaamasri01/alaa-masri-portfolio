@@ -8,7 +8,7 @@
     "frozen_chicken"
    ],
    "include": "whole chicken|chicken whole|griller|broiler|دجاج كامل|دجاجه كامله|دجاج طازج",
-   "exclude": "leg|thigh|breast|wing|marinat|season|rosemary|smoked|roast|grilled|nugget|burger|stock|cube|soup|noodle|sausage|frank|متبل|افخاذ|صدور|اجنحه|مشوي"
+   "exclude": "leg|thigh|breast|wing|marinat|season|rosemary|smoked|roast|grilled|nugget|burger|stock|cube|soup|noodle|sausage|frank|متبل|افخاذ|صدور|اجنحه|مشوي|قطع|مشكل|مقطع|parts|pieces"
   },
   "chicken_pieces": {
    "name": "قطع دجاج",
@@ -126,7 +126,7 @@
     "produce_veg"
    ],
    "include": "potato|بطاطس|بطاطا",
-   "exclude": "chips|crisps|fries|wedges|sweet|mash|starch|flake|frozen|hash"
+   "exclude": "chips|crisps|fries|wedges|sweet|mash|starch|flake|frozen|hash|حلوه|حلو"
   },
   "tomatoes_canned": {
    "name": "طماطم مقطعة معلبة",
@@ -201,7 +201,7 @@
     "other"
    ],
    "include": "lentil|عدس",
-   "exclude": "chips|pasta|soup|crisps|snack|penne|organic|puffs"
+   "exclude": "chips|pasta|soup|crisps|snack|penne|organic|puffs|شوربه|كنور|مغلفه|knorr"
   },
   "yogurt": {
    "name": "زبادي",

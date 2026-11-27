@@ -6,7 +6,8 @@
  *
  * 1. Works out the ISO week and creates weeks/<week>/meta.json if needed,
  *    with Tamimi as the store the plans are costed at.
- * 2. Reads Tamimi's weekly-offers listing (fetch-tamimi.mjs).
+ * 2. Reads Tamimi's weekly-offers listing and fresh produce (fetch-tamimi.mjs)
+ *    and Panda's whole catalogue (fetch-panda.mjs).
  * 3. Builds the published data and chooses the plans (build-data.mjs).
  * 4. Keeps only the two most recent weeks; older ones stay in git history.
  * Exits non-zero if any step fails, so a scheduled run reports the failure.
@@ -39,12 +40,20 @@ export function metaFor(weekId, today) {
     week: weekId,
     city: 'riyadh',
     updated: today,
-    plan_store: 'tamimi',
+    plan_stores: ['panda', 'tamimi'],
+    publish_all: true,
     stores: {
+      panda: {
+        prefix: 'pd',
+        name: 'بنده',
+        source: 'متجر بنده الإلكتروني (كل الأقسام)',
+        source_url: 'https://panda.sa/ar',
+        checked: today
+      },
       tamimi: {
         prefix: 'tm',
         name: 'التميمي',
-        source: 'قسم العروض الأسبوعية في متجر التميمي الإلكتروني',
+        source: 'متجر التميمي الإلكتروني: العروض الأسبوعية والخضار والفواكه',
         source_url: 'https://www.tamimimarkets.com/tag/Weekly%20Offers',
         checked: today
       }
@@ -65,7 +74,7 @@ function main() {
   mkdirSync(weekDir, { recursive: true });
   if (existsSync(metaPath)) {
     const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
-    if (meta.stores.tamimi) meta.stores.tamimi.checked = today;
+    Object.values(meta.stores).forEach(store => { if (store.checked) store.checked = today; });
     meta.updated = today;
     writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
   } else {
@@ -75,6 +84,7 @@ function main() {
 
   const run = script => execFileSync(process.execPath, [join(ROOT, 'tools/maqadi', script), week.dir], { stdio: 'inherit' });
   run('fetch-tamimi.mjs');
+  run('fetch-panda.mjs');
   run('build-data.mjs');
 
   for (const base of [join(ROOT, 'tools/maqadi/weeks'), join(ROOT, 'maqadi/data')]) {

@@ -5,7 +5,7 @@
  */
 import { html, render, useState, useEffect, useMemo, useCallback } from './lib/htm-preact.js';
 import {
-  buildList, mealHighlight, discountPercent, unitPrice, matches, money, amount,
+  buildList, mealHighlight, discountPercent, unitPrice, normalizeAr, money, amount,
   ingredientAmount, offerSize, isLoose, halalas
 } from './lib/plan.js';
 
@@ -149,8 +149,7 @@ const DAY_MS = 86400000;
 /* How old the prices the plans are built on are, and how to say it. A
    flyer has an end date; an online store has the day its prices were read
    and is refreshed weekly, so after eight days it is out of date. */
-function pricePeriod(data) {
-  const id = data.plans.store || Object.keys(data.offers.stores)[0];
+function pricePeriod(data, id) {
   const store = data.offers.stores[id] || {};
   const today = riyadhToday();
   if (store.checked) {
@@ -173,8 +172,8 @@ function pricePeriod(data) {
 /* ---------------------------------------------------------------------
    Plan
    ------------------------------------------------------------------- */
-function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
-  const planStore = storeName(data, data.plans.store || Object.keys(data.offers.stores)[0]);
+function PlanTab({ data, plans, store, compare, plan, persons, week, list, offers, locked, set }) {
+  const planStore = storeName(data, store);
   const [swapFor, setSwapFor] = useState(null);
   const picked = new Set(plan.meals.map(meal => meal.id));
   const swaps = plan.choices.filter(meal => !picked.has(meal.id));
@@ -192,6 +191,14 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
           <p class="figure__caption">توفيرك عن السعر قبل العرض</p>
         </div>
       </div>
+      ${compare.length ? html`
+        <div class="hero__compare">
+          <span class="hero__here">في ${planStore}${list.unpriced.length ? ` · ${list.unpriced.length} بدون سعر` : ''}</span>
+          ${compare.map(other => {
+            const diff = other.totals.cost - list.totals.cost;
+            return html`<span class="hero__other">نفس السفرة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${other.unpriced ? ` · ${other.unpriced} بدون سعر` : ''}${other.unpriced === list.unpriced.length && diff ? html` · <em>${diff > 0 ? 'أغلى' : 'أرخص'} بـ <span dir="ltr">${money(Math.abs(diff))}</span></em>` : null}</span>`;
+          })}
+        </div>` : null}
       <div class="hero__row">
         <span class="hero__family">عدد أفراد الأسرة</span>
         <${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${value => set.persons(value)} />
@@ -199,7 +206,7 @@ function PlanTab({ data, plan, persons, week, list, offers, locked, set }) {
     </section>
 
     <div class="chips chips--plans" role="group" aria-label="نوع السفرة">
-      ${data.plans.plans.map(option => html`
+      ${plans.map(option => html`
         <button type="button" class="chip" aria-pressed=${option.id === plan.id} onClick=${() => set.plan(option.id)}>${option.name}</button>`)}
     </div>
     <p class="plan-tagline">${plan.tagline}</p>
@@ -356,7 +363,7 @@ function shareText(data, list, period) {
   return rows.join('\n');
 }
 
-function ListTab({ data, list, week, set, period }) {
+function ListTab({ data, list, week, set, period, compare }) {
   const done = key => week.checked.includes(key);
   const total = list.lines.length + list.unpriced.length;
   const ticked = list.lines.filter(line => done(line.key)).length + list.unpriced.filter(item => done('u:' + item.name)).length;
@@ -379,7 +386,7 @@ function ListTab({ data, list, week, set, period }) {
     return html`
       <div class="empty">
         <p class="empty__title">القائمة فارغة</p>
-        <p>يلزم اختيار طبخة واحدة على الأقل من الخطة، أو إضافة أصناف من العروض.</p>
+        <p>يلزم اختيار طبخة واحدة على الأقل من الخطة، أو إضافة أصناف من شاشة المنتجات.</p>
         <a class="btn" href="#/plan">العودة إلى الخطة</a>
       </div>`;
   }
@@ -392,6 +399,7 @@ function ListTab({ data, list, week, set, period }) {
       </div>
       <button type="button" class="btn btn--ghost" onClick=${share}><${Icon} name="share" size=${18} /> ${copied ? 'تم النسخ' : 'مشاركة'}</button>
     </header>
+    ${compare.map(other => html`<p class="compare-line">نفس القائمة في ${other.name}: <b dir="ltr">${money(other.totals.cost)}</b> ريال${other.unpriced ? ` · ${other.unpriced} أصناف بدون سعر هناك` : ''}</p>`)}
     <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax=${total} aria-valuenow=${ticked} aria-label="ما تم شراؤه"><span style=${'width:' + (total ? ticked / total * 100 : 0) + '%'}></span></div>
 
     ${AISLES.map(aisle => {
@@ -459,36 +467,44 @@ function ListTab({ data, list, week, set, period }) {
 /* ---------------------------------------------------------------------
    Deals
    ------------------------------------------------------------------- */
-function DealsTab({ data, week, set }) {
+function DealsTab({ data, week, set, twin }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [store, setStore] = useState('all');
   const [shown, setShown] = useState(CONFIG.dealsPage);
   const storeIds = Object.keys(data.offers.stores);
+  const searching = query.trim().length > 0;
+
+  // Names are normalised once, so searching thousands of products stays instant.
+  const haystack = useMemo(() => new Map(data.offers.offers.map(offer => [offer.id, normalizeAr([offer.name, offer.name_en, offer.brand].filter(Boolean).join(' '))])), [data]);
+  const words = normalizeAr(query).split(' ').filter(Boolean);
+  const inScope = offer => (searching || offer.was > offer.price) && (store === 'all' || offer.store === store);
 
   const categories = useMemo(() => {
     const counts = {};
-    data.offers.offers.forEach(offer => { if (offer.was > offer.price) counts[offer.category] = (counts[offer.category] || 0) + 1; });
+    data.offers.offers.forEach(offer => { if (inScope(offer)) counts[offer.category] = (counts[offer.category] || 0) + 1; });
     return Object.keys(CATEGORY_NAMES).filter(id => counts[id]);
-  }, [data]);
+  }, [data, searching, store]);
 
-  // Regular prices cost the plans; only real discounts are shown as offers.
+  // Without a search: this week's real discounts. With one: every product, discounts first.
   const results = useMemo(() => data.offers.offers
-    .filter(offer => offer.was > offer.price && (store === 'all' || offer.store === store) && (category === 'all' || offer.category === category) && matches(offer, query))
-    .sort((a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price),
+    .filter(offer => inScope(offer) && (category === 'all' || offer.category === category) && words.every(word => haystack.get(offer.id).includes(word)))
+    .sort(searching
+      ? (a, b) => (b.was > b.price) - (a.was > a.price) || a.price - b.price
+      : (a, b) => discountPercent(b) - discountPercent(a) || a.price - b.price),
   [data, query, category, store]);
 
   useEffect(() => setShown(CONFIG.dealsPage), [query, category, store]);
 
   return html`
-    <h1 class="page-title">عروض الأسبوع</h1>
-    <p class="page-sub">${results.length} عرض · مرتّبة من الأعلى خصماً</p>
+    <h1 class="page-title">المنتجات والعروض</h1>
+    <p class="page-sub">${searching ? `${results.length} منتج` : `${results.length} عرض · مرتّبة من الأعلى خصماً`}</p>
     ${storeIds.length > 1 ? html`
       <div class="segmented segmented--stores" role="group" aria-label="المتجر">
         <button type="button" class="segmented__item" aria-pressed=${store === 'all'} onClick=${() => setStore('all')}>كل المتاجر</button>
         ${storeIds.map(id => html`<button type="button" class="segmented__item" aria-pressed=${store === id} onClick=${() => setStore(id)}>${storeName(data, id)}</button>`)}
       </div>` : null}
-    <input class="search" type="search" inputmode="search" placeholder="بحث: دجاج، أرز، جبنة…" aria-label="بحث في العروض" value=${query} onInput=${event => setQuery(event.target.value)} />
+    <input class="search" type="search" inputmode="search" placeholder="ابحث عن أي غرض: بصل، حليب، منظف…" aria-label="بحث في المنتجات" value=${query} onInput=${event => setQuery(event.target.value)} />
     <div class="chips" role="group" aria-label="القسم">
       <button type="button" class="chip" aria-pressed=${category === 'all'} onClick=${() => setCategory('all')}>الكل</button>
       ${categories.map(id => html`<button type="button" class="chip" aria-pressed=${category === id} onClick=${() => setCategory(id)}>${CATEGORY_NAMES[id]}</button>`)}
@@ -500,12 +516,14 @@ function DealsTab({ data, week, set }) {
           const per = unitPrice(offer);
           const units = week.extras[offer.id] || 0;
           const step = isLoose(offer) ? 0.5 : 1;
+          const twins = storeIds.filter(id => id !== offer.store).map(id => twin(offer, id)).filter(Boolean);
           return html`
             <li class="deal">
               <div class="deal__body">
                 <span class="deal__name">${offer.name}</span>
                 <span class="deal__sub">${[offerSize(offer), SOLD_BY[offer.sold_by], storeName(data, offer.store), offer.note ? (NOTES[offer.note] || offer.note) : null].filter(Boolean).join(' · ')}</span>
                 ${per ? html`<span class="deal__per"><span dir="ltr">${per.value.toFixed(2)}</span> ريال ${per.per === 'kg' ? 'للكيلو' : 'لليتر'}</span>` : null}
+                ${twins.map(other => html`<span class=${'deal__twin' + (other.price < offer.price ? ' is-cheaper' : '')}>نفس المنتج في ${storeName(data, other.store)}: <b dir="ltr">${money(halalas(other.price))}</b></span>`)}
               </div>
               <div class="deal__side">
                 <${OfferPrice} offer=${offer} />
@@ -517,13 +535,13 @@ function DealsTab({ data, week, set }) {
         })}
       </ul>
       ${results.length > shown ? html`<button type="button" class="btn btn--ghost btn--wide" onClick=${() => setShown(shown + CONFIG.dealsPage)}>عرض المزيد (${results.length - shown})</button>` : null}`
-    : html`<div class="empty"><p class="empty__title">لا توجد عروض مطابقة</p><p>يمكن تجربة كلمة أخرى أو قسم آخر.</p></div>`}`;
+    : html`<div class="empty"><p class="empty__title">${searching ? 'لا توجد منتجات مطابقة' : 'لا توجد عروض مطابقة'}</p><p>يمكن تجربة كلمة أخرى أو قسم آخر.</p></div>`}`;
 }
 
 /* ---------------------------------------------------------------------
    Settings and about
    ------------------------------------------------------------------- */
-function MeTab({ data, plan, persons, mealsPerWeek, set, plusOn }) {
+function MeTab({ data, plans, planStores, store, plan, persons, mealsPerWeek, set, plusOn }) {
   const maxMeals = Math.min(CONFIG.maxMeals, plan.choices.filter(meal => !meal.unavailable).length);
   const stores = Object.keys(data.offers.stores).map(id => data.offers.stores[id]);
   return html`
@@ -534,6 +552,13 @@ function MeTab({ data, plan, persons, mealsPerWeek, set, plusOn }) {
         <span>عدد أفراد الأسرة</span>
         <${Stepper} value=${persons} min=${CONFIG.minPersons} max=${CONFIG.maxPersons} label="عدد أفراد الأسرة" onChange=${value => set.persons(value)} />
       </div>
+      ${planStores.length > 1 ? html`
+        <div class="row">
+          <label for="store-select">المتجر الذي تتسوق منه</label>
+          <select id="store-select" value=${store} onChange=${event => set.store(event.target.value)}>
+            ${planStores.map(id => html`<option value=${id}>${storeName(data, id)}</option>`)}
+          </select>
+        </div>` : null}
       <div class="row">
         <span>عدد الطبخات في الأسبوع</span>
         <${Stepper} value=${Math.min(mealsPerWeek, maxMeals)} min=${CONFIG.minMeals} max=${maxMeals} label="عدد الطبخات في الأسبوع" onChange=${value => set.mealsPerWeek(value)} />
@@ -541,7 +566,7 @@ function MeTab({ data, plan, persons, mealsPerWeek, set, plusOn }) {
       <div class="row">
         <label for="plan-select">نوع السفرة</label>
         <select id="plan-select" value=${plan.id} onChange=${event => set.plan(event.target.value)}>
-          ${data.plans.plans.map(option => html`<option value=${option.id}>${option.name}</option>`)}
+          ${plans.map(option => html`<option value=${option.id}>${option.name}</option>`)}
         </select>
       </div>
     </section>
@@ -582,7 +607,7 @@ function MeTab({ data, plan, persons, mealsPerWeek, set, plusOn }) {
 const TABS = [
   { id: 'plan', label: 'الخطة' },
   { id: 'list', label: 'المقاضي' },
-  { id: 'deals', label: 'العروض' },
+  { id: 'deals', label: 'المنتجات' },
   { id: 'me', label: 'الإعدادات' }
 ];
 
@@ -610,6 +635,17 @@ function App() {
   }), []);
 
   const offers = useMemo(() => new Map(data ? data.offers.offers.map(offer => [offer.id, offer]) : []), [data]);
+  // The cheapest product per store and barcode, to find the same product elsewhere.
+  const barcodes = useMemo(() => {
+    const index = new Map();
+    if (data) data.offers.offers.forEach(offer => {
+      if (!offer.barcode) return;
+      const key = offer.store + '|' + offer.barcode;
+      const current = index.get(key);
+      if (!current || offer.price < current.price) index.set(key, offer);
+    });
+    return index;
+  }, [data]);
 
   if (failed) {
     return html`
@@ -632,7 +668,12 @@ function App() {
     extras: stored.extras || {},
     essentials: stored.essentials !== false
   };
-  const basePlan = data.plans.plans.find(option => option.id === prefs.plan) || data.plans.plans[0];
+  // Plans are published per store, for the same meals; the family picks where they shop.
+  const planStores = data.plans.stores || [data.plans.store || Object.keys(data.offers.stores)[0]];
+  const setsBy = data.plans.by_store || { [planStores[0]]: data.plans };
+  const store = planStores.includes(prefs.store) ? prefs.store : planStores[0];
+  const plans = setsBy[store].plans;
+  const basePlan = plans.find(option => option.id === prefs.plan) || plans[0];
   const mealsPerWeek = clamp(prefs.mealsPerWeek || basePlan.meals.length, CONFIG.minMeals, CONFIG.maxMeals);
   const plan = activePlan(basePlan, (stored.picks || {})[basePlan.id], mealsPerWeek);
   const persons = clamp(prefs.persons || plan.base_persons, CONFIG.minPersons, CONFIG.maxPersons);
@@ -640,6 +681,22 @@ function App() {
   const locked = new Set(plusOn ? plan.meals.slice(CONFIG.plus.freeMeals).map(meal => meal.id) : []);
   const skipped = new Set(week.skipped.concat(Array.from(locked)));
   const list = buildList({ plan, offers, persons, skipped, essentials: week.essentials, extras: week.extras });
+
+  // The same week at the other stores: same meals, each store's own products;
+  // hand-added products follow by barcode when the other store sells the same one.
+  const twin = (offer, storeId) => (offer && offer.barcode ? barcodes.get(storeId + '|' + offer.barcode) || null : null);
+  const compare = planStores.filter(id => id !== store).map(id => {
+    const otherBase = setsBy[id].plans.find(option => option.id === basePlan.id);
+    if (!otherBase) return null;
+    const otherPlan = activePlan(otherBase, plan.meals.map(meal => meal.id), mealsPerWeek);
+    const extras = {};
+    Object.keys(week.extras).forEach(extraId => {
+      const match = twin(offers.get(extraId), id);
+      if (match) extras[match.id] = week.extras[extraId];
+    });
+    const other = buildList({ plan: otherPlan, offers, persons, skipped, essentials: week.essentials, extras });
+    return { id, name: storeName(data, id), totals: other.totals, unpriced: other.unpriced.length };
+  }).filter(Boolean);
 
   const setWeek = change => patch(previous => {
     const base = previous.week && previous.week.id === weekId ? previous.week : { id: weekId };
@@ -649,6 +706,7 @@ function App() {
   const set = {
     persons: value => patch({ persons: value }),
     plan: id => patch({ plan: id }),
+    store: id => patch({ store: id }),
     essentials: on => setWeek(() => ({ essentials: on })),
     toggleMeal: id => setWeek(current => ({ skipped: toggleIn(current.skipped, id) })),
     swap: (from, to) => setWeek(current => {
@@ -666,7 +724,7 @@ function App() {
     reset: () => { try { localStorage.removeItem(STORAGE_KEY); } catch (error) { /* nothing stored */ } setPrefs({}); }
   };
 
-  const period = pricePeriod(data);
+  const period = pricePeriod(data, store);
   const expired = period.stale;
   const meal = route.tab === 'meal' ? plan.choices.find(item => item.id === route.id && !locked.has(item.id)) : null;
   const tab = route.tab === 'meal' ? 'plan' : route.tab;
@@ -682,10 +740,10 @@ function App() {
 
       <main class="main" id="main">
         ${meal ? html`<${MealPage} data=${data} plan=${plan} meal=${meal} persons=${persons} offers=${offers} />`
-          : tab === 'list' ? html`<${ListTab} data=${data} list=${list} week=${week} set=${set} period=${period} />`
-          : tab === 'deals' ? html`<${DealsTab} data=${data} week=${week} set=${set} />`
-          : tab === 'me' ? html`<${MeTab} data=${data} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} set=${set} plusOn=${plusOn} />`
-          : html`<${PlanTab} data=${data} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} />`}
+          : tab === 'list' ? html`<${ListTab} data=${data} list=${list} week=${week} set=${set} period=${period} compare=${compare} />`
+          : tab === 'deals' ? html`<${DealsTab} data=${data} week=${week} set=${set} twin=${twin} />`
+          : tab === 'me' ? html`<${MeTab} data=${data} plans=${plans} planStores=${planStores} store=${store} plan=${plan} persons=${persons} mealsPerWeek=${mealsPerWeek} set=${set} plusOn=${plusOn} />`
+          : html`<${PlanTab} data=${data} plans=${plans} store=${store} compare=${compare} plan=${plan} persons=${persons} week=${week} list=${list} offers=${offers} locked=${locked} set=${set} />`}
       </main>
 
       <nav class="tabbar" aria-label="الأقسام">

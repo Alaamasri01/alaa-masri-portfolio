@@ -93,7 +93,8 @@ export function buildOffers(week, log = console.log) {
           price: item.price,
           was,
           promo: clean(item.promo),
-          note: restriction(item.note)
+          note: restriction(item.note),
+          barcode: item.barcode || null
         };
         // The two halves of a page overlap; the same product read twice is one offer.
         const key = raw.source_id ? storeId + '|' + raw.source_id : [storeId, page, offer.name, offer.size_text, offer.price].join('|');
@@ -181,8 +182,15 @@ function main() {
   });
   const out = join(ROOT, 'maqadi/data', week);
   // Phones only need real discounts (the deals screen) and the products the plans buy.
+  // Every product is published (the basket can hold anything), without empty fields.
+  const slim = offer => {
+    const out = {};
+    ['id', 'store', 'name', 'name_en', 'brand', 'category', 'size_text', 'size_qty', 'size_unit', 'pack_count', 'sold_by', 'price', 'was', 'promo', 'note', 'barcode']
+      .forEach(key => { const value = offer[key]; if (value !== null && value !== undefined && !(key === 'pack_count' && value === 1)) out[key] = value; });
+    return out;
+  };
   const publish = used => {
-    const kept = offers.filter(offer => offer.was > offer.price || used.has(offer.id));
+    const kept = offers.filter(offer => meta.publish_all || offer.was > offer.price || used.has(offer.id)).map(slim);
     Object.keys(stores).forEach(id => { stores[id].offers = kept.filter(offer => offer.store === id).length; });
     writeJSON(join(out, 'offers.json'), { week: meta.week, city: meta.city, stores, offers: kept });
     return kept.length;
@@ -193,42 +201,46 @@ function main() {
   const plansPath = join(dir, 'plans.json');
   let plans;
   if (existsSync(plansPath)) plans = readJSON(plansPath);
-  else if (meta.plan_store) {
-    console.log(`plans: chosen automatically from ${meta.plan_store}`);
+  else if (meta.plan_stores || meta.plan_store) {
+    const planStores = (meta.plan_stores || [meta.plan_store]).filter(id => meta.stores[id]);
+    console.log(`plans: chosen automatically at ${planStores[0]}, priced at ${planStores.join(' and ')}`);
     const auto = autoPlans({
       recipes: readJSON(join(ROOT, 'tools/maqadi/recipes.json')),
       ingredients: readJSON(join(ROOT, 'tools/maqadi/ingredients.json')).ingredients,
       offers,
-      store: meta.plan_store,
+      stores: planStores,
       log: console.log
     });
-    plans = Object.assign({ store: meta.plan_store }, auto.plans);
+    plans = { stores: planStores, by_store: auto.byStore };
     const seen = new Set();
-    Object.keys(auto.choices).forEach(cuisine => Object.entries(auto.choices[cuisine].chosen).forEach(([key, offer]) => {
+    Object.keys(auto.choices).forEach(at => Object.entries(auto.choices[at].chosen).forEach(([key, offer]) => {
       if (seen.has(key + offer.id)) return;
       seen.add(key + offer.id);
-      console.log(`    ${key.padEnd(16)} → ${offer.name} ${offer.size_text || ''} · ${offer.price}${offer.was ? ' (was ' + offer.was + ')' : ''}`);
+      console.log(`    ${offer.store.padEnd(7)} ${key.padEnd(16)} → ${offer.name} ${offer.size_text || ''} · ${offer.price}${offer.was ? ' (was ' + offer.was + ')' : ''}`);
     }));
   } else { publish(new Set()); console.log('no plans.json and no plan_store: offers written, plans skipped'); return; }
-  const problems = checkPlans(plans, offers);
+  // A hand-written plans.json covers one store.
+  if (!plans.by_store) plans = { stores: [plans.store || Object.keys(meta.stores)[0]], by_store: { [plans.store || Object.keys(meta.stores)[0]]: plans } };
+  const storePlans = Object.values(plans.by_store);
+  const problems = storePlans.flatMap(set => checkPlans(set, offers));
   if (problems.length) {
     console.error(`\n${problems.length} problem(s) in plans.json — nothing published:`);
     problems.forEach(problem => console.error('  ✗ ' + problem));
     process.exit(1);
   }
   const used = new Set();
-  plans.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
-    .forEach(item => { if (item.offer) used.add(item.offer); }));
-  console.log(`published ${publish(used)} of ${offers.length} products (discounts and the ones the plans buy)`);
+  storePlans.forEach(set => set.plans.forEach(plan => plan.meals.concat(plan.alternatives || []).flatMap(meal => meal.ingredients).concat(plan.essentials ? plan.essentials.items : [])
+    .forEach(item => { if (item.offer) used.add(item.offer); })));
+  console.log(`published ${publish(used)} of ${offers.length} products${meta.publish_all ? '' : ' (discounts and the ones the plans buy)'}`);
   writeJSON(join(out, 'plans.json'), Object.assign({ week: meta.week }, plans));
   writeJSON(join(ROOT, 'maqadi/data/current.json'), { week: meta.week, offers: `${week}/offers.json`, plans: `${week}/plans.json`, updated: meta.updated });
 
   const byId = new Map(offers.map(offer => [offer.id, offer]));
-  plans.plans.forEach(plan => {
-    const list = buildList({ plan, offers: byId, persons: plans.base_persons });
+  Object.entries(plans.by_store).forEach(([storeId, set]) => set.plans.forEach(plan => {
+    const list = buildList({ plan, offers: byId, persons: set.base_persons });
     const flagged = list.lines.filter(line => line.approx).map(line => line.offer.id);
-    console.log(`plan ${plan.id}: ${plan.meals.length} meals, ${list.lines.length} priced items, ${list.unpriced.length} without a price, pays ${money(list.totals.cost)} SAR, saves ${money(list.totals.saved)} SAR (${list.totals.percent}%)${flagged.length ? ' — APPROX: ' + flagged.join(',') : ''}`);
-  });
+    console.log(`plan ${storeId} ${plan.id}: ${plan.meals.length} meals, ${list.lines.length} priced items, ${list.unpriced.length} without a price, pays ${money(list.totals.cost)} SAR, saves ${money(list.totals.saved)} SAR (${list.totals.percent}%)${flagged.length ? ' — APPROX: ' + flagged.join(',') : ''}`);
+  }));
   console.log('published ' + week);
 }
 

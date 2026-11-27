@@ -2,7 +2,11 @@
   "week": "2026-W48",
   "city": "riyadh",
   "updated": "2026-11-27",
-  "plan_store": "tamimi",
+  "plan_stores": [
+    "panda",
+    "tamimi"
+  ],
+  "publish_all": true,
   "stores": {
     "othaim": {
       "prefix": "ot",
@@ -16,8 +20,15 @@
     "tamimi": {
       "prefix": "tm",
       "name": "التميمي",
-      "source": "قسم العروض الأسبوعية في متجر التميمي الإلكتروني",
+      "source": "متجر التميمي الإلكتروني: العروض الأسبوعية والخضار والفواكه",
       "source_url": "https://www.tamimimarkets.com/tag/Weekly%20Offers",
+      "checked": "2026-11-27"
+    },
+    "panda": {
+      "prefix": "pd",
+      "name": "بنده",
+      "source": "متجر بنده الإلكتروني (كل الأقسام)",
+      "source_url": "https://panda.sa/ar",
       "checked": "2026-11-27"
     }
   },

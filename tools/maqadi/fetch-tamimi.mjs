@@ -160,12 +160,106 @@ export function toOffers(products) {
         promo: null,
         note: null,
         category: categoryOf(product),
+        barcode: pickBarcode(variant.barcodes),
         in_stock: variant.inStock !== false,
         confidence: 'high'
       });
     });
   });
   return offers;
+}
+
+/* A shop-floor code (starting with 2) is the store's own; a GTIN is shared by every store. */
+export function normalizeBarcode(code) {
+  let digits = String(code || '').replace(/\D/g, '');
+  if (digits.length === 14 && digits[0] === '0') digits = digits.slice(1);
+  if (digits.length === 12 && digits[0] === '2') return null;
+  if (digits.length === 12) digits = '0' + digits;
+  if (digits.length !== 13 && digits.length !== 8) return null;
+  if (digits.length === 13 && digits[0] === '2') return null;
+  return digits;
+}
+export const pickBarcode = codes => (codes || []).map(normalizeBarcode).find(Boolean) || null;
+
+/* Fresh produce is not in the weekly listing, so it is read from single product pages. */
+const PRODUCE_AR = [
+  ['sweet potato', 'بطاطا حلوة'], ['potato', 'بطاطس'], ['tomato', 'طماطم'], ['onion', 'بصل'], ['cucumber', 'خيار'],
+  ['garlic', 'ثوم'], ['lemon', 'ليمون'], ['lime', 'ليمون أخضر'], ['carrot', 'جزر'], ['lettuce', 'خس'], ['cabbage', 'ملفوف'],
+  ['cauliflower', 'قرنبيط'], ['broccoli', 'بروكلي'], ['eggplant', 'باذنجان'], ['aubergine', 'باذنجان'], ['zucchini', 'كوسا'],
+  ['capsicum', 'فلفل رومي'], ['bell pepper', 'فلفل رومي'], ['chili', 'فلفل حار'], ['chilli', 'فلفل حار'], ['pepper', 'فلفل'],
+  ['parsley', 'بقدونس'], ['coriander', 'كزبرة'], ['mint', 'نعناع'], ['dill', 'شبت'], ['spinach', 'سبانخ'], ['okra', 'بامية'],
+  ['beans', 'فاصوليا'], ['peas', 'بازلاء'], ['mushroom', 'فطر'], ['ginger', 'زنجبيل'], ['beetroot', 'شمندر'], ['radish', 'فجل'],
+  ['celery', 'كرفس'], ['leek', 'كراث'], ['corn', 'ذرة'], ['apple', 'تفاح'], ['banana', 'موز'], ['mandarin', 'يوسفي'],
+  ['orange', 'برتقال'], ['grapefruit', 'جريب فروت'], ['grape', 'عنب'], ['mango', 'مانجو'], ['kiwi', 'كيوي'], ['pear', 'كمثرى'],
+  ['peach', 'خوخ'], ['plum', 'برقوق'], ['apricot', 'مشمش'], ['watermelon', 'بطيخ'], ['melon', 'شمام'], ['strawberr', 'فراولة'],
+  ['pomegranate', 'رمان'], ['avocado', 'أفوكادو'], ['pineapple', 'أناناس'], ['papaya', 'بابايا'], ['guava', 'جوافة'],
+  ['blueberr', 'توت أزرق'], ['raspberr', 'توت أحمر'], ['cherr', 'كرز'], ['coconut', 'جوز هند'], ['fig', 'تين'], ['rocket', 'جرجير'],
+  ['arugula', 'جرجير'], ['jarjeer', 'جرجير'], ['molokhia', 'ملوخية'], ['pumpkin', 'قرع'], ['turnip', 'لفت']
+];
+const COLOURS_AR = [['red', 'أحمر'], ['white', 'أبيض'], ['green', 'أخضر'], ['yellow', 'أصفر'], ['local', 'محلي']];
+export function produceArabic(nameEn) {
+  const lower = String(nameEn || '').toLowerCase();
+  const hit = PRODUCE_AR.find(([word]) => lower.includes(word));
+  if (!hit) return null;
+  const colour = COLOURS_AR.filter(([word]) => new RegExp('\\b' + word + '\\b').test(lower)).map(([, ar]) => ar);
+  return [hit[1]].concat(colour).join(' ');
+}
+// Produce pages are named after the produce, maybe after an origin or a colour: "onion-white-500-g", "fresh-garlic-500-g".
+const PRODUCE_SLUG = new RegExp('^(?:(?:fresh|local|organic|baby|mini|red|green|yellow|white|sweet|black|golden|seedless|large|small|jumbo|egyptian|saudi|indian|african|spanish|turkish|lebanese|jordanian|iranian|chinese|american|australian|kenyan|imported)-)*(?:' + PRODUCE_AR.map(([word]) => word.replace(' ', '-')).join('|') + ')');
+const PROCESSED_SLUG = /chip|crisp|ring|powder|paste|sauce|ketchup|juice|soup|pickle|dried|flake|salad|soap|shampoo|lotion|oil|cream|cheese|biscuit|cake|bread|candy|drink|tea|spice|season|granul|frozen|fries|wedge|puree|jam|mayo|dip|hummus|vinegar|salt|chutney|relish|pesto|wash|scrub|deodor|body|hair|mask|clean|detergent|syrup|flavo|mix|litter|water|jelly|curry|shrimp|chicken|beef|tuna|salmon|tablet|lemonade|smoothie|yogurt|yoghurt|ice|sorbet|bar|cereal|muesli|granola|cookie|wafer|pie|pasta|noodle|rice|makdous|stuffed|canned|tin|nectar|cordial|squash|essence|extract|perfume|scent|candle|air|sparkling|soda|cola/;
+
+export function readProductPage(html) {
+  const chunks = [];
+  const pattern = /self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g;
+  let match;
+  while ((match = pattern.exec(html))) chunks.push(JSON.parse('"' + match[1] + '"'));
+  const text = chunks.join('');
+  const start = text.indexOf('"variants":[{"variantId"');
+  if (start < 0) return null;
+  let i = start + '"variants":'.length;
+  const from = i;
+  let depth = 0, inString = false, escaped = false;
+  for (; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === '"') inString = false; }
+    else if (ch === '"') inString = true;
+    else if (ch === '[') depth++;
+    else if (ch === ']' && --depth === 0) break;
+  }
+  const variants = JSON.parse(text.slice(from, i + 1));
+  const name = /\{"name":"([^"]+)","url":"\/products\/[^"]+","variantId":"[^"]+","articleNumber":"([^"]+)"\}/.exec(text);
+  const crumbs = [...html.matchAll(/"@type":"ListItem","position":\d+,"name":"([^"]+)"/g)].map(m => m[1]);
+  return { name: name ? name[1] : null, article: name ? name[2] : null, variants, crumbs };
+}
+
+export function produceOffers(page) {
+  if (!page || !page.name || !/FRUITS & VEGETABLES/.test(page.crumbs.join(' / '))) return [];
+  const vegetable = /VEGETABLE/.test(page.crumbs[2] || '');
+  return page.variants.filter(v => v.price > 0).map(v => {
+    const size = parseSize(v.label || v.unit);
+    const discounted = v.oldPrice > v.price;
+    return {
+      page: 1,
+      source_id: v.variantId,
+      article: page.article,
+      name_ar: produceArabic(page.name) || page.name,
+      name_en: page.name,
+      brand: null,
+      size_text: v.label || null,
+      size_qty: size ? size.qty : null,
+      size_unit: size ? size.unit : null,
+      pack_count: size ? size.count : 1,
+      sold_by: null,
+      price: Math.round(v.price * 100) / 100,
+      was: discounted ? Math.round(v.oldPrice * 100) / 100 : null,
+      promo: null,
+      note: null,
+      category: vegetable ? 'produce_veg' : 'produce_fruit',
+      barcode: null,
+      in_stock: v.inStock !== false,
+      confidence: 'high'
+    };
+  });
 }
 
 async function fetchPage(n, cacheDir) {
@@ -198,6 +292,52 @@ async function main() {
 
   const seen = new Set();
   const offers = toOffers(products).filter(offer => !seen.has(offer.source_id) && seen.add(offer.source_id));
+
+  // Fresh produce from single product pages, found by name in the store's sitemap.
+  const listed = new Set(products.map(product => String(product.productId)));
+  const urls = [];
+  for (let n = 0; n < 40; n++) {
+    const cached = join(cacheDir, `sitemap-${n}.xml`);
+    let xml;
+    if (existsSync(cached)) xml = readFileSync(cached, 'utf8');
+    else {
+      const response = await fetch(`https://www.tamimimarkets.com/sitemaps/products-${n}.xml`, { headers: { 'user-agent': UA } });
+      if (!response.ok) break;
+      xml = await response.text();
+      writeFileSync(cached, xml);
+      await sleep(PAUSE_MS);
+    }
+    if (!xml.includes('<loc>')) break;
+    urls.push(...[...xml.matchAll(/<loc>(https:\/\/www\.tamimimarkets\.com\/products\/[^<]+)<\/loc>/g)].map(m => m[1]));
+  }
+  const byArticle = new Map();
+  urls.forEach(url => {
+    const slug = url.split('/products/')[1];
+    const article = (/-(\d+)$/.exec(slug) || [])[1];
+    if (!article || listed.has(article) || byArticle.has(article)) return;
+    if (!PRODUCE_SLUG.test(slug) || PROCESSED_SLUG.test(slug)) return;
+    byArticle.set(article, url);
+  });
+  let produce = 0;
+  for (const [article, url] of byArticle) {
+    const cached = join(cacheDir, `product-${article}.html`);
+    let html;
+    if (existsSync(cached)) html = readFileSync(cached, 'utf8');
+    else {
+      const response = await fetch(url, { headers: { 'user-agent': UA } });
+      if (!response.ok) continue;
+      html = await response.text();
+      writeFileSync(cached, html);
+      await sleep(PAUSE_MS);
+    }
+    produceOffers(readProductPage(html)).forEach(offer => {
+      if (seen.has(offer.source_id)) return;
+      seen.add(offer.source_id);
+      offers.push(offer);
+      produce++;
+    });
+  }
+  console.log(`  produce: ${byArticle.size} candidate pages, ${produce} fresh fruit and vegetable prices`);
   const out = join(ROOT, 'tools/maqadi/weeks', week, 'tamimi', 'online.json');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(offers, null, 1) + '\n');

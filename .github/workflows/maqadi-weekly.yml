@@ -1,4 +1,4 @@
-# مقاضي — weekly prices and plans from Tamimi.
+# مقاضي — weekly prices from Tamimi and Panda, and the week's plans.
 # Scheduled workflows only run from the repository's default branch, so this
 # starts working once the app is merged into it. It can also be started by
 # hand from the Actions tab ("Run workflow").
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Read Tamimi's prices and choose the week's plans
+      - name: Read the stores' prices and choose the week's plans
         run: node tools/maqadi/weekly.mjs
 
       - name: Test the published data

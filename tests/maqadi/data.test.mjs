@@ -15,7 +15,10 @@ const read = path => JSON.parse(readFileSync(join(DATA, path), 'utf8'));
 
 const current = read('current.json');
 const offersFile = read(current.offers);
-const plansFile = read(current.plans);
+const plansData = read(current.plans);
+// Plans are published per store; every store's set is checked the same way.
+const storeSets = plansData.by_store ? Object.values(plansData.by_store) : [plansData];
+const plansFile = { week: plansData.week, base_persons: storeSets[0].base_persons, plans: storeSets.flatMap(set => set.plans) };
 const offers = offersFile.offers;
 const byId = new Map(offers.map(offer => [offer.id, offer]));
 const isDate = text => /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text));
@@ -49,15 +52,15 @@ test('every offer has a unique id, a name and a believable price', () => {
     assert.ok(offersFile.stores[offer.store], offer.id + ' belongs to an unknown store');
     assert.ok(offer.name && offer.name.length >= 2, offer.id + ' has no name');
     assert.ok(offer.price > 0 && offer.price < 5000, offer.id + ' price ' + offer.price);
-    if (offer.was !== null) assert.ok(offer.was > offer.price, offer.id + ' old price must be above the offer price');
-    if (offer.size_qty !== null) assert.ok(offer.size_qty > 0 && offer.size_unit, offer.id + ' size');
-    assert.ok(offer.pack_count >= 1);
+    if (offer.was != null) assert.ok(offer.was > offer.price, offer.id + ' old price must be above the offer price');
+    if (offer.size_qty != null) assert.ok(offer.size_qty > 0 && offer.size_unit, offer.id + ' size');
+    assert.ok((offer.pack_count || 1) >= 1);
   });
 });
 
 test('the plans pass the same checks as the build', () => {
-  assert.deepEqual(checkPlans(plansFile, offers), []);
-  assert.ok(plansFile.plans.length >= 2);
+  storeSets.forEach(set => assert.deepEqual(checkPlans(set, offers), []));
+  assert.ok(storeSets[0].plans.length >= 2);
 });
 
 test('every plan can be costed exactly for any family size', () => {
